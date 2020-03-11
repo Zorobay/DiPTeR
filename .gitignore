@@ -1,3 +1,10 @@
+# IDE specific
+.idea
+.vscode
+
+# The freetype dll (if kept in project)
+freetype.dll
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
