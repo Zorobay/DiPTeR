@@ -1,6 +1,4 @@
-import autograd.numpy as np
-
-from src.shaders.glsl_builtins import mix
+from src.shaders.misc_functions.glsl_builtins import mix
 from src.shaders.shader_super import Shader
 
 

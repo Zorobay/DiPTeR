@@ -1,14 +1,10 @@
-import math
-import time
-
 import numpy as np
 from PyQt5.QtCore import QTimer, Qt
 from PyQt5.QtWidgets import QOpenGLWidget
 from glumpy import gl, glm, gloo
 
 from src.opengl import object_vertices
-from src.shaders.color_shader import ColorShader
-from src.shaders.gradient_shader import GradientShader
+from src.shaders.brick_shader import BrickShader
 from src.shaders import OBJECT_MATRIX_NAME, VIEW_MATRIX_NAME, PROJECTION_MATRIX_NAME
 
 
@@ -20,10 +16,16 @@ class OpenGLWidget(QOpenGLWidget):
         self.setMinimumSize(width, height)
         self.setMouseTracking(False)
 
+        # Define variables to track objects
         self._program = None
+        self._shader = None
         self._timer = None
-        self._frame_rate = 60
         self._I = None
+
+        # Define variables for settings
+        self._frame_rate = 60
+        self._far_clip_z = 100.0
+        self._near_clip_z = 0.5
 
         # Define variables for mouse and keyboard interaction
         self._scroll_speed = 0.2
@@ -63,18 +65,18 @@ class OpenGLWidget(QOpenGLWidget):
         glm.translate(self._world_to_view, 0, 0, -5)
 
     def _init_shaders(self):
-        gs = GradientShader()
-        V, I = object_vertices.get_3d_cube()
+        self._shader = BrickShader()
+        V, I = object_vertices.get_2d_plane()
         V = V.view(gloo.VertexBuffer)
         I = I.view(gloo.IndexBuffer)
         self._I = I
 
-        self._program = gs.get_program(len(V))
+        self._program = self._shader.get_program(len(V))
 
         self._program.bind(V)
-        self._program["rot"] = 0.0
-        self._program["color1"] = np.array((1.0, 0.1, 0.4), dtype=np.float32)
-        self._program["color2"] = np.array((0.0, 0.1, 0.8), dtype=np.float32)
+        self._program["mortar_scale"] = 0.7
+        self._program["brick_scale"] = 4.0
+        self._program["brick_elongate"] = 1.0
 
         self._program[OBJECT_MATRIX_NAME] = self._object_to_world
         self._program[VIEW_MATRIX_NAME] = self._world_to_view
@@ -91,16 +93,31 @@ class OpenGLWidget(QOpenGLWidget):
 
     def resizeGL(self, w: int, h: int):
         ratio = w / float(h)
-        self._program[PROJECTION_MATRIX_NAME] = glm.perspective(45.0, ratio, znear=2, zfar=100.0)
+        self._program[PROJECTION_MATRIX_NAME] = glm.perspective(45.0, ratio, znear=self._near_clip_z, zfar=self._far_clip_z)
 
+    def set_vertices(self, V: np.ndarray, I:np.ndarray):
+        """
+        Set the vertices to be rendered.
+        :param V: An array of vertex positions
+        :param I: An array of triangle indices
+        """
+        V = V.view(gloo.VertexBuffer)
+        I = I.view(gloo.IndexBuffer)
+        self._I = I
+        self._program.bind(V)
+
+    # ============== ============ ==============
+    # ============== HANDLE EVENTS ==============
+    # ============== ============ ==============
     def wheelEvent(self, wheel_event):
         scroll_steps = wheel_event.angleDelta().y() / 8 / 15  # Get actual number of steps (default is 15 deg/step)
 
         view_y = self._world_to_view[-1, 2]
-        if (view_y >= 0 and scroll_steps > 0) or view_y <= -600:
+        if (view_y >= 0 and scroll_steps > 0) or (view_y <= -self._far_clip_z and scroll_steps < 0):
             return
 
-        glm.translate(self._world_to_view, 0, 0, scroll_steps * self._scroll_speed)
+        distance_speedup = np.clip(abs(view_y)/4.0, 1.0, 10.0)
+        glm.translate(self._world_to_view, 0, 0, scroll_steps * self._scroll_speed * distance_speedup)
 
     def mouseMoveEvent(self, mouse_event):
         if mouse_event.buttons() == Qt.LeftButton:

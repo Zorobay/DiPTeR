@@ -2,7 +2,7 @@
 
 DiPTer is a tool to create procedurally generated textures that are fully differentiable.
  
- :warning:**This project is in very early alpha and has just started. Expect nothing to work!**:warning:
+ :warning:**This project is in very early alpha and has just been started. Expect nothing to work!**:warning:
  
  
 ## Contribute

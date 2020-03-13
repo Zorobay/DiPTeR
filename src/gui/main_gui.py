@@ -1,9 +1,10 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QGridLayout, QGraphicsView
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QGridLayout
 
-from src.gui.widgets.OpenGLSettingsWidget import OpenGLSettingsWidget
-from src.gui.widgets.OpenQLWidget import OpenGLWidget
-from src.gui.widgets.Node import Node
-from src.gui.widgets.NodeScene import NodeScene
+from src.gui.widgets.graphics.node_view import NodeView
+from src.gui.widgets.graphics.output_node import OutputNode
+from src.gui.widgets.opengl_settings_widget import OpenGLSettingsWidget
+from src.gui.widgets.graphics.opengl_widget import OpenGLWidget
+from src.gui.widgets.graphics.node_scene import NodeScene
 
 
 class MainWindow(QWidget):
@@ -36,20 +37,16 @@ class MainWindow(QWidget):
 
         # Setup Node Area
         self.node_scene = NodeScene()
-        self.node_view = QGraphicsView(self.node_scene)
-        self.node_scene.addItem(Node(self.node_scene, "A title"))
-        self.node_scene.addItem(Node(self.node_scene, "Node 2"))
+        self.node_view = NodeView(self.node_scene)
         self.grid_layout.addWidget(self.node_view, 0, 0, 2, 1)
-
-        # Setup OpenGL settings widget
-        self.opengl_settings = OpenGLSettingsWidget()
-        self.grid_layout.addWidget(self.opengl_settings, 0, 1, 1, 1)
 
         # Setup open GL rendering widget
         self.openGL = OpenGLWidget(500, 400)
         self.grid_layout.addWidget(self.openGL, 1, 1, 1, 1)
 
-
+        # Setup OpenGL settings widget
+        self.opengl_settings = OpenGLSettingsWidget(self.openGL)
+        self.grid_layout.addWidget(self.opengl_settings, 0, 1, 1, 1)
 
         self.show()
 
