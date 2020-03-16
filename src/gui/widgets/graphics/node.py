@@ -2,13 +2,13 @@ import typing
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QRectF
-from PyQt5.QtGui import QPainterPath, QBrush, QFont, QColor, QPalette, QPainter
-from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsWidget, QSizePolicy, QGraphicsLinearLayout
+from PyQt5.QtGui import QBrush, QFont, QColor, QPalette, QPainter
+from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsWidget, QGraphicsLinearLayout
 
 from src.gui.widgets.graphics.graphics_grid_layout import GraphicsGridLayout
 from src.gui.widgets.graphics.node_scene import NodeScene
 from src.gui.widgets.graphics.socket import Socket
-from src.gui.widgets.input.double_line_edit import DoubleLineEdit
+from src.gui.widgets.input.float_line_edit import FloatLineEdit
 from src.gui.widgets.input.input_module import InputModule
 from src.opengl.shader_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_RGB, Type
 from src.shaders.shader_super import Shader
@@ -88,36 +88,35 @@ class Node(QGraphicsWidget):
         self._title = value
         self._title_item.setPlainText(self._title)
 
-
     def boundingRect(self) -> QtCore.QRectF:
         return QRectF(0, 0, self._width, self._height).normalized()
 
     def paint(self, painter: QPainter, option, widget=None):
         painter.setPen(Qt.NoPen)  # Disables the border
         painter.setBrush(QBrush(self._bg_color))
-        painter.drawRoundedRect(0,0,self._width, self._height, self._rounding, 1)
+        painter.drawRoundedRect(0, 0, self._width, self._height, self._rounding, 1)
 
     def add_input_from_uniform(self, uniform: typing.Tuple[str, Type]):
         name = uniform[0]
         type_ = uniform[1]
         self.add_input(type_, name)
 
+    def _input_changed(self, new_val: str):
+        print(new_val)
+
     def add_input(self, type_: Type, input_name: str, input_range=(0, 1)):
-        # Create a socket
-        socket = Socket()
         self._socket_layout.addItem(Socket())
 
         if type_.internal_type == INTERNAL_TYPE_FLOAT:
             # Create an input widget
-            line_edit_widget = DoubleLineEdit(min_=input_range[0], max_=input_range[1])
-            line_edit_widget.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+            input_widget = FloatLineEdit(min_=input_range[0], max_=input_range[1])
+            input_widget.textChanged.connect(self._input_changed)
 
-            module = InputModule(input_name, line_edit_widget)
-            module.set_label_palette(self._input_label_palette)
-            module_item = self._scene.addWidget(module)
-
-            # Add all components to the layout
-            self._input_layout.addItem(module_item)
-
-        if type_.internal_type == INTERNAL_TYPE_RGB:
+        elif type_.internal_type == INTERNAL_TYPE_RGB:
             pass
+
+        # Create an input module and add to this node
+        module = InputModule(input_name, input_widget)
+        module.set_label_palette(self._input_label_palette)
+        module_item = self._scene.addWidget(module)
+        self._input_layout.addItem(module_item)

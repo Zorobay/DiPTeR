@@ -29,11 +29,14 @@ class NodeView(QGraphicsView):
         if modifiers == Qt.ControlModifier and key == Qt.Key_A:
             mouse_pos = QtGui.QCursor().pos()
             self._spawn_add_node_menu(mouse_pos)
+        else:
+            super().keyPressEvent(key_event)
 
     def _spawn_add_node_menu(self, pos: QPoint):
         shader = self._add_node_menu.execute(pos)
-        shader = shader()
-        self.scene().addItem(Node.from_shader(self.scene(), shader))
+        if shader is not None:
+            shader = shader()
+            self.scene().addItem(Node.from_shader(self.scene(), shader))
 
 
 class AddNodeMenu(QMenu):
@@ -55,5 +58,8 @@ class AddNodeMenu(QMenu):
 
     def execute(self, *args) -> Shader:
         action = self.exec_(*args)
+        if action is None:
+            return None
+
         action_index = array_funcs.index_of(self._action_shader_map, lambda t: t[0] == action)
         return self._action_shader_map[action_index][1]

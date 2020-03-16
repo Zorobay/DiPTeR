@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QLineEdit
 reg_float = re.compile(r"(-?)(\d+)[\.,]?(\d*)", flags=re.UNICODE)
 
 
-class DoubleValidator(QDoubleValidator):
+class FloatValidator(QDoubleValidator):
     NOT_FLOAT = 0
     TOO_LARGE = 1
     TOO_SMALL = 2
@@ -30,14 +30,14 @@ class DoubleValidator(QDoubleValidator):
                     self._reason_for_invalid = None
                     return QValidator.Acceptable
                 else:
-                    self._reason_for_invalid = DoubleValidator.TOO_SMALL
+                    self._reason_for_invalid = FloatValidator.TOO_SMALL
                     return QValidator.Intermediate
             else:
-                self._reason_for_invalid = DoubleValidator.TOO_LARGE
+                self._reason_for_invalid = FloatValidator.TOO_LARGE
                 return QValidator.Invalid
 
         except ValueError:
-            self._reason_for_invalid = DoubleValidator.NOT_FLOAT
+            self._reason_for_invalid = FloatValidator.NOT_FLOAT
             return QValidator.Invalid
 
     def fixup(self, input_: str) -> str:
@@ -45,18 +45,18 @@ class DoubleValidator(QDoubleValidator):
 
         corrected = input_
 
-        if self._reason_for_invalid == DoubleValidator.NOT_FLOAT:
+        if self._reason_for_invalid == FloatValidator.NOT_FLOAT:
             corrected = corrected.replace(',', '.')  # replace commas with full stops
             corrected = corrected.replace('\D', '')  # Remove any non-digits
-        elif self._reason_for_invalid == DoubleValidator.TOO_SMALL:
+        elif self._reason_for_invalid == FloatValidator.TOO_SMALL:
             corrected = str(self.bottom())
-        elif self._reason_for_invalid == DoubleValidator.TOO_LARGE:
+        elif self._reason_for_invalid == FloatValidator.TOO_LARGE:
             corrected = str(self.top())
 
         return corrected
 
 
-class DoubleLineEdit(QLineEdit):
+class FloatLineEdit(QLineEdit):
 
     def __init__(self, min_: float = 0.0, max_: float = 1.0, *args):
         assert min_ <= max_, "Minimum value must be less than or equal to maximum value!"
@@ -67,4 +67,6 @@ class DoubleLineEdit(QLineEdit):
         self._init_widget()
 
     def _init_widget(self):
-        self.setValidator(DoubleValidator(bottom=self.min_, top=self.max_))
+        pass
+
+        #self.setValidator(FloatValidator(bottom=self.min_, top=self.max_))
