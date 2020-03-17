@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QGridLayout, QComboBox, QLabel
 
-from src.gui.widgets.graphics.opengl_widget import OpenGLWidget
+from src.gui.opengl.opengl_widget import OpenGLWidget
 from src.opengl import object_vertices
 import types
 
@@ -30,6 +30,9 @@ def vertex_func_name_to_label(vertex_func_names: list):
 
 class OpenGLSettingsWidget(QWidget):
 
+    # Define defaults
+    OBJECT_VERTICES_DEFAULT = 0
+
     def __init__(self, open_gl_widget: OpenGLWidget, parent=None):
         super().__init__(parent)
         self._open_gl_widget = open_gl_widget
@@ -40,9 +43,11 @@ class OpenGLSettingsWidget(QWidget):
 
         # Define data variables
         self._object_vertices_func_names = find_module_func_names(object_vertices)
-        self.setupUI()
 
-    def setupUI(self):
+        self._init_widget()
+        self._send_defaults_to_gl()
+
+    def _init_widget(self):
         self._object_list = QComboBox()
         self._object_list.addItems(vertex_func_name_to_label(self._object_vertices_func_names))
         self._object_list.currentIndexChanged.connect(self._handle_object_vertices_list_change)
@@ -51,6 +56,9 @@ class OpenGLSettingsWidget(QWidget):
 
         self.setLayout(self._layout)
         self.show()
+
+    def _send_defaults_to_gl(self):
+        self._handle_object_vertices_list_change(self.OBJECT_VERTICES_DEFAULT)
 
     def _handle_object_vertices_list_change(self, index):
         func_name = self._object_vertices_func_names[index]

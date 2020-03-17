@@ -1,11 +1,10 @@
-from PyQt5.QtCore import Qt, QRectF, QPoint
-from PyQt5.QtGui import QColor, QBrush
-from PyQt5.QtWidgets import QGraphicsWidget, QGraphicsLinearLayout
-
-from src.gui.widgets.graphics.edge import Edge
+from PyQt5.QtCore import Qt, QRectF, pyqtSignal
+from PyQt5.QtGui import QColor, QBrush, QPainter
+from PyQt5.QtWidgets import QGraphicsWidget, QGraphicsLinearLayout, QGraphicsItem
 
 
 class Socket(QGraphicsWidget):
+    edge_started = pyqtSignal(object)
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -19,10 +18,11 @@ class Socket(QGraphicsWidget):
         self._circle_brush = self._circle_inactive_brush
         self._border_brush = self._border_inactive_brush
         self._bbox = QRectF(0, 0, 10, 10)
-
-        self._layout = QGraphicsLinearLayout(Qt.Horizontal)
-        self.setLayout(self._layout)
         self._current_edge = None
+        self._layout = QGraphicsLinearLayout(Qt.Horizontal)
+
+        self.setLayout(self._layout)
+        self.setFlag(QGraphicsItem.ItemIsMovable, False)
 
     def get_width_height(self):
         """Returns a tuple with the width,height of this socket."""
@@ -31,7 +31,7 @@ class Socket(QGraphicsWidget):
     def boundingRect(self):
         return self._bbox
 
-    def paint(self, painter, option, widget=None):
+    def paint(self, painter:QPainter, option, widget=None):
         painter.setPen(self._border_brush)
         painter.setBrush(self._circle_brush)
         painter.drawEllipse(self._bbox)
@@ -42,19 +42,9 @@ class Socket(QGraphicsWidget):
         self._border_brush = self._border_inactive_brush
 
     def mousePressEvent(self, mouse_event):
-        # Needs to be reimplemented to be able to catch mouseMoveEvent
+        # Needs to be reimplemented to be able to catch mouseMoveEvent, but it does not need to do anything
         pass
-    #     if mouse_event.buttons() == Qt.LeftButton:
-    #         pos = mouse_event.scenePos()
-    #         edge = Edge()
-    #         edge.start_pos = QPoint(self.mapFromScene(pos).toPoint())
-    #         self._current_edge = edge
 
     def mouseMoveEvent(self, mouse_event):
         if mouse_event.buttons() == Qt.LeftButton:
-            if not self._current_edge:
-                self._current_edge = Edge()
-                self._layout.addItem(self._current_edge)
-
-            pos = self.mapFromScene(mouse_event.scenePos())
-            self._current_edge.end_pos = QPoint(pos.toPoint())
+            self.edge_started.emit(self)

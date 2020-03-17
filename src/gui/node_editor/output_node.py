@@ -1,5 +1,4 @@
-from src.gui.widgets.graphics.node import Node
-from src.opengl.shader_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_RGB
+from src.gui.node_editor.node import Node
 
 
 class OutputNode(Node):

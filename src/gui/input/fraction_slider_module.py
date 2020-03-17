@@ -1,7 +1,7 @@
 from PyQt5.QtCore import Qt, pyqtSlot
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel
 
-from src.gui.widgets.input.fraction_slider import QFractionSlider
+from src.gui.input.fraction_slider import QFractionSlider
 
 
 class QFractionSliderModule(QFractionSlider):

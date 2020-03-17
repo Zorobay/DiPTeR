@@ -1,10 +1,12 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QGridLayout
+import logging
 
-from src.gui.widgets.graphics.node_view import NodeView
-from src.gui.widgets.graphics.output_node import OutputNode
-from src.gui.widgets.opengl_settings_widget import OpenGLSettingsWidget
-from src.gui.widgets.graphics.opengl_widget import OpenGLWidget
-from src.gui.widgets.graphics.node_scene import NodeScene
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QApplication
+from src.gui.node_editor.node_scene import NodeScene
+from src.gui.node_editor.node_view import NodeView
+from src.gui.opengl.opengl_widget import OpenGLWidget
+from src.gui.node_editor.material import Material
+from src.gui.opengl.opengl_settings_widget import OpenGLSettingsWidget
+from src.gui.rendering_area import RenderingArea
 
 
 class MainWindow(QWidget):
@@ -15,13 +17,16 @@ class MainWindow(QWidget):
         self.sliders = []
 
         # Define GUI layouts
-        self.grid_layout = None
-        self.base_layout = None
+        self.base_layout = QVBoxLayout()
+        self.grid_layout = QGridLayout()
 
         # Define GUI elements
-        self.image_viewer = None
-        self.node_scene = None
-        self.opengl_settings = None
+        self.node_scene = NodeScene()
+        self.material = Material(self.node_scene)
+        self.node_view = NodeView(self.material, self.node_scene)
+        self.openGL = OpenGLWidget(500, 400, self.material)
+        self.opengl_settings = OpenGLSettingsWidget(self.openGL)
+        self.python_renderer = RenderingArea()
 
         self.setupUI()
 
@@ -29,27 +34,27 @@ class MainWindow(QWidget):
         self.setWindowTitle(self._TITLE)
         self.setGeometry(*self._SIZE)
 
-        # Initialize layout
-        self.base_layout = QVBoxLayout()
-        self.grid_layout = QGridLayout()
+        # Setup layout
         self.base_layout.addLayout(self.grid_layout)
         self.setLayout(self.base_layout)
 
         # Setup Node Area
-        self.node_scene = NodeScene()
-        self.node_view = NodeView(self.node_scene)
         self.grid_layout.addWidget(self.node_view, 0, 0, 2, 1)
 
         # Setup open GL rendering widget
-        self.openGL = OpenGLWidget(500, 400)
         self.grid_layout.addWidget(self.openGL, 1, 1, 1, 1)
 
         # Setup OpenGL settings widget
-        self.opengl_settings = OpenGLSettingsWidget(self.openGL)
         self.grid_layout.addWidget(self.opengl_settings, 0, 1, 1, 1)
 
+        # Setup Rendering Area where python shaders are rendered
+        self.grid_layout.addWidget(self.python_renderer, 1,2,1,1)
         self.show()
 
+
+# Setup global logging settings
+FORMAT = "%(asctime)s [%(levelname)s] %(message)s"
+logging.basicConfig(level=logging.DEBUG, format=FORMAT)
 
 app = QApplication([])
 window = MainWindow()

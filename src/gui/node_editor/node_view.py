@@ -1,21 +1,25 @@
-import inspect
+import typing
 
-import numpy as np
 from PyQt5 import QtGui
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtWidgets import QGraphicsView, QMenu
 
-import src.shaders as shader_module
-from src.gui.widgets.graphics.node import Node
+from src.gui.node_editor.material import Material
 from src.misc import string_funcs, array_funcs
+from src.shaders.brick_shader import BrickShader
+from src.shaders.color_shader import ColorShader
 from src.shaders.shader_super import Shader
+
+SHADERS_TO_CONTEXT_MENU = [BrickShader, ColorShader]
 
 
 class NodeView(QGraphicsView):
 
-    def __init__(self, *args):
+    def __init__(self, material:Material, *args):
         super().__init__(*args)
 
+        self._material = material
+        self._node_scene = self.scene()
         self._add_node_menu = AddNodeMenu()
 
     def contextMenuEvent(self, cm_event):
@@ -33,10 +37,9 @@ class NodeView(QGraphicsView):
             super().keyPressEvent(key_event)
 
     def _spawn_add_node_menu(self, pos: QPoint):
-        shader = self._add_node_menu.execute(pos)
+        shader: typing.Type[Shader] = self._add_node_menu.execute(pos)
         if shader is not None:
-            shader = shader()
-            self.scene().addItem(Node.from_shader(self.scene(), shader))
+            self._material.new_node(shader)
 
 
 class AddNodeMenu(QMenu):
@@ -48,15 +51,12 @@ class AddNodeMenu(QMenu):
         self._add_shader_actions()
 
     def _add_shader_actions(self):
-        for name, obj in inspect.getmembers(shader_module):
-            if inspect.ismodule(obj):
-                for name, cls in inspect.getmembers(obj):
-                    if inspect.isclass(cls) and issubclass(cls, Shader) and not cls == Shader:
-                        words = string_funcs.split_on_upper_case(name)
-                        action = self.addAction(" ".join(words))
-                        self._action_shader_map.append((action, cls))
+        for shader in SHADERS_TO_CONTEXT_MENU:
+            words = string_funcs.split_on_upper_case(shader.__name__)
+            action = self.addAction(" ".join(words))
+            self._action_shader_map.append((action, shader))
 
-    def execute(self, *args) -> Shader:
+    def execute(self, *args) -> typing.Type[Shader]:
         action = self.exec_(*args)
         if action is None:
             return None

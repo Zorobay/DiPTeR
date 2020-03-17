@@ -1,5 +1,5 @@
 import numpy as onp
-import autograd.numpy as np
+import autograd.numpy as anp
 
 
 class CheckerShader:
@@ -15,10 +15,10 @@ class CheckerShader:
         self.scale = scale
 
     def checker(self, x: float, y: float) -> float:
-        xi = np.abs(np.floor(x))
-        yi = np.abs(np.floor(y))
+        xi = anp.abs(anp.floor(x))
+        yi = anp.abs(anp.floor(y))
 
-        if np.mod(xi, 2) == np.mod(yi, 2):
+        if anp.mod(xi, 2) == anp.mod(yi, 2):
             return 1.0
 
         return 0.0

@@ -1,31 +1,17 @@
 #version 430
 
-varying vec3 vert_pos;
+in vec3 vert_pos;
 
 uniform float mortar_scale;
 uniform float brick_scale;
 uniform float brick_elongate;
+uniform vec4 color_brick;
+uniform vec4 color_mortar;
 
-#define PI 3.1415926535897932384626433832795
+out vec4 frag_color;
 
-float deg_to_rad(float deg){
-    return (PI / 180.) * deg;
-}
-
-float box(vec2 coord, vec2 size, float edge_smooth){
-    // Returns 1.0 if this coordinate belongs to the box, 0.0 otherwise (with some interpolation based on edge_smooth)
-
-    // Results are undefined for smoothstep if edge0 == edge1, therefore we add a small term to edge_smooth
-    edge_smooth = clamp(edge_smooth, 0.00001, 1.0);
-
-    // Invert and normalize scaling so that (1.0,1.0) corresponds to largest size and (0.,0.) to smallest
-    size = vec2(.5) - size*.5;
-    // Create the upper corner
-    vec2 bx = smoothstep(size, size+edge_smooth, vec2(1.0)- coord);
-    // Create the lower corner
-    bx *= smoothstep(size, size+edge_smooth, coord);
-    return bx.x * bx.y;
-}
+#import "trig.glsl"
+#import "pattern.glsl"
 
 vec3 rotateZ(vec3 color, float deg){
     float rad = deg_to_rad(deg);
@@ -44,6 +30,7 @@ vec3 rotateZ(vec3 color, float deg){
 }
 
 vec3 brickTile(vec3 tile, vec3 scale, float shift){
+    // tiles (repeats) the coordinates in 'tile' and scales them down by a factor in 'scale'
     tile.x *= scale.x;
     tile.y *= scale.y;
     tile.z *= scale.z;
@@ -59,9 +46,8 @@ void main()
     vec2 uv = vert_pos.xy;
     vec3 uv3 = vert_pos.xyz;
 
-    uv3 = brickTile(uv3, vec3(brick_scale/brick_elongate, brick_scale, brick_scale), 0.5);// Tile the color into 4
-
-    vec3 fg = vec3(0.5, 0.1, 0.0);
-    vec3 bg = vec3(0.1, 0.1, 0.1);
-    gl_FragColor = vec4(mix(bg, fg, box(uv3.xy, vec2(mortar_scale, mortar_scale), 0.0)), 1.0);
+    //uv3 = brickTile(uv3, vec3(brick_scale/brick_elongate, brick_scale, brick_scale), 0.5);// Tile the color into 4
+    uv3 = brickTile(uv3, vec3(4.0,4.0, 1.0), 0.0);
+    //frag_color = mix(color_mortar, color_brick, box(uv3.xy, vec2(mortar_scale, mortar_scale), 0.0));
+    frag_color = vec4(uv3,1.0);
 }

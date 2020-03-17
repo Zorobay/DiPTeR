@@ -1,3 +1,5 @@
+import uuid
+
 from PyQt5.QtCore import QPoint, QRectF
 from PyQt5.QtGui import QColor, QPainter, QPen
 from PyQt5.QtWidgets import QGraphicsWidget
@@ -8,6 +10,7 @@ class Edge(QGraphicsWidget):
     def __init__(self, *args):
         super().__init__(*args)
 
+        self._id = uuid.uuid4()
         self._start_pos = None
         self._end_pos = None
 
@@ -15,6 +18,10 @@ class Edge(QGraphicsWidget):
 
     def boundingRect(self):
         return QRectF(QPoint(0, 0), self._end_pos)
+
+    @property
+    def uuid(self):
+        return self._id
 
     @property
     def start_pos(self):
