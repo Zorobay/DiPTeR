@@ -38,13 +38,9 @@ class BrickShader(Shader):
 
     def shade(self, vert_pos: ndarray, mortar_scale: float, brick_scale: float, brick_elongate: float, brick_shift: float,
               color_brick: ndarray, color_mortar: ndarray) -> ndarray:
-        uv3 = vert_pos[0:3]
+        uv3 = vert_pos
 
-        brick_shift = 0.5
         uv3 = self._brickTile(uv3, anp.array((brick_scale / brick_elongate, brick_scale, brick_scale)), brick_shift)
         b = box(uv3[:2], anp.array((mortar_scale, mortar_scale)), 0.0)
         frag_color = gl.mix(color_mortar, color_brick, b)
         return frag_color
-        # uv3 = self._brickTile(uv3, anp.array((brick_scale/brick_elongate, brick_scale, brick_scale)), 0.5)
-        # frag_color = gl.mix(color_mortar, color_brick, gl.box())
-        # return anp.append(uv3, 1.0)
