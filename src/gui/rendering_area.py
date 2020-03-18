@@ -22,17 +22,19 @@ class RenderingArea(QWidget):
         # Test generation of data
         W, H = 100, 100
         sh = BrickShader()
+        def_vals = [t[-1] for t in sh.get_inputs()]
         img = np.zeros((W, H, 3))
-        for r in range(H):
-            for c in range(W):
-                vert_pos = np.array((r / H, c / H, 0.0))
-                val = sh.shade(vert_pos, 0.9, 10, 2,
-                               np.array((0.5, 0.4, 0.1, 1.0)), np.array((0.1, 0.9, 0.1, 1.0)))
-                #val = np.array((1.0,1.0,1.0))
-                img[r, c, :] = val[:3]
+        for y in range(H):
+            for x in range(W):
+                vert_pos = np.array((x / H, y / H, 0.0))
+                val = sh.shade(vert_pos, *def_vals)
+                img[y, x, :] = val[:3]
 
         self._layout.addWidget(self._figure_canvas)
         self._axis.imshow(img)
+        self._figure.gca().invert_yaxis()
+        self._axis.set_ylim(0, H)
+        self._axis.set_xlim(0, W)
 
         self.setMinimumHeight(500)
         self.setMinimumWidth(500)

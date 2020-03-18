@@ -5,6 +5,7 @@ in vec3 vert_pos;
 uniform float mortar_scale;
 uniform float brick_scale;
 uniform float brick_elongate;
+uniform float brick_shift;
 uniform vec4 color_brick;
 uniform vec4 color_mortar;
 
@@ -13,6 +14,7 @@ out vec4 frag_color;
 #import "trig.glsl"
 #import "pattern.glsl"
 
+/*
 vec3 rotateZ(vec3 color, float deg){
     float rad = deg_to_rad(deg);
 
@@ -28,6 +30,7 @@ vec3 rotateZ(vec3 color, float deg){
     color_rot.y += 0.5;
     return color_rot.xyz;
 }
+*/
 
 vec3 brickTile(vec3 tile, vec3 scale, float shift){
     // tiles (repeats) the coordinates in 'tile' and scales them down by a factor in 'scale'
@@ -44,10 +47,8 @@ vec3 brickTile(vec3 tile, vec3 scale, float shift){
 void main()
 {
     vec2 uv = vert_pos.xy;
-    vec3 uv3 = vert_pos.xyz;
+    vec3 uv3 = vert_pos;
 
-    //uv3 = brickTile(uv3, vec3(brick_scale/brick_elongate, brick_scale, brick_scale), 0.5);// Tile the color into 4
-    uv3 = brickTile(uv3, vec3(4.0,4.0, 1.0), 0.0);
-    //frag_color = mix(color_mortar, color_brick, box(uv3.xy, vec2(mortar_scale, mortar_scale), 0.0));
-    frag_color = vec4(uv3,1.0);
+    uv3 = brickTile(uv3, vec3(brick_scale/brick_elongate, brick_scale, brick_scale), brick_shift);
+    frag_color = mix(color_mortar, color_brick, box(uv3.xy, vec2(mortar_scale, mortar_scale), 0.0));
 }

@@ -8,6 +8,6 @@ in vec3 in_vert_pos;
 out vec3 vert_pos;
 
 void main() {
-    vert_pos = in_vert_pos;
+    vert_pos = (in_vert_pos + 1.0)/2.;
     gl_Position = view_to_projection * world_to_view * object_to_world * vec4(in_vert_pos, 1.0);
 }

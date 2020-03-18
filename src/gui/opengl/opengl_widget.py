@@ -85,9 +85,8 @@ class OpenGLWidget(QOpenGLWidget):
 
         self._program = self._shader.get_program(len(self._V))
         self._program.bind(self._V)
-        self._program["mortar_scale"] = 0.8
-        self._program["brick_scale"] = 10.0
-        self._program["brick_elongate"] = 2.0
+        for nf, nu, t, ra, de in self._shader.get_inputs():
+            self._program[nu] = de
 
     def paintGL(self):
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
