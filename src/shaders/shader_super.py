@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 from glumpy import gloo
-from numpy import ndarray
 
 from src.misc import string_funcs
 from src.opengl.shader_types import INTERNAL_TYPE_RGBA
@@ -18,7 +17,7 @@ REG_GLSL_IMPORT = re.compile(r"\s*#\s*import\s*[\"'](\w*\.?\w*)[\"']", flags=re.
 
 def preprocess_imports(code: typing.List[str]) -> str:
     lib_path = Path.cwd() / GLSL_INCLUDE_DIR
-    for i,line in enumerate(code):
+    for i, line in enumerate(code):
         match = REG_GLSL_IMPORT.match(line)
         if match:
             filename = match.group(1)
@@ -73,11 +72,16 @@ class Shader(ABC):
 
         return self._fragment_shader
 
-    def get_program(self, vertex_count: int) -> gloo.Program:
+    def get_program(self, vertex_count: int = 0, set_defaults: bool = False) -> gloo.Program:
         """Compiles the full program with vertex and fragment shader and returns it in a glumpy Program object"""
         vertex_shader = self.get_vertex_shader()
         fragment_shader = self.get_fragment_shader()
         self._program = gloo.Program(vertex_shader, fragment_shader, count=vertex_count, version=self._glsl_version)
+
+        if set_defaults:
+            for _, uniform, _, _, default in self.get_inputs():
+                self._program[uniform] = default
+
         return self._program
 
     def get_name(self) -> str:
