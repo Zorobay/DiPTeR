@@ -18,15 +18,15 @@ class ColorInput(QPushButton, Input):
         self._init_widget()
 
     def set_default_value(self, default_value: list):
-        color = QColor(*default_value)
+        color = QColor.fromRgbF(*default_value)
         self._set_display_color(color)
         self._color_dialog.setCurrentColor(color)
 
     def get_gl_value(self) -> np.ndarray:
         if self._internal_type == INTERNAL_TYPE_RGB:
-            return np.array((self._color.getRgb()[:3]), dtype=np.float32) / 255.0
+            return np.array((self._color.getRgbF()[:3]), dtype=np.float32)
         elif self._internal_type == INTERNAL_TYPE_RGBA:
-            return np.array((self._color.getRgb()), dtype=np.float32) / 255.0
+            return np.array((self._color.getRgbF()), dtype=np.float32)
         else:
             raise TypeError("Internal type {} not supported for ColorInput!".format(self._internal_type))
 
