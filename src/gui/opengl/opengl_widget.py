@@ -55,8 +55,11 @@ class OpenGLWidget(QOpenGLWidget):
 
     def initializeGL(self):
         gl.glEnable(gl.GL_DEPTH_TEST)
+        gl.glEnable(gl.GL_BLEND)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         gl.glFrontFace(gl.GL_CCW)
         gl.glClearColor(*self._clear_color)
+        gl.glDisable(gl.GL_CULL_FACE)
         self._init_camera()
         self._init_default_shader()
 

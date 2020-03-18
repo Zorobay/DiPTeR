@@ -35,6 +35,7 @@ class ColorInput(QPushButton, Input):
 
     def _init_widget(self):
         self._color_dialog.currentColorChanged.connect(self._current_color_changed)
+        self._color_dialog.setOption(QColorDialog.ShowAlphaChannel, True)
         self.clicked.connect(self._open_color_dialog)
 
     @pyqtSlot(QColor)
