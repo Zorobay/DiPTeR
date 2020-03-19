@@ -17,7 +17,7 @@ _logger = logging.getLogger(__name__)
 class Material(QObject):
     """Class that keeps track of all nodes present on the NodeScene, as well as their relation to each other."""
 
-    program_ready = pyqtSignal()
+    program_ready = pyqtSignal(Program)
     edge_spawned = pyqtSignal(object)
     edge_despawned = pyqtSignal()
 
@@ -41,17 +41,17 @@ class Material(QObject):
         if not isinstance(shader, Shader):
             shader = shader()  # Instantiate the shader if only a type was given
 
-        node = Node(self._scene, shader.get_name(), shader)  # TODO Increment name if two shaders of the same type are added
+        node = Node(self._scene, shader.get_name(), shader)
         node.edge_started.connect(self._spawn_edge)
-        self._nodes[node._id] = node
-        self._id = node._id
+        self._nodes[node.id] = node
+        self._id = node.id
         self._program = node.get_program()
 
         # Spawn node to scene
         self._scene.addItem(node)
 
         # Emit event to tell OpenGL that the program is ready
-        self.program_ready.emit()
+        self.program_ready.emit(self._program)
 
     def remove_edge(self, edge: Edge):
         self._scene.removeItem(edge)

@@ -93,7 +93,7 @@ class Shader(ABC):
 
     @abstractmethod
     def get_inputs(self) -> typing.List[typing.Tuple[str, str, str, typing.Tuple[float, float], typing.Any]]:
-        """Returns a list of tuples with information about the input parameters of this shader.
+        """Returns a list of tuples with information about the input_widgets parameters of this shader.
 
             :return: a tuple on the form (formatted name, uniform name, internal type, (min value, max value), default value)
         """

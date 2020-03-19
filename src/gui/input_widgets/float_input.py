@@ -5,7 +5,7 @@ import numpy as np
 from PyQt5.QtGui import QDoubleValidator, QValidator
 from PyQt5.QtWidgets import QLineEdit
 
-from src.gui.input.input_module import Input
+from src.gui.input_widgets.input_module import Input
 
 reg_float = re.compile(r"(-?)(\d+)[\.,]?(\d*)", flags=re.UNICODE)
 
@@ -53,7 +53,7 @@ class FloatValidator(QDoubleValidator):
             return QValidator.Invalid, input_, cursor_pos
 
     def fixup(self, input_: str) -> str:
-        """Attempts to return a corrected version of the invalid input string."""
+        """Attempts to return a corrected version of the invalid input_widgets string."""
 
         corrected = input_
 
@@ -98,5 +98,6 @@ class FloatInput(QLineEdit, Input):
         self.editingFinished.connect(lambda: self.input_changed.emit())
 
     def setText(self, p_str):
-        self.input_changed.emit()
         super().setText(p_str)
+        self.input_changed.emit()
+

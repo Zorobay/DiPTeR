@@ -3,5 +3,5 @@ OBJECT_MATRIX_NAME = "object_to_world"
 VIEW_MATRIX_NAME = "world_to_view"
 PROJECTION_MATRIX_NAME = "view_to_projection"
 
-# Constant for variable name of input vertices to GLSL shader
+# Constant for variable name of input_widgets vertices to GLSL shader
 IN_VERTEX_POS_NAME = "in_vert_pos"

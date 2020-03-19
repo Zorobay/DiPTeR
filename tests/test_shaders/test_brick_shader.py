@@ -78,8 +78,8 @@ class TestBrickShader:
     #
     #     def handle(texture):
     #         rand_inputs = randomize_inputs(self.shader.get_inputs())
-    #         for tup, input in zip(self.shader.get_inputs(), rand_inputs):
-    #             self.program[tup[1]] = input
+    #         for tup, input_widgets in zip(self.shader.get_inputs(), rand_inputs):
+    #             self.program[tup[1]] = input_widgets
     #
     #         python_render = render(self.W, self.H, self.shader.shade, *self.default_args)
     #         assert_abs_mean_diff(python_render, 3)

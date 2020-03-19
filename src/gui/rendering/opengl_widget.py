@@ -2,6 +2,7 @@ import numpy as np
 from PyQt5.QtCore import QTimer, Qt
 from PyQt5.QtWidgets import QOpenGLWidget
 from glumpy import gl, glm, gloo
+from glumpy.gloo import Program
 
 from src.gui.node_editor.material import Material
 from src.opengl import object_vertices
@@ -11,7 +12,7 @@ from src.shaders.brick_shader import BrickShader
 
 class OpenGLWidget(QOpenGLWidget):
 
-    def __init__(self, width: int, height: int, node_scene: Material):
+    def __init__(self, width: int, height: int, material: Material):
         super().__init__()
 
         # Set Widget settings
@@ -19,7 +20,7 @@ class OpenGLWidget(QOpenGLWidget):
         self.setMouseTracking(False)
 
         # Define variables to track objects
-        self._node_scene = node_scene
+        self.material = material
         self._program = None
         self._shader = None
         self._timer = None
@@ -63,7 +64,7 @@ class OpenGLWidget(QOpenGLWidget):
         self._init_camera()
         self._init_default_shader()
 
-        self._node_scene.program_ready.connect(self._graph_changed)
+        self.material.program_ready.connect(self._graph_changed)
 
         # Start an update timer to refresh rendering
         self._timer = QTimer()
@@ -72,13 +73,13 @@ class OpenGLWidget(QOpenGLWidget):
         self._timer.start()
 
     # @pyqtSlot()
-    def _graph_changed(self):
-        self._program = self._node_scene.get_program()
-        self._node_scene.bind_vertices(self._V)
+    def _graph_changed(self, program: Program):
+        self._program = program
+        self.material.bind_vertices(self._V)
 
     def _init_camera(self):
         # Translate out view in negative z dir
-        glm.translate(self._world_to_view, 0, 0, -5)
+        glm.translate(self._world_to_view, 0, 0, -3)
 
     def _init_default_shader(self):
         self._shader = BrickShader()

@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout, QSizePolicy
 
 
 class Input:
-    # To be called by subclasses when input changes!
+    # To be called by subclasses when input_widgets changes!
     input_changed = pyqtSignal()
 
     def __init__(self, internal_type: str):
@@ -16,22 +16,22 @@ class Input:
 
     @abstractmethod
     def get_value(self) -> typing.Any:
-        """Return the value of this input widget."""
+        """Return the value of this input_widgets widget."""
         raise NotImplementedError("Input subclass need to implement this method!")
 
     @abstractmethod
     def get_gl_value(self) -> typing.Any:
-        """Return the value of this input widget converted to an OpenGL compatible type."""
+        """Return the value of this input_widgets widget converted to an OpenGL compatible type."""
         raise NotImplementedError("Input subclass need to implement this method!")
 
     @abstractmethod
     def set_default_value(self, default_value: typing.Any):
-        """Set the default value of this input."""
+        """Set the default value of this input_widgets."""
         raise NotImplementedError("Input subclass need to implement this method!")
 
 
 class InputModule(QWidget):
-    input_changed = pyqtSignal(str, object, str, object)  # uniform variable name, input value, internal type, input module ID
+    input_changed = pyqtSignal(str, object, str, object)  # uniform variable name, input_widgets value, internal type, input_widgets module ID
 
     def __init__(self, label: str, internal_type: str, uniform_var: str, widget: Input):
         super().__init__()
@@ -64,7 +64,7 @@ class InputModule(QWidget):
 
     @property
     def uniform_var(self) -> str:
-        """The name of the uniform variable in the GLSL code that this input is connected to."""
+        """The name of the uniform variable in the GLSL code that this input_widgets is connected to."""
         return self._uniform_var
 
     @property

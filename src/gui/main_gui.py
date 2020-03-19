@@ -1,21 +1,18 @@
 import logging
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QApplication, QMainWindow, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QApplication, QMainWindow, QDockWidget
+
+from src.gui.node_editor.material import Material
 from src.gui.node_editor.node_scene import NodeScene
 from src.gui.node_editor.node_view import NodeView
-from src.gui.opengl.opengl_widget import OpenGLWidget
-from src.gui.node_editor.material import Material
-from src.gui.opengl.opengl_settings_widget import OpenGLSettingsWidget
-from src.gui.rendering_area import RenderingArea
+from src.gui.rendering.opengl_settings_widget import OpenGLSettingsWidget
+from src.gui.rendering.opengl_widget import OpenGLWidget
+from src.gui.rendering.python_rendering_widget import PythonRenderingWidget
 
 
-class MainWindow(QWidget):
+class MainWidget(QWidget):
     def __init__(self):
         super().__init__()
-        self._TITLE = "Shader viewer"
-        self._SIZE = (300, 300, 800, 500)
-        self.sliders = []
 
         # Define GUI layouts
         self.base_layout = QVBoxLayout()
@@ -25,46 +22,50 @@ class MainWindow(QWidget):
         self.node_scene = NodeScene()
         self.material = Material(self.node_scene)
         self.node_view = NodeView(self.material, self.node_scene)
-        self.render_window = QWidget(width=800,height=400)
+
+        self.render_window = QWidget(width=700, height=400)
         self.openGL = OpenGLWidget(400, 400, self.material)
         self.opengl_settings = OpenGLSettingsWidget(self.openGL)
-        self.python_renderer = RenderingArea()
+        self.python_renderer = PythonRenderingWidget()
 
-        self.setupUI()
+        self._init_widget()
 
-    def setupUI(self):
-        self.setWindowTitle(self._TITLE)
-        self.setGeometry(*self._SIZE)
+    def _init_widget(self):
+        self.setLayout(self.grid_layout)
 
-        # Setup layout
-        self.base_layout.addLayout(self.grid_layout)
-        self.setLayout(self.base_layout)
-
-        # Setup Node Area
         self.grid_layout.addWidget(self.node_view, 0, 0, 2, 1)
 
-        # Setup render window
-        layout = QHBoxLayout()
-        layout.addWidget(self.openGL, alignment=Qt.AlignRight)
-        layout.addWidget(self.python_renderer, alignment=Qt.AlignLeft)
-        self.render_window.setLayout(layout)
+        self.render_window.setLayout(QGridLayout())
+        self.render_window.layout()
 
-        # Setup open GL rendering widget
-        #self.grid_layout.addWidget(self.openGL, 1, 1, 1, 1)
+        self.render_window.layout().addWidget(self.opengl_settings, 0, 0, 1, 1)
+        self.render_window.layout().addWidget(self.openGL, 1, 0, 1, 1)
+        self.render_window.layout().addWidget(self.python_renderer, 0, 1, 2, 1)
 
-        # Setup OpenGL settings widget
-        #self.grid_layout.addWidget(self.opengl_settings, 0, 1, 1, 1)
+        self.grid_layout.addWidget(self.render_window, 0, 1)
 
-        # Setup Rendering Area where python shaders are rendered
-        #self.grid_layout.addWidget(self.python_renderer, 1,2,1,1)
-        self.show()
-        self.render_window.show()
+
+class MainWindow(QMainWindow):
+
+    def __init__(self, *args):
+        super().__init__(*args)
+
+        self._title = "Shader viewer"
+        self._size = (300, 300, 1200, 500)
+
+        self.main_widget = MainWidget()
+        self._init_window()
+
+    def _init_window(self):
+        self.setCentralWidget(self.main_widget)
+
+        self.setWindowTitle(self._title)
+        self.setGeometry(*self._size)
 
 
 # Setup global logging settings
 FORMAT = "%(asctime)s [%(levelname)s] %(message)s"
 logging.basicConfig(level=logging.DEBUG, format=FORMAT)
-
 app = QApplication([])
 window = MainWindow()
 window.show()

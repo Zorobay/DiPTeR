@@ -6,12 +6,12 @@ from matplotlib.figure import Figure
 from src.shaders.brick_shader import BrickShader
 
 
-class RenderingArea(QWidget):
+class PythonRenderingWidget(QWidget):
 
     def __init__(self, *args):
         super().__init__(*args)
 
-        self._figure = Figure(figsize=(6,6))
+        self._figure = Figure(figsize=(4,4))
         self._axis = self._figure.add_subplot(111)
         self._figure_canvas = FigureCanvas(self._figure)
         self._layout = QVBoxLayout()

@@ -7,12 +7,12 @@ from PyQt5.QtGui import QBrush, QFont, QColor, QPalette, QPainter
 from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsWidget
 from glumpy.gloo import Program
 
-from src.gui.input.color_input import ColorInput
+from src.gui.input_widgets.color_input import ColorInput
 from src.gui.node_editor.layouts import GraphicsGridLayout
 from src.gui.node_editor.node_scene import NodeScene
 from src.gui.node_editor.socket import Socket
-from src.gui.input.float_input import FloatInput
-from src.gui.input.input_module import InputModule
+from src.gui.input_widgets.float_input import FloatInput
+from src.gui.input_widgets.input_module import InputModule
 from src.opengl.shader_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_RGB, INTERNAL_TYPE_RGBA
 from src.shaders.shader_super import Shader
 
@@ -44,7 +44,7 @@ class Node(QGraphicsWidget):
         self._title = title
         self._title_item = QGraphicsTextItem(self)
 
-        # Define input properties
+        # Define input_widgets properties
         self._input_label_font = QFont("Corbel", 8)
         self._input_label_palette = QPalette()
         self._input_label_palette.setColor(QPalette.Background, QColor(0, 0, 0, 0))
@@ -119,7 +119,7 @@ class Node(QGraphicsWidget):
         return self._program
 
     def _input_changed(self, uniform_var: str, value: typing.Any, internal_type: str, input_id: uuid.UUID):
-        """Event is called when any of this node's input is changed"""
+        """Event is called when any of this node's input_widgets is changed"""
         # Set the value of the uniform in the program
         self._program[uniform_var] = value
         self.input_changed.emit(self.id)
@@ -130,14 +130,14 @@ class Node(QGraphicsWidget):
         # self._input_socket_layout.addItem(socket)
 
         if internal_type == INTERNAL_TYPE_FLOAT:
-            # Create an input widget
+            # Create an input_widgets widget
             input_widget = FloatInput(internal_type, min_=input_range[0], max_=input_range[1])
         elif internal_type == INTERNAL_TYPE_RGB or INTERNAL_TYPE_RGBA:
             input_widget = ColorInput(internal_type)
         else:
             raise TypeError("Internal type {} is not yet supported!".format(internal_type))
 
-        # Create an input module and add to this node
+        # Create an input_widgets module and add to this node
         module = InputModule(input_name, internal_type, uniform_var, input_widget)
         module.input_changed.connect(self._input_changed)
         module.set_label_palette(self._input_label_palette)

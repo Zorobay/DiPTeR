@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QGridLayout, QComboBox, QLabel
 
-from src.gui.opengl.opengl_widget import OpenGLWidget
+from src.gui.rendering.opengl_widget import OpenGLWidget
 from src.opengl import object_vertices
 import types
 
