@@ -14,6 +14,9 @@ _logger = logging.getLogger(__name__)
 GLSL_INCLUDE_DIR = "res/lib/"
 REG_GLSL_IMPORT = re.compile(r"\s*#\s*import\s*[\"'](\w*\.?\w*)[\"']", flags=re.ASCII)
 
+# Define useful constants for numerical manipulation
+TINY_FLOAT = anp.finfo(anp.float32).tiny
+
 
 def preprocess_imports(code: typing.List[str]) -> str:
     lib_path = Path.cwd() / GLSL_INCLUDE_DIR
@@ -106,5 +109,5 @@ class Shader(ABC):
         ]
 
     @abstractmethod
-    def shade(self, *args) -> ndarray:
+    def shade(self, vert_pos: ndarray, *args) -> ndarray:
         pass

@@ -5,6 +5,9 @@
 # The freetype dll (if kept in project)
 freetype.dll
 
+# Output folder for test images
+test_image_output/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

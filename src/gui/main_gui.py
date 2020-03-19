@@ -1,6 +1,7 @@
 import logging
 
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QApplication
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QApplication, QMainWindow, QHBoxLayout
 from src.gui.node_editor.node_scene import NodeScene
 from src.gui.node_editor.node_view import NodeView
 from src.gui.opengl.opengl_widget import OpenGLWidget
@@ -13,7 +14,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         self._TITLE = "Shader viewer"
-        self._SIZE = (300, 300, 1200, 500)
+        self._SIZE = (300, 300, 800, 500)
         self.sliders = []
 
         # Define GUI layouts
@@ -24,7 +25,8 @@ class MainWindow(QWidget):
         self.node_scene = NodeScene()
         self.material = Material(self.node_scene)
         self.node_view = NodeView(self.material, self.node_scene)
-        self.openGL = OpenGLWidget(500, 400, self.material)
+        self.render_window = QWidget(width=800,height=400)
+        self.openGL = OpenGLWidget(400, 400, self.material)
         self.opengl_settings = OpenGLSettingsWidget(self.openGL)
         self.python_renderer = RenderingArea()
 
@@ -41,15 +43,22 @@ class MainWindow(QWidget):
         # Setup Node Area
         self.grid_layout.addWidget(self.node_view, 0, 0, 2, 1)
 
+        # Setup render window
+        layout = QHBoxLayout()
+        layout.addWidget(self.openGL, alignment=Qt.AlignRight)
+        layout.addWidget(self.python_renderer, alignment=Qt.AlignLeft)
+        self.render_window.setLayout(layout)
+
         # Setup open GL rendering widget
-        self.grid_layout.addWidget(self.openGL, 1, 1, 1, 1)
+        #self.grid_layout.addWidget(self.openGL, 1, 1, 1, 1)
 
         # Setup OpenGL settings widget
-        self.grid_layout.addWidget(self.opengl_settings, 0, 1, 1, 1)
+        #self.grid_layout.addWidget(self.opengl_settings, 0, 1, 1, 1)
 
         # Setup Rendering Area where python shaders are rendered
-        self.grid_layout.addWidget(self.python_renderer, 1,2,1,1)
+        #self.grid_layout.addWidget(self.python_renderer, 1,2,1,1)
         self.show()
+        self.render_window.show()
 
 
 # Setup global logging settings

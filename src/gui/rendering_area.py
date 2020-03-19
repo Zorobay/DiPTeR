@@ -31,7 +31,7 @@ class RenderingArea(QWidget):
                 img[y, x, :] = val[:3]
 
         self._layout.addWidget(self._figure_canvas)
-        self._axis.imshow(img)
+        self._axis.imshow(img, vmin=0., vmax=1.)
         self._figure.gca().invert_yaxis()
         self._axis.set_ylim(0, H)
         self._axis.set_xlim(0, W)

@@ -1,14 +1,14 @@
 from src.opengl.object_vertices import get_2d_plane
-from tests.stuff_for_testing.test_shaders.test_shader import TestShader
+from tests.stuff_for_testing.test_shaders.test_lines_shader import TestLinesShader
 from tests.stuff_for_testing.funcs import save_images, render_opengl, assert_abs_mean_diff
 from src.misc.render_funcs import render
 
 
-class TestTestShader:
+class TestTestLinesShader:
 
     def setup(self):
         self.V, self.I = get_2d_plane()
-        self.shader = TestShader()
+        self.shader = TestLinesShader()
         self.program = self.shader.get_program(len(self.V), set_defaults=True)
         self.program.bind(self.V)
 

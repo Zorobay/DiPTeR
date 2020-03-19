@@ -9,8 +9,9 @@ from src.misc import string_funcs, array_funcs
 from src.shaders.brick_shader import BrickShader
 from src.shaders.color_shader import ColorShader
 from src.shaders.shader_super import Shader
+from tests.stuff_for_testing.test_shaders.test_lines_shader import TestLinesShader
 
-SHADERS_TO_CONTEXT_MENU = [BrickShader, ColorShader]
+SHADERS_TO_CONTEXT_MENU = [BrickShader, ColorShader, TestLinesShader]
 
 
 class NodeView(QGraphicsView):

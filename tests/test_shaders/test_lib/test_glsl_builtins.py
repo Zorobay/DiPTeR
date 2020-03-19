@@ -48,6 +48,7 @@ def test_mix():
 
 def test_fract():
     f = gl.fract
+    assert_allclose(f(0.), 0.)
     assert_allclose(f(1.4), 0.4)
     assert_allclose(f(1.5999), 0.5999)
     assert_allclose(f(-0.55), 0.45)
@@ -62,9 +63,13 @@ def test_smoothstep():
     f = gl.smoothstep
     edge0 = 1.0
     edge1 = 3.0
+
+    assert f(edge0, edge1, 0) == 0, "smoothstep with x=0 returned wrong value"
     assert f(edge0, edge1, edge0 - 1) == 0, "smoothstep with x<edge0 did not return 0"
     assert f(edge0, edge1, edge0) == 0, "smoothstep with x=edge0 did not return 0"
     assert f(edge0, edge1, edge1) == 1, "smoothstep with x=edge1 did not return 1"
     assert f(edge0, edge1, edge1 + 1) == 1, "smoothstep with x>edge1 did not return 1"
     x = edge0 + (edge1 - edge0) / 2
     assert_allclose(f(edge0, edge1, x), 0.5, err_msg="smoothstep with x halfway between edges did not return a value halfway between edges.")
+
+    assert f(0,0,1) == 1.0, "smoothstep with edge0=edge1=0 did not return 1.0"

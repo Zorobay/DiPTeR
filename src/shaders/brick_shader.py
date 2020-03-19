@@ -6,7 +6,7 @@ from numpy import ndarray
 import src.shaders.lib.glsl_builtins as gl
 from src.opengl.shader_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_RGBA
 from src.shaders.lib.pattern import box
-from src.shaders.shader_super import Shader
+from src.shaders.shader_super import Shader, TINY_FLOAT
 
 
 class BrickShader(Shader):
@@ -38,8 +38,10 @@ class BrickShader(Shader):
 
     def shade(self, vert_pos: ndarray, mortar_scale: float, brick_scale: float, brick_elongate: float, brick_shift: float,
               color_brick: ndarray, color_mortar: ndarray) -> ndarray:
-        uv3 = vert_pos
+        # Increment each divisor by TINY_FLOAT to prevent DivisionByZeroErrors
+        brick_elongate += TINY_FLOAT
 
+        uv3 = vert_pos
         uv3 = self._brickTile(uv3, anp.array((brick_scale / brick_elongate, brick_scale, brick_scale)), brick_shift)
         b = box(uv3[:2], anp.array((mortar_scale, mortar_scale)), 0.0)
         frag_color = gl.mix(color_mortar, color_brick, b)

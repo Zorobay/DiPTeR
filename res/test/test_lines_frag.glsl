@@ -9,7 +9,7 @@ out vec4 frag_color;
 
 void main()
 {
-    if (vert_pos.x >= 0.05 && vert_pos.x <= 0.06){  //Test horizontal thin alignment
+    if (vert_pos.x > 0.05 && vert_pos.x < 0.06){  //Test horizontal thin alignment
         frag_color = vec4(0.,1.,0.,1.);
     } else if (vert_pos.x >= 0.1 && vert_pos.x <= 0.2){  // Test horizontal thick alignment
         frag_color = vec4(1.0, 1., 0., 1.0);
