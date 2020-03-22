@@ -1,6 +1,7 @@
 import numpy as np
 from PyQt5.QtCore import QTimer, Qt
-from PyQt5.QtWidgets import QOpenGLWidget
+from PyQt5.QtGui import QMouseEvent, QImage
+from PyQt5.QtWidgets import QOpenGLWidget, QMenu, QFileDialog
 from glumpy import gl, glm, gloo
 from glumpy.gloo import Program
 
@@ -79,7 +80,7 @@ class OpenGLWidget(QOpenGLWidget):
 
     def _init_camera(self):
         # Translate out view in negative z dir
-        glm.translate(self._world_to_view, 0, 0, -3)
+        glm.translate(self._world_to_view, 0, 0, -2)
 
     def _init_default_shader(self):
         self._shader = BrickShader()
@@ -95,17 +96,15 @@ class OpenGLWidget(QOpenGLWidget):
     def paintGL(self):
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
         if self._program is not None:
-            self._program.draw(gl.GL_TRIANGLES, self._I)
-
             # Send the updated transformation matrices to the shader
             self._program[OBJECT_MATRIX_NAME] = self._object_to_world
             self._program[VIEW_MATRIX_NAME] = self._world_to_view
             self._program[PROJECTION_MATRIX_NAME] = self._view_to_projection
 
+            self._program.draw(gl.GL_TRIANGLES, self._I)
+
     def resizeGL(self, w: int, h: int):
-        ratio = w / float(h)
-        self._view_to_projection = glm.perspective(45.0, ratio, znear=self._near_clip_z, zfar=self._far_clip_z)
-        self._program[PROJECTION_MATRIX_NAME] = self._view_to_projection
+        self._set_perspective_projection(w, h)
 
     def set_vertices(self, V: np.ndarray, I: np.ndarray):
         """
@@ -117,6 +116,36 @@ class OpenGLWidget(QOpenGLWidget):
         self._V = V.view(gloo.VertexBuffer)
         if self._program is not None:
             self._program.bind(self._V)
+
+    def _set_perspective_projection(self, w: int, h: int):
+        ratio = w / float(h)
+        self._view_to_projection = glm.perspective(45.0, ratio, znear=self._near_clip_z, zfar=self._far_clip_z)
+        self._program[PROJECTION_MATRIX_NAME] = self._view_to_projection
+
+    def _get_texture(self) -> QImage:
+        # Reset the view to default so that the texture fits to the view
+        temp_obj_to_world = self._object_to_world
+        temp_world_to_view = self._world_to_view
+        temp_view_to_proj = self._view_to_projection
+        self._object_to_world = np.eye(4, dtype=np.float32)
+        self._world_to_view = np.eye(4, dtype=np.float32)
+        self._view_to_projection = np.eye(4, dtype=np.float32)
+
+        # Set the rendered object to be a plane
+        temp_V, temp_I = self._V, self._I
+        V, I = object_vertices.get_2d_plane()
+        self.set_vertices(V, I)
+
+        self.update()
+        img: QImage = self.grabFramebuffer()
+
+        # Reset the view
+        self._object_to_world = temp_obj_to_world
+        self._world_to_view = temp_world_to_view
+        self._view_to_projection = temp_view_to_proj
+        self.set_vertices(temp_V, temp_I)
+
+        return img
 
     # ============== ============ ==============
     # ============== HANDLE EVENTS ==============
@@ -152,7 +181,19 @@ class OpenGLWidget(QOpenGLWidget):
             glm.rotate(self._object_to_world, x_angle, 1, 0, 0)
             glm.rotate(self._object_to_world, y_angle, 0, 1, 0)
 
-    def mouseReleaseEvent(self, mouse_event):
+    def mouseReleaseEvent(self, mouse_event: QMouseEvent):
+
+        # if a right click occurred, open context menu
+        if mouse_event.button() == Qt.RightButton:
+            menu = QMenu()
+            save_image = menu.addAction("Export texture")
+            action = menu.exec_(mouse_event.globalPos())
+            if action == save_image:
+                img = self._get_texture()
+                filename, _ = QFileDialog.getSaveFileName(self, "Save Texture", filter="Image File (*.png)", directory="texture.png")
+                if filename:
+                    img.save(filename)
+
         # When the mouse is released, reset the last mouse positions
         self._last_mouse_x = -1
         self._last_mouse_y = -1
