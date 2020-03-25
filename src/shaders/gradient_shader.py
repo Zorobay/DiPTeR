@@ -7,7 +7,7 @@ class GradientShader(Shader):
     def __init__(self):
         super().__init__()
         # Define names of linked GLSL shaders
-        self.VERTEX_SHADER_FILENAME = "gradient_shader_vert.glsl"
+        self.VERTEX_SHADER_FILENAME = "vertex_shader.glsl"
         self.FRAGMENT_SHADER_FILENAME = "gradient_shader_frag.glsl"
 
     def shade(self, x, y, z):

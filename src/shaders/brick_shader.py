@@ -4,17 +4,17 @@ import autograd.numpy as anp
 from numpy import ndarray
 
 import src.shaders.lib.glsl_builtins as gl
-from src.opengl.shader_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_RGBA
+from src.opengl.shader_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGBA
 from src.shaders.lib.pattern import box
 from src.shaders.shader_super import Shader, TINY_FLOAT
 
 
 class BrickShader(Shader):
+    VERTEX_SHADER_FILENAME = "vertex_shader.glsl"
+    FRAGMENT_SHADER_FILENAME = "brick_shader_frag.glsl"
 
     def __init__(self):
         super().__init__()
-        self.VERTEX_SHADER_FILENAME = "brick_shader_vert.glsl"
-        self.FRAGMENT_SHADER_FILENAME = "brick_shader_frag.glsl"
 
     def get_inputs(self) -> typing.List[typing.Tuple[str, str, str, typing.Tuple[float, float], float]]:
         return [
@@ -22,8 +22,8 @@ class BrickShader(Shader):
             ("Brick Scale", "brick_scale", INTERNAL_TYPE_FLOAT, (0.0, 100.0), 10.0),
             ("Brick Elongate", "brick_elongate", INTERNAL_TYPE_FLOAT, (0.0, 100.0), 2.0),
             ("Brick Shift", "brick_shift", INTERNAL_TYPE_FLOAT, (0., 1.), 0.5),
-            ("Brick Color", "color_brick", INTERNAL_TYPE_RGBA, (0, 0), anp.array((0.69, 0.25, 0.255, 1.))),
-            ("Mortar Color", "color_mortar", INTERNAL_TYPE_RGBA, (0, 0), anp.array((0.9, 0.9, 0.9, 1.)))
+            ("Brick Color", "color_brick", INTERNAL_TYPE_ARRAY_RGBA, (0, 0), anp.array((0.69, 0.25, 0.255, 1.))),
+            ("Mortar Color", "color_mortar", INTERNAL_TYPE_ARRAY_RGBA, (0, 0), anp.array((0.9, 0.9, 0.9, 1.)))
         ]
 
     def _brickTile(self, tile: ndarray, scale: ndarray, shift: float):

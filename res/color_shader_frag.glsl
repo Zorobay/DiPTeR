@@ -1,9 +1,9 @@
 #version 430
 
 
-uniform vec3 color;
+uniform vec4 color;
 varying vec3 vert_pos;
 
 void main() {
-    gl_FragColor = vec4(color, 1.0);
+    gl_FragColor = color;
 }
