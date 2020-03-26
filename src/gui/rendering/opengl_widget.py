@@ -1,19 +1,22 @@
 import numpy as np
-from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtCore import QTimer, Qt, pyqtSignal, QObject, QEvent
 from PyQt5.QtGui import QMouseEvent, QImage
 from PyQt5.QtWidgets import QOpenGLWidget, QMenu, QFileDialog
 from glumpy import gl, glm, gloo
 from glumpy.gloo import Program
 
-from src.gui.node_editor.material import Material
+from src.gui.node_editor.material import Material, MaterialSelector
 from src.opengl import object_vertices
 from src.shaders import OBJECT_MATRIX_NAME, VIEW_MATRIX_NAME, PROJECTION_MATRIX_NAME
-from src.shaders.brick_shader import BrickShader
+from src.shaders.color_shader import ColorShader
 
 
 class OpenGLWidget(QOpenGLWidget):
+    TEXTURE_RENDER_MODE = 0
+    FREE_RENDER_MODE = 1
+    init_done = pyqtSignal()
 
-    def __init__(self, width: int, height: int, material: Material):
+    def __init__(self, width: int, height: int, material_selector: MaterialSelector = None, render_mode: int = FREE_RENDER_MODE):
         super().__init__()
 
         # Set Widget settings
@@ -21,7 +24,8 @@ class OpenGLWidget(QOpenGLWidget):
         self.setMouseTracking(False)
 
         # Define variables to track objects
-        self.material = material
+        self._material_selector = material_selector
+        self._render_mode = render_mode
         self._program = None
         self._shader = None
         self._timer = None
@@ -65,31 +69,38 @@ class OpenGLWidget(QOpenGLWidget):
         self._init_camera()
         self._init_default_shader()
 
-        self.material.program_ready.connect(self._graph_changed)
+        if self._material_selector:
+            self._material_selector.material_ready.connect(self._material_selected)
 
         # Start an update timer to refresh rendering
         self._timer = QTimer()
         self._timer.setInterval(int(1000 / self._frame_rate))
         self._timer.timeout.connect(self.update)
         self._timer.start()
+        self.init_done.emit()
 
-    # @pyqtSlot()
-    def _graph_changed(self, program: Program):
+    def _material_selected(self, material: Material):
+        material.program_ready.connect(self.set_program)
+
+    def set_program(self, program: Program):
         self._program = program
-        self.material.bind_vertices(self._V)
+        self.set_vertices(self._V, self._I)
 
     def _init_camera(self):
         # Translate out view in negative z dir
-        glm.translate(self._world_to_view, 0, 0, -2)
+        glm.translate(self._world_to_view, 0, 0, -5)
 
     def _init_default_shader(self):
-        self._shader = BrickShader()
-        if self._I is None or self._V is None:
-            V, I = object_vertices.get_3d_cube()
-            self.set_vertices(V, I)
+        self._shader = ColorShader()
 
-        self._program = self._shader.get_program(len(self._V))
-        self._program.bind(self._V)
+        if self._render_mode == self.FREE_RENDER_MODE:
+            V, I = object_vertices.get_3d_cube()
+        elif self._render_mode == self.TEXTURE_RENDER_MODE:
+            V, I = object_vertices.get_2d_plane()
+
+        self._program = self._shader.get_program()
+        self.set_vertices(V, I)
+
         for nf, nu, t, ra, de in self._shader.get_inputs():
             self._program[nu] = de
 
@@ -104,7 +115,10 @@ class OpenGLWidget(QOpenGLWidget):
             self._program.draw(gl.GL_TRIANGLES, self._I)
 
     def resizeGL(self, w: int, h: int):
-        self._set_perspective_projection(w, h)
+        if self._render_mode == self.FREE_RENDER_MODE:
+            self._set_perspective_projection(w, h)
+        elif self._render_mode == self.TEXTURE_RENDER_MODE:
+            self._set_ortho_texture_projection(w, h)
 
     def set_vertices(self, V: np.ndarray, I: np.ndarray):
         """
@@ -121,6 +135,14 @@ class OpenGLWidget(QOpenGLWidget):
         ratio = w / float(h)
         self._view_to_projection = glm.perspective(45.0, ratio, znear=self._near_clip_z, zfar=self._far_clip_z)
         self._program[PROJECTION_MATRIX_NAME] = self._view_to_projection
+        self.update()
+
+    def _set_ortho_texture_projection(self, w: int, h: int):
+        self._object_to_world = np.eye(4, dtype=np.float32)
+        self._world_to_view = np.eye(4, dtype=np.float32)
+        # self._view_to_projection = glm.ortho(0, w, 0, h, -1, 1)
+        self._view_to_projection = np.eye(4, dtype=np.float32)
+        self.update()
 
     def _get_texture(self) -> QImage:
         # Reset the view to default so that the texture fits to the view
@@ -150,7 +172,11 @@ class OpenGLWidget(QOpenGLWidget):
     # ============== ============ ==============
     # ============== HANDLE EVENTS ==============
     # ============== ============ ==============
+
     def wheelEvent(self, wheel_event):
+        if self._render_mode == self.TEXTURE_RENDER_MODE:
+            return
+
         scroll_steps = wheel_event.angleDelta().y() / 8 / 15  # Get actual number of steps (default is 15 deg/step)
 
         view_y = self._world_to_view[-1, 2]
@@ -161,6 +187,9 @@ class OpenGLWidget(QOpenGLWidget):
         glm.translate(self._world_to_view, 0, 0, scroll_steps * self._scroll_speed * distance_speedup)
 
     def mouseMoveEvent(self, mouse_event):
+        if self._render_mode == self.TEXTURE_RENDER_MODE:
+            return
+
         if mouse_event.buttons() == Qt.LeftButton:
             x = mouse_event.x()
             y = mouse_event.y()
@@ -182,6 +211,8 @@ class OpenGLWidget(QOpenGLWidget):
             glm.rotate(self._object_to_world, y_angle, 0, 1, 0)
 
     def mouseReleaseEvent(self, mouse_event: QMouseEvent):
+        if self._render_mode == self.TEXTURE_RENDER_MODE:
+            return
 
         # if a right click occurred, open context menu
         if mouse_event.button() == Qt.RightButton:

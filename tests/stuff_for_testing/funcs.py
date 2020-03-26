@@ -7,20 +7,26 @@ from PIL import Image
 from PyQt5.QtWidgets import QApplication
 from glumpy.gloo import Program
 
-from src.opengl.shader_types import INTERNAL_TYPE_RGB, INTERNAL_TYPE_FLOAT
+from src.opengl.shader_types import INTERNAL_TYPE_ARRAY_RGB, INTERNAL_TYPE_FLOAT
 from tests.stuff_for_testing.opengl_renderer import OpenGLTestRenderer
 
 _logger = logging.getLogger(__name__)
 
+
 def randomize_inputs(inputs: typing.List[typing.Any]) -> typing.List[typing.Any]:
     output = []
-    for _,_,internal_type,ran,default in inputs:
-        if INTERNAL_TYPE_RGB in internal_type:
-            output.append(np.random.random(default.shape))
-        elif internal_type == INTERNAL_TYPE_FLOAT:
-            output.append(np.random.uniform(ran[0],ran[1]))
+    for _, _, internal_type, ran, default in inputs:
+        output.append(randomize_input(internal_type, ran, default))
 
     return output
+
+
+def randomize_input(internal_type, range, default):
+    if INTERNAL_TYPE_ARRAY_RGB in internal_type:
+        return np.random.random(default.shape)
+    elif internal_type == INTERNAL_TYPE_FLOAT:
+        return np.random.uniform(range[0], range[1])
+
 
 def save_images(filenames, images):
     now = datetime.datetime.now().strftime("%H-%M-%S")
@@ -36,7 +42,7 @@ def render_opengl(width, height, program: Program):
     renderer = OpenGLTestRenderer(width, height, program)
     renderer.show()
     app.exec_()
-    return renderer.rendered_tex
+    return renderer.get_image()
 
 
 def assert_abs_mean_diff(render1: np.ndarray, render2: np.ndarray, msg="Test failed, as absolute mean difference of {} was higher than allowed!",

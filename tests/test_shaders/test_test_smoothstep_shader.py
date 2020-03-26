@@ -1,6 +1,6 @@
 from src.opengl.object_vertices import get_2d_plane
 from tests.stuff_for_testing.funcs import render_opengl, save_images, assert_abs_mean_diff
-from tests.stuff_for_testing.test_shaders.test_smoothstep_shader import TestSmoothstepShader
+from tests.stuff_for_testing.shaders.test_smoothstep_shader import TestSmoothstepShader
 from src.misc.render_funcs import render
 
 
@@ -9,7 +9,7 @@ class TestTestSmoothstepShader:
     def setup(self):
         self.V, self.I = get_2d_plane()
         self.shader = TestSmoothstepShader()
-        self.program = self.shader.get_program(len(self.V), set_defaults=True)
+        self.program = self.shader.get_program()
         self.program.bind(self.V)
 
         self.default_args = [t[-1] for t in self.shader.get_inputs()]

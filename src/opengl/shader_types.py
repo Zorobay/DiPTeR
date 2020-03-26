@@ -1,9 +1,9 @@
 """
 This document contains type translations between GLSL, numpy and internal types
 """
-import numpy as np
 import OpenGL.raw.GL.VERSION.GL_2_0 as gl_types_2
 import OpenGL.raw.GL.VERSION.GL_4_3 as gl_types_4
+import numpy as np
 from OpenGL.constant import IntConstant
 
 
@@ -41,19 +41,20 @@ def from_gl_type(gl_type: IntConstant) -> Type:
 
 # ----- Internal Types --------
 
+ARRAY = "type_array_"
 INTERNAL_TYPE_FLOAT = "type_float"
-INTERNAL_TYPE_FLOAT_VEC = "type_float_vec"
-INTERNAL_TYPE_RGB = "type_rgb"
-INTERNAL_TYPE_RGBA = "type_rgba"
+INTERNAL_TYPE_ARRAY_FLOAT = ARRAY + "float"
+INTERNAL_TYPE_ARRAY_RGB = ARRAY + "rgb"
+INTERNAL_TYPE_ARRAY_RGBA = ARRAY + "rgba"
 
 # ----- Translations from GLSL --------
 GL_TO_TYPE = {
     gl_types_4.GL_FLOAT: Type(gl_types_4.GL_FLOAT, np.float32, INTERNAL_TYPE_FLOAT),
-    gl_types_2.GL_FLOAT_VEC3: Type(gl_types_2.GL_FLOAT_VEC3, np.ndarray, INTERNAL_TYPE_FLOAT_VEC)
+    gl_types_2.GL_FLOAT_VEC3: Type(gl_types_2.GL_FLOAT_VEC3, np.ndarray, INTERNAL_TYPE_ARRAY_FLOAT)
 }
 
 # ----- Translations from Internal -----
 INTERNAL_TO_TYPE = {
     INTERNAL_TYPE_FLOAT: GL_TO_TYPE[gl_types_4.GL_FLOAT],
-    INTERNAL_TYPE_FLOAT_VEC: GL_TO_TYPE[gl_types_2.GL_FLOAT_VEC3]
+    INTERNAL_TYPE_ARRAY_FLOAT: GL_TO_TYPE[gl_types_2.GL_FLOAT_VEC3]
 }

@@ -1,7 +1,7 @@
 from src.misc.render_funcs import render
 from src.opengl.object_vertices import get_2d_plane
 from tests.stuff_for_testing.funcs import render_opengl, save_images, assert_abs_mean_diff
-from tests.stuff_for_testing.test_shaders.test_frag_interpolation_shader import TestFragInterpolationShader
+from tests.stuff_for_testing.shaders.test_frag_interpolation_shader import TestFragInterpolationShader
 
 
 class TestTestFragInterpolationShader:
@@ -9,7 +9,7 @@ class TestTestFragInterpolationShader:
     def setup(self):
         self.V, self.I = get_2d_plane()
         self.shader = TestFragInterpolationShader()
-        self.program = self.shader.get_program(len(self.V), set_defaults=True)
+        self.program = self.shader.get_program()
         self.program.bind(self.V)
 
         self.default_args = [t[-1] for t in self.shader.get_inputs()]

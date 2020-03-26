@@ -2,8 +2,12 @@ import logging
 import re
 from abc import ABC, abstractmethod
 from pathlib import Path
+import numpy as np
+import torch
 
 from glumpy import gloo
+from glumpy.gloo import Program
+from torch import Tensor
 
 from src.misc import string_funcs
 from src.opengl.shader_types import INTERNAL_TYPE_ARRAY_RGBA
@@ -44,9 +48,9 @@ class Shader(ABC):
         # Load and set program
         self._set_program()
 
-    def get_vertex_shader(self) -> gloo.VertexShader:
+    def get_vertex_shader(self, new_instance=False) -> gloo.VertexShader:
         """Compiles the vertex shader code associated with this shader and returns it in a glumpy VertexShader object."""
-        if not self._vertex_shader:
+        if not self._vertex_shader or new_instance:
             assert self.__class__.VERTEX_SHADER_FILENAME, "Name of GLSL vertex shader need to be set by subclass"
             vertex_shader_path = Path(Path.cwd() / "res" / self.VERTEX_SHADER_FILENAME)
 
@@ -57,13 +61,13 @@ class Shader(ABC):
                 _logger.error("Could not find vertex shader at path %s.", vertex_shader_path)
                 raise e
 
-            self._vertex_shader = gloo.VertexShader(vertex_code, version=self._glsl_version)
+            return gloo.VertexShader(vertex_code, version=self._glsl_version)
 
         return self._vertex_shader
 
-    def get_fragment_shader(self) -> gloo.FragmentShader:
+    def get_fragment_shader(self, new_instance=False) -> gloo.FragmentShader:
         """Compiles the fragment shader code associated with this shader and returns it in a glumpy FragmentShader object."""
-        if not self._fragment_shader:
+        if not self._fragment_shader or new_instance:
             assert self.__class__.FRAGMENT_SHADER_FILENAME, "Name of GLSL fragment shader need to be set by subclass"
             fragment_shader_path = Path(Path.cwd() / "res" / self.FRAGMENT_SHADER_FILENAME)
 
@@ -74,25 +78,39 @@ class Shader(ABC):
                 _logger.error("Could not find fragment shader at path %s.", fragment_shader_path)
                 raise e
 
-            self._fragment_shader = gloo.FragmentShader(fragment_code, version=self._glsl_version)
+            return gloo.FragmentShader(fragment_code, version=self._glsl_version)
 
         return self._fragment_shader
 
     def get_program(self) -> gloo.Program:
         return self._program
 
+    def get_program_copy(self):
+        vertex_shader = self.get_vertex_shader(new_instance=True)
+        fragment_shader = self.get_fragment_shader(new_instance=True)
+        program = gloo.Program(vertex_shader, fragment_shader, count=0, version=self._glsl_version)
+
+        # Copy uniforms
+        uniforms = self._program.all_uniforms
+        for u, _ in uniforms:
+            program[u] = self._program[u]
+
+        return program
+
     def _set_program(self):
         """Compiles the full program with vertex and fragment shader and returns it in a glumpy Program object"""
-        vertex_shader = self.get_vertex_shader()
-        fragment_shader = self.get_fragment_shader()
-        self._program = gloo.Program(vertex_shader, fragment_shader, count=0, version=self._glsl_version)
+        self._vertex_shader = self.get_vertex_shader()
+        self._fragment_shader = self.get_fragment_shader()
+        self._program = gloo.Program(self._vertex_shader, self._fragment_shader, count=0, version=self._glsl_version)
 
         self.set_defaults()
 
-    def set_defaults(self):
-        if self._program is not None:
+    def set_defaults(self, program: Program = None):
+        program = self._program if program is None else program
+
+        if program is not None:
             for _, uniform, _, _, default in self.get_inputs():
-                self._program[uniform] = default
+                program[uniform] = default
 
     def set_input_by_uniform(self, uniform: str, value: typing.Any):
         try:
@@ -124,6 +142,20 @@ class Shader(ABC):
 
         return params
 
+    def get_parameters_list_torch(self, requires_grad=False):
+
+        params = []
+
+        for _, uniform, internal_type, _, _ in self.get_inputs():
+            val = self._program[uniform]
+            if not "array" in internal_type:
+                val = val[0]  # Uniforms are stored in array even if they're single floats
+
+            tensor = torch.from_numpy(np.array(val))
+            tensor.requires_grad = requires_grad
+            params.append(tensor)
+
+        return params
 
     @abstractmethod
     def get_inputs(self) -> typing.List[typing.Tuple[str, str, str, typing.Tuple[float, float], typing.Any]]:
@@ -131,7 +163,6 @@ class Shader(ABC):
 
             :return: a tuple on the form (formatted name, uniform name, internal type, (min value, max value), default value)
         """
-
 
     # TODO make abstract (for now this is true for all shaders
     def get_outputs(self) -> typing.List[typing.Tuple[str, str]]:
@@ -142,7 +173,6 @@ class Shader(ABC):
         return [
             ("Color", INTERNAL_TYPE_ARRAY_RGBA)
         ]
-
 
     @abstractmethod
     def shade(self, vert_pos: ndarray, *args) -> ndarray:

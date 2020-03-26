@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow
 from src.misc.render_funcs import render
 from src.opengl.object_vertices import get_2d_plane
 from src.shaders.brick_shader import BrickShader
-from tests.stuff_for_testing.funcs import save_images, render_opengl, assert_abs_mean_diff, randomize_inputs
+from tests.stuff_for_testing.funcs import save_images, render_opengl, assert_abs_mean_diff, randomize_inputs, randomize_input
 from tests.stuff_for_testing.opengl_renderer import OpenGLTestRenderer
 
 _logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ class TestBrickShader:
     def setup(self):
         self.shader = BrickShader()
         self.V, self.I = get_2d_plane()
-        self.program = self.shader.get_program(len(self.V), set_defaults=True)
+        self.program = self.shader.get_program()
         #self.program.bind(self.V)
         self.default_args = [t[-1] for t in self.shader.get_inputs()]
 
@@ -72,27 +72,13 @@ class TestBrickShader:
         py, op = self.render_both()
         assert_abs_mean_diff(py, op, "Average pixel difference of {} is too large when 'brick_elongate' is at 100 (max)!")
 
-    # def test_brick_random(self):
-    #     self.W = 100
-    #     self.H = 100
-    #
-    #     def handle(texture):
-    #         rand_inputs = randomize_inputs(self.shader.get_inputs())
-    #         for tup, input_widgets in zip(self.shader.get_inputs(), rand_inputs):
-    #             self.program[tup[1]] = input_widgets
-    #
-    #         python_render = render(self.W, self.H, self.shader.shade, *self.default_args)
-    #         assert_abs_mean_diff(python_render, 3)
-    #
-    #     app = QApplication(sys.argv)
-    #     renderer = OpenGLTestRenderer(self.W, self.H, self.program, frame_count=-1)
-    #
-    #     window = QMainWindow()
-    #     window.setCentralWidget(renderer)
-    #     window.show()
-    #     renderer.render_ready.connect(lambda x: handle(x))
-    #
-    #     #renderer.show()
-    #     #window.callback_pb_load()
-    #     renderer.renderN(40)
-    #     #renderer.close()
+    def test_brick_random(self):
+        self.W = 100
+        self.H = 100
+
+        for _,uni,internal_type, ran,default in self.shader.get_inputs():
+            self.shader.set_input_by_uniform(uni, randomize_input(internal_type, ran, default))
+
+        py, op = self.render_both()
+        assert_abs_mean_diff(py, op, "Average pixel difference of {} is too large when randomizing input!", test_name="test_brick_random")
+

@@ -3,10 +3,10 @@ from src.shaders.shader_super import *
 
 class TestLinesShader(Shader):
 
+    FRAGMENT_SHADER_FILENAME = "test/test_lines_frag.glsl"
+    VERTEX_SHADER_FILENAME = "test/vertex_shader.glsl"
     def __init__(self):
         super().__init__()
-        self.FRAGMENT_SHADER_FILENAME = "test/test_lines_frag.glsl"
-        self.VERTEX_SHADER_FILENAME = "test/test_vert.glsl"
 
     def get_inputs(self) -> typing.List[typing.Tuple[str, str, str, typing.Tuple[float, float], typing.Any]]:
         return []

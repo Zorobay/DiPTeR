@@ -8,6 +8,9 @@ freetype.dll
 # Output folder for test images
 test_image_output/
 
+# Test save image
+temp_render.png
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

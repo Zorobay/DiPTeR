@@ -4,24 +4,28 @@ from PyQt5 import QtGui
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtWidgets import QGraphicsView, QMenu
 
-from src.gui.node_editor.material import Material
+from src.gui.node_editor.material import Material, MaterialSelector
+from src.gui.node_editor.node_scene import NodeScene
+from src.gui.node_editor.output_node import OutputNode
 from src.misc import string_funcs, array_funcs
 from src.shaders.brick_shader import BrickShader
 from src.shaders.color_shader import ColorShader
 from src.shaders.shader_super import Shader
-from tests.stuff_for_testing.test_shaders.test_lines_shader import TestLinesShader
+from tests.stuff_for_testing.shaders.test_lines_shader import TestLinesShader
 
 SHADERS_TO_CONTEXT_MENU = [BrickShader, ColorShader, TestLinesShader]
 
 
 class NodeView(QGraphicsView):
 
-    def __init__(self, material:Material, *args):
-        super().__init__(*args)
+    def __init__(self, material_selector: MaterialSelector, scene: NodeScene):
+        super().__init__(scene)
 
-        self._material = material
-        self._node_scene = self.scene()
+        self._material_selector = material_selector
+        self._node_scene = scene
         self._add_node_menu = AddNodeMenu()
+
+        self._node_scene.addItem(OutputNode(self._node_scene))
 
     def contextMenuEvent(self, cm_event):
         pos = cm_event.pos()
@@ -40,7 +44,7 @@ class NodeView(QGraphicsView):
     def _spawn_add_node_menu(self, pos: QPoint):
         shader: typing.Type[Shader] = self._add_node_menu.execute(pos)
         if shader is not None:
-            self._material.new_node(shader)
+            self._material_selector.add_node(shader)
 
 
 class AddNodeMenu(QMenu):
