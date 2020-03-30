@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from PIL import Image
 from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog
+from autograd import grad
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
@@ -38,7 +39,7 @@ class TextureMatcher(QWidget):
 
     def _init_widget(self):
         self._match_button.setEnabled(False)
-        self._match_button.clicked.connect(self._run_gradient_descent)
+        self._match_button.clicked.connect(self._run_gradient_descent_torch)
 
         self._load_texture_button.clicked.connect(self._load_texture)
 
@@ -74,7 +75,7 @@ class TextureMatcher(QWidget):
         program = self._shader.get_program_copy()
         self._openGL.set_program(program)
 
-    def _run_gradient_descent(self):
+    def _run_gradient_descent_torch(self):
         width, height = 50, 50
         lr = 0.15
         decay = 0.97
@@ -91,9 +92,23 @@ class TextureMatcher(QWidget):
             self._loss_axis.plot(losses)
             self._figure_canvas.draw()
 
-        gradient_descent(init_params, lr=lr, lr_decay=decay, max_iter=max_iter, early_stopping_thresh=0.01, iter_callback=callback)
+        gradient_descent_torch(init_params, lr=lr, lr_decay=decay, max_iter=max_iter, early_stopping_thresh=0.01, iter_callback=callback)
 
-    # Sweet! Now, can we use gradient descent on this loss to find the optimal values of col_low and col_high?
+    def _run_gradient_descent(self):
+        width, height = 50, 50
+        lr = 0.15
+        decay = 0.97
+        max_iter = 100
+
+        global truth
+        global f
+        truth = np.asarray(self._image_to_match.resize((width, height))) / 255.
+        f = self._shader.shade
+
+        loss_grad = grad()
+        init_params = self._shader.get_parameters_list()
+
+        gradient_descent(init_params, lr=lr, lr_decay=decay, max_iter=max_iter, early_stopping_thresh=0.01)
 
 
 global truth
@@ -135,29 +150,47 @@ def loss_torch(*args):
 
     return loss_sum / (width * height * 4)
 
+def gradient_descent(loss_grad, init_params, lr=0.01, lr_decay=0.99, max_iter=150, early_stopping_thresh=0.01):
+    params = init_params
+    loss_hist = []
 
-def gradient_descent(init_params, lr=0.01, lr_decay=0.99, max_iter=150, early_stopping_thresh=0.01, iter_callback: typing.Callable = None):
+    for i in range(max_iter):
+        gradient = loss_grad(*params)
+        params.subtract([lr * g for g in gradient])
+        new_loss = loss(*params)
+        loss_hist.append(new_loss)
+
+        print("{}. new loss: {:.5f}, lr: {:.5f}, Params: {}".format(i, new_loss, lr, params))
+        if new_loss <= early_stopping_thresh:
+            return params, loss_hist
+        lr = lr * lr_decay
+
+    return params, loss_hist
+
+def gradient_descent_torch(init_params, lr=0.01, lr_decay=0.99, max_iter=150, early_stopping_thresh=0.01, iter_callback: typing.Callable = None):
     params = init_params
     loss_hist = []
 
     for i in range(max_iter):
         new_loss = loss_torch(*params)
+        grads = torch.autograd.grad(outputs=new_loss, inputs=params, create_graph=True, retain_graph=True, allow_unused=True)
         loss_hist.append(new_loss)
 
-        for p in params:
-            p.retain_grad()
-        new_loss.backward(retain_graph=True)
+        # for p in params:
+        #     p.retain_grad()
+        # new_loss.backward(params, retain_graph=True)
 
         print("{}. new loss: {:.5f}, lr: {:.5f}, Params: {}".format(i, new_loss, lr, params))
 
         with torch.no_grad():
-            for p in params:
-                p -= lr * p.grad
+            for p,g in zip(params, grads):
+                if g is not None:
+                    p -= lr * g
 
             lr *= lr_decay
 
-            for p in params:
-                p.grad.zero_()
+            # for p in params:
+            #     p.grad.zero_()
 
         if new_loss <= early_stopping_thresh:
             return params, loss_hist

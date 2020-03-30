@@ -5,7 +5,9 @@ from PyQt5.QtWidgets import QOpenGLWidget, QMenu, QFileDialog
 from glumpy import gl, glm, gloo
 from glumpy.gloo import Program
 
-from src.gui.node_editor.material import Material, MaterialSelector
+from src.gui.node_editor.control_center import ControlCenter
+from src.gui.node_editor.material import Material
+from src.gui.widgets.material_selector import MaterialSelector
 from src.opengl import object_vertices
 from src.shaders import OBJECT_MATRIX_NAME, VIEW_MATRIX_NAME, PROJECTION_MATRIX_NAME
 from src.shaders.color_shader import ColorShader
@@ -16,7 +18,7 @@ class OpenGLWidget(QOpenGLWidget):
     FREE_RENDER_MODE = 1
     init_done = pyqtSignal()
 
-    def __init__(self, width: int, height: int, material_selector: MaterialSelector = None, render_mode: int = FREE_RENDER_MODE):
+    def __init__(self, width: int, height: int, cc: ControlCenter = None, render_mode: int = FREE_RENDER_MODE):
         super().__init__()
 
         # Set Widget settings
@@ -24,7 +26,7 @@ class OpenGLWidget(QOpenGLWidget):
         self.setMouseTracking(False)
 
         # Define variables to track objects
-        self._material_selector = material_selector
+        self.cc = cc
         self._render_mode = render_mode
         self._program = None
         self._shader = None
@@ -69,8 +71,7 @@ class OpenGLWidget(QOpenGLWidget):
         self._init_camera()
         self._init_default_shader()
 
-        if self._material_selector:
-            self._material_selector.material_ready.connect(self._material_selected)
+        self.cc.active_material_changed.connect(self._subscribe_to_material)
 
         # Start an update timer to refresh rendering
         self._timer = QTimer()
@@ -79,7 +80,7 @@ class OpenGLWidget(QOpenGLWidget):
         self._timer.start()
         self.init_done.emit()
 
-    def _material_selected(self, material: Material):
+    def _subscribe_to_material(self, material: Material):
         material.program_ready.connect(self.set_program)
 
     def set_program(self, program: Program):

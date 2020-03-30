@@ -53,8 +53,9 @@ class InputModule(QWidget):
 
         self.widget.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.widget.input_changed.connect(self._input_changed)
-        self._layout.addWidget(self._label_widget)
         self._layout.addWidget(self.widget)
+
+        self._layout.addWidget(self._label_widget)
 
         self.setLayout(self._layout)
 

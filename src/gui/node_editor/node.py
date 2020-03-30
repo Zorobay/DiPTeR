@@ -5,32 +5,38 @@ import uuid
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QRectF, pyqtSignal
 from PyQt5.QtGui import QBrush, QFont, QColor, QPalette, QPainter
-from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsWidget, QSpacerItem, QLabel
+from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsWidget
 from glumpy.gloo import Program
 
-from src.gui.widgets.color_input import ColorInput
-from src.gui.widgets.float_input import FloatInput
-from src.gui.widgets.input_module import InputModule
+# from src.gui.node_editor.control_center import ControlCenter
+from src.gui.node_editor.edge import Edge
 from src.gui.node_editor.layouts import GraphicsGridLayout
 from src.gui.node_editor.node_scene import NodeScene
 from src.gui.node_editor.socket import Socket
+from src.gui.widgets.color_input import ColorInput
+from src.gui.widgets.float_input import FloatInput
+from src.gui.widgets.input_module import InputModule
 from src.gui.widgets.output_module import OutputModule
-from src.opengl.shader_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB, INTERNAL_TYPE_ARRAY_RGBA
+from src.gui.widgets.shader_input import ShaderInput
+from src.opengl.shader_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB, INTERNAL_TYPE_ARRAY_RGBA, INTERNAL_TYPE_SHADER
 from src.shaders.shader_super import Shader
 
 
-class NodeGraphics(QGraphicsWidget):
+class Node(QGraphicsWidget):
     """This abstract class defines the look and feel of a Node. Specialized classes can subclass this instead of the Node class.
     """
-    edge_started = pyqtSignal(uuid.UUID, object)
+    edge_started = pyqtSignal(uuid.UUID, Edge)
+    edge_ended = pyqtSignal(uuid.UUID, Edge)
 
     @abc.abstractmethod
-    def __init__(self, scene: NodeScene, title: str, parent=None):
+    def __init__(self, node_scene: NodeScene, title: str, parent=None):
         super().__init__(parent)
 
-        self._scene = scene
+        self.node_scene = node_scene
         self._title = title
         self._id = uuid.uuid4()
+
+        self._sockets = {}
 
         # define Node properties
         self._input_index = 2
@@ -89,6 +95,31 @@ class NodeGraphics(QGraphicsWidget):
         self._title_item.setTextWidth(self._width - self._padding)
         self.title = self._title
 
+    def get_socket_type(self, socket_id: uuid.UUID) -> int:
+        return self._sockets[socket_id].socket_type
+
+    def has_socket(self, socket_id: uuid.UUID) -> bool:
+        return socket_id in self._sockets
+
+    def create_input_socket(self) -> Socket:
+        return self._create_socket(Socket.SOCKET_INPUT)
+
+    def create_output_socket(self) -> Socket:
+        return self._create_socket(Socket.SOCKET_OUTPUT)
+
+    def _create_socket(self, socket_type: int) -> Socket:
+        socket = Socket(self, socket_type)
+        socket.edge_started.connect(self._spawn_edge)
+        socket.edge_released.connect(self._release_edge)
+        self._sockets[socket.id] = socket
+        return socket
+
+    def _spawn_edge(self, edge):
+        self.edge_started.emit(self.id, edge)
+
+    def _release_edge(self, edge):
+        self.edge_ended.emit(self.id, edge)
+
     def boundingRect(self) -> QtCore.QRectF:
         return QRectF(0, 0, self._width, self._height).normalized()
 
@@ -98,11 +129,11 @@ class NodeGraphics(QGraphicsWidget):
         painter.drawRoundedRect(0, 0, self._width, self._height, self._rounding, 1)
 
 
-class Node(NodeGraphics):
+class ShaderNode(Node):
     input_changed = pyqtSignal(uuid.UUID)
 
-    def __init__(self, scene: NodeScene, title: str, shader: Shader, parent=None):
-        super().__init__(scene, title, parent)
+    def __init__(self, mat, title: str, shader: Shader, parent=None):
+        super().__init__(mat, title, parent)
 
         # define data properties
         self._input_modules = {}
@@ -127,15 +158,17 @@ class Node(NodeGraphics):
         self._shader.set_input_by_uniform(uniform_var, value)
         self.input_changed.emit(self.id)
 
-    def add_input(self, input_name: str, uniform_var: str, internal_type: str, input_range: (float, float), default_value: typing.Any):
-        socket = Socket()
-        socket.edge_started.connect(lambda s: self.edge_started.emit(self.id, s))
+    def add_input(self, input_name: str, uniform_var: str, internal_type: str, input_range: (float, float) = (0, 1),
+                  default_value: typing.Any = None):
+        socket = self.create_input_socket()
 
         if internal_type == INTERNAL_TYPE_FLOAT:
             # Create an widgets widget
             input_widget = FloatInput(internal_type, min_=input_range[0], max_=input_range[1])
         elif internal_type == INTERNAL_TYPE_ARRAY_RGB or INTERNAL_TYPE_ARRAY_RGBA:
             input_widget = ColorInput(internal_type)
+        elif internal_type == INTERNAL_TYPE_SHADER:
+            input_widget = ShaderInput(internal_type)
         else:
             raise TypeError("Internal type {} is not yet supported!".format(internal_type))
 
@@ -145,7 +178,7 @@ class Node(NodeGraphics):
         module.set_label_palette(self._input_label_palette)
         module.set_default_value(default_value)
 
-        module_item = self._scene.addWidget(module)
+        module_item = self.node_scene.addWidget(module)
         self._master_layout.addItem(socket, self._input_index, 0)
         self._master_layout.addItem(module_item, self._input_index, 1)
         self._master_layout.setRowAlignment(self._input_index, Qt.AlignBottom)
@@ -153,11 +186,10 @@ class Node(NodeGraphics):
         self._height = self._input_index * 40
 
     def add_output(self, output_name: str, internal_type: str):
-        socket = Socket()
+        socket = self.create_output_socket()
         output_module = OutputModule(output_name)
         output_module.set_label_palette(self._input_label_palette)
-        module_item = self._scene.addWidget(output_module)
+        module_item = self.node_scene.addWidget(output_module)
 
         self._master_layout.addItem(module_item, 1, 1)
         self._master_layout.addItem(socket, 1, 2)
-        #self._output_socket_layout.addItem(socket)

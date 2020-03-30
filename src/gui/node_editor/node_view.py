@@ -1,14 +1,14 @@
 import typing
 
-import numpy as np
 from PyQt5 import QtGui
 from PyQt5.QtCore import Qt, QPoint, QPointF
 from PyQt5.QtGui import QWheelEvent, QMouseEvent
-from PyQt5.QtWidgets import QGraphicsView, QMenu, QGraphicsSceneMouseEvent
+from PyQt5.QtWidgets import QGraphicsView, QMenu, QGraphicsSceneMouseEvent, QMessageBox
 
-from src.gui.node_editor.material import MaterialSelector
-from src.gui.node_editor.node_scene import NodeScene
-from src.gui.node_editor.output_node import OutputNode
+from src.gui.node_editor.control_center import ControlCenter
+from src.gui.node_editor.edge import Edge
+from src.gui.node_editor.material import Material
+from src.gui.widgets.material_selector import MaterialSelector
 from src.misc import string_funcs, array_funcs
 from src.shaders.brick_shader import BrickShader
 from src.shaders.color_shader import ColorShader
@@ -20,21 +20,24 @@ SHADERS_TO_CONTEXT_MENU = [BrickShader, ColorShader, TestLinesShader]
 
 class NodeView(QGraphicsView):
 
-    def __init__(self, material_selector: MaterialSelector, scene: NodeScene):
-        super().__init__(scene)
+    def __init__(self, cc: ControlCenter):
+        super().__init__(None)
+
+        self.cc = cc
 
         # define NodeView properties
         self._pan_last_pos = None
+        self.is_drawing_edge = False
+        self._current_edge = None
 
-        self._material_selector = material_selector
-        self._node_scene = scene
+        self._node_scene = None
         self._add_node_menu = AddNodeMenu()
 
         self._init_view()
 
     def _init_view(self):
         self.setDragMode(self.NoDrag)
-        self._node_scene.addItem(OutputNode(self._node_scene))
+        self.cc.active_material_changed.connect(self._set_scene_from_material)
 
     def contextMenuEvent(self, cm_event):
         pos = cm_event.pos()
@@ -53,7 +56,36 @@ class NodeView(QGraphicsView):
     def _spawn_add_node_menu(self, pos: QPoint):
         shader: typing.Type[Shader] = self._add_node_menu.execute(pos)
         if shader is not None:
-            self._material_selector.add_node(shader)
+            res = self.cc.new_node(shader)
+            if not res:
+                msg = QMessageBox(self)
+                msg.setWindowTitle("No Material Selected")
+                msg.setText("Please select or create a new material before adding nodes.")
+                msg.setIcon(QMessageBox.Information)
+                msg.exec_()
+
+    def draw_edge(self, edge: Edge):
+        scene = self.cc.active_scene
+        if scene:
+            scene.addItem(edge)
+            self._current_edge = edge
+            self.is_drawing_edge = True
+
+    def cancel_edge(self, edge: Edge):
+        scene = self.cc.active_scene
+        if edge == self._current_edge and scene:
+            scene.removeItem(edge)
+            self._current_edge = None
+            self.is_drawing_edge = False
+
+    def addWidget(self, *args, **kwargs):
+        self.scene().addWidget(*args, **kwargs)
+
+    def addItem(self, *args, **kwargs):
+        self.scene().addItem(*args, **kwargs)
+
+    def _set_scene_from_material(self, material: Material):
+        self.setScene(self.cc.active_scene)
 
     def wheelEvent(self, wheel_event: QWheelEvent):
         scroll_steps = wheel_event.angleDelta().y() / 8 / 15  # Get actual number of steps (default is 15 deg/step)
@@ -74,13 +106,17 @@ class NodeView(QGraphicsView):
         else:
             super().mousePressEvent(event)
 
-    def mouseReleaseEvent(self, event: QMouseEvent):
-        # Handle end of panning
-        if event.button() == Qt.MiddleButton:
-            self.setCursor(Qt.ArrowCursor)
-            event.accept()
-        else:
-            event.ignore()
+    # def mouseReleaseEvent(self, event: QMouseEvent):
+    #     # Handle end of panning
+    #     if event.button() == Qt.MiddleButton:
+    #         self.setCursor(Qt.ArrowCursor)
+    #         event.accept()
+    #     elif event.button() == Qt.LeftButton and self.is_drawing_edge:
+    #         print("Mouse released on view while drawing edge!")
+    #         event.accept()
+    #     else:
+    #         print("mouse released on node view")
+    #         #event.ignore()
 
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
         if event.buttons() == Qt.MiddleButton:

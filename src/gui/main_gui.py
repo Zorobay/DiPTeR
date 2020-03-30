@@ -1,49 +1,38 @@
 import logging
 
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QApplication, QMainWindow, QDockWidget
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QApplication, QMainWindow
 
-from src.gui.node_editor.material import Material, MaterialSelector
-from src.gui.node_editor.node_scene import NodeScene
+from src.gui.node_editor.control_center import ControlCenter
+from src.gui.widgets.material_selector import MaterialSelector
 from src.gui.node_editor.node_view import NodeView
 from src.gui.rendering.opengl_settings_widget import OpenGLSettingsWidget
 from src.gui.rendering.opengl_widget import OpenGLWidget
-from src.gui.rendering.python_rendering_widget import PythonRenderingWidget
 
 
 class MainWidget(QWidget):
     def __init__(self):
         super().__init__()
 
+        self.cc = ControlCenter()
+
         # Define GUI layouts
         self.base_layout = QVBoxLayout()
         self.grid_layout = QGridLayout()
 
         # Define GUI elements
-        self.node_scene = NodeScene()
-        self.material_selector = MaterialSelector(self.node_scene)
-        self.node_view = NodeView(self.material_selector, self.node_scene)
+        self.material_selector = MaterialSelector(self.cc)
+        self.node_view = NodeView(self.cc)
 
-        #self.render_window = QWidget(width=700, height=400)
-        self.openGL = OpenGLWidget(400, 400, self.material_selector)
-        self.opengl_settings = OpenGLSettingsWidget(self.material_selector, self.openGL)
-        #self.python_renderer = PythonRenderingWidget(self.material)
+        self.openGL = OpenGLWidget(400, 400, self.cc)
+        self.opengl_settings = OpenGLSettingsWidget(self.cc, self.openGL)
 
         self._init_widget()
 
     def _init_widget(self):
-        self.grid_layout.addWidget(self.material_selector, 0,0,1,1)
+        self.grid_layout.addWidget(self.material_selector, 0, 0, 1, 1)
         self.grid_layout.addWidget(self.node_view, 1, 0, 1, 1)
-        self.grid_layout.addWidget(self.openGL, 0,1,2,1)
-        self.grid_layout.addWidget(self.opengl_settings, 0,2,2,1)
-
-        #self.render_window.setLayout(QGridLayout())
-        #self.render_window.layout()
-
-        #self.render_window.layout().addWidget(self.openGL, 0, 1, 2, 1)
-        #self.render_window.layout().addWidget(self.opengl_settings, 0, 2, 2, 1)
-        #self.render_window.layout().addWidget(self.python_renderer, 0, 1, 2, 1)
-
-        #self.grid_layout.addWidget(self.render_window, 0, 1)
+        self.grid_layout.addWidget(self.openGL, 0, 1, 2, 1)
+        self.grid_layout.addWidget(self.opengl_settings, 0, 2, 2, 1)
 
         self.setLayout(self.grid_layout)
 

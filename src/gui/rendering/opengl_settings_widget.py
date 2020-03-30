@@ -7,7 +7,8 @@ from PIL import Image
 from PyQt5.QtWidgets import QWidget, QGridLayout, QComboBox, QLabel, QPushButton, QFileDialog, QVBoxLayout, QHBoxLayout
 from autograd import grad
 
-from src.gui.node_editor.material import MaterialSelector
+from src.gui.node_editor.control_center import ControlCenter
+from src.gui.widgets.material_selector import MaterialSelector
 from src.gui.node_editor.texture_matcher import TextureMatcher
 from src.gui.rendering.opengl_widget import OpenGLWidget
 from src.opengl import object_vertices
@@ -42,10 +43,10 @@ class OpenGLSettingsWidget(QWidget):
     # Define defaults
     OBJECT_VERTICES_DEFAULT = 0
 
-    def __init__(self, material_selector: MaterialSelector, open_gl_widget: OpenGLWidget, parent=None):
+    def __init__(self, cc: ControlCenter, open_gl_widget: OpenGLWidget, parent=None):
         super().__init__(parent)
 
-        self._material_selector = material_selector
+        self.cc = cc
         self._open_gl_widget = open_gl_widget
 
         # Define gui component variables
@@ -87,7 +88,7 @@ class OpenGLSettingsWidget(QWidget):
         self._open_gl_widget.set_vertices(V, I)
 
     def _match_texture(self):
-        mat = self._material_selector.active_material
+        mat = self.cc.active_material
         if mat:
             shader = mat.shader
             if shader:

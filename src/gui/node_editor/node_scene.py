@@ -1,7 +1,10 @@
 import logging
 
+from PyQt5.QtCore import Qt, QPointF
 from PyQt5.QtGui import QBrush, QColor
-from PyQt5.QtWidgets import QGraphicsScene
+from PyQt5.QtWidgets import QGraphicsScene, QGraphicsSceneMouseEvent
+
+from src.gui.node_editor.edge import Edge
 
 _logger = logging.getLogger(__name__)
 
@@ -12,7 +15,7 @@ class NodeScene(QGraphicsScene):
     def __init__(self):
         super().__init__()
 
-        self._is_drawing_edge = False
+        self.is_drawing_edge = False
         self._current_edge = None
 
         self._init_scene()
@@ -20,6 +23,12 @@ class NodeScene(QGraphicsScene):
     def _init_scene(self):
         self.setBackgroundBrush(QBrush(QColor(140, 140, 140, 255)))
 
+
+    # def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
+    #     if event.buttons() == Qt.LeftButton:
+    #         print("Dragging on Scene")
+    #         event.accept()
+    #
     # def mousePressEvent(self, QMouseEvent):
     #     super().mousePressEvent(QMouseEvent)
     #
