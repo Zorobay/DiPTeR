@@ -113,11 +113,28 @@ class Shader(ABC):
                 program[uniform] = default
 
     def set_input_by_uniform(self, uniform: str, value: typing.Any):
+        """
+        Set the value of a uniform of the Fragment Shader in the program held by this Shader. Raises an AttributeError if the uniform is not valid.
+        :param uniform: the name of uniform. Must match the uniform defined in the GLSL shader.
+        :param value: the new value of the uniform.
+        """
         try:
             self._program[uniform] = value
         except AttributeError as e:
             _logger.error("Uniform %s does not exist in shader!", uniform)
             raise e
+
+    def set_inputs(self, inputs):
+        """
+        Set the values of the inputs to this shader from a list of parameters. The length of the parameters must match the length of the list
+        returned by get_inputs().
+        :param inputs: a list of parameter values.
+        """
+        assert len(inputs) == len(self.get_inputs())
+        i = 0
+        for _, uniform, _, _, _ in self.get_inputs():
+            self._program[uniform] = inputs[i]
+            i += 1
 
     def get_name(self) -> str:
         """Returns the formatted name of this class"""

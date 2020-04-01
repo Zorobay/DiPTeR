@@ -71,7 +71,8 @@ class OpenGLWidget(QOpenGLWidget):
         self._init_camera()
         self._init_default_shader()
 
-        self.cc.active_material_changed.connect(self._subscribe_to_material)
+        if self.cc:
+            self.cc.active_material_changed.connect(self._subscribe_to_material)
 
         # Start an update timer to refresh rendering
         self._timer = QTimer()

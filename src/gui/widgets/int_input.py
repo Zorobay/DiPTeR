@@ -6,13 +6,13 @@ from PyQt5.QtGui import QDoubleValidator, QValidator
 from PyQt5.QtWidgets import QLineEdit
 
 from src.gui.widgets.input_module import Input
-from src.opengl.shader_types import INTERNAL_TYPE_FLOAT
+from src.opengl.shader_types import INTERNAL_TYPE_INT
 
 reg_float = re.compile(r"(-?)(\d+)[\.,]?(\d*)", flags=re.UNICODE)
 
 
-class FloatValidator(QDoubleValidator):
-    NOT_FLOAT = 0
+class IntValidator(QDoubleValidator):
+    NOT_INT = 0
     TOO_LARGE = 1
     TOO_SMALL = 2
 
@@ -33,24 +33,24 @@ class FloatValidator(QDoubleValidator):
             if input_ == "-" or input_ == "+":
                 return QValidator.Intermediate, input_, cursor_pos
 
-            as_float = float(input_)
+            as_int = int(input_)
 
-            top_valid = as_float <= self.top()
-            bottom_valid = as_float >= self.bottom()
+            top_valid = as_int <= self.top()
+            bottom_valid = as_int >= self.bottom()
 
             if top_valid:
                 if bottom_valid:
                     self._reason_for_invalid = None
                     return QValidator.Acceptable, input_, cursor_pos
                 else:
-                    self._reason_for_invalid = FloatValidator.TOO_SMALL
+                    self._reason_for_invalid = IntValidator.TOO_SMALL
                     return QValidator.Intermediate, input_, cursor_pos
             else:
-                self._reason_for_invalid = FloatValidator.TOO_LARGE
+                self._reason_for_invalid = IntValidator.TOO_LARGE
                 return QValidator.Invalid, input_, cursor_pos
 
         except ValueError:
-            self._reason_for_invalid = FloatValidator.NOT_FLOAT
+            self._reason_for_invalid = IntValidator.NOT_INT
             return QValidator.Invalid, input_, cursor_pos
 
     def fixup(self, input_: str) -> str:
@@ -58,20 +58,20 @@ class FloatValidator(QDoubleValidator):
 
         corrected = input_
 
-        if self._reason_for_invalid == FloatValidator.NOT_FLOAT:
+        if self._reason_for_invalid == IntValidator.NOT_INT:
             corrected = corrected.replace(',', '.')  # replace commas with full stops
             corrected = corrected.replace('\D', '')  # Remove any non-digits
-        elif self._reason_for_invalid == FloatValidator.TOO_SMALL:
+        elif self._reason_for_invalid == IntValidator.TOO_SMALL:
             corrected = str(self.bottom())
-        elif self._reason_for_invalid == FloatValidator.TOO_LARGE:
+        elif self._reason_for_invalid == IntValidator.TOO_LARGE:
             corrected = str(self.top())
 
         return corrected
 
 
-class FloatInput(QLineEdit, Input):
+class IntInput(QLineEdit, Input):
 
-    def __init__(self, min_: float, max_: float, internal_type=INTERNAL_TYPE_FLOAT):
+    def __init__(self, min_: float, max_: float, internal_type=INTERNAL_TYPE_INT):
         assert min_ <= max_, "Minimum value must be less than or equal to maximum value!"
         super().__init__(internal_type=internal_type)
 
@@ -80,22 +80,22 @@ class FloatInput(QLineEdit, Input):
         self._init_widget()
 
     def set_default_value(self, default_value: typing.Any):
-        assert isinstance(default_value, (float, np.float32)), "Incompatible type of default value for FloatInput!"
+        assert isinstance(default_value, (int, np.int)), "Incompatible type of default value for FloatInput!"
 
         self.setText(str(default_value))
 
-    def get_gl_value(self) -> typing.Any:
+    def get_gl_value(self) -> int:
         text = self.text().strip()
         if text == "+" or text == "-" or text == "":
-            return np.float32(0.0)
+            return np.int(0)
 
-        return np.float32(float(self.text()))
+        return int(self.text())
 
     def get_value(self) -> str:
         return self.text()
 
     def _init_widget(self):
-        self.setValidator(FloatValidator(bottom=self.min_, top=self.max_))
+        self.setValidator(IntValidator(bottom=self.min_, top=self.max_))
         self.editingFinished.connect(lambda: self.input_changed.emit())
 
     def setText(self, p_str):

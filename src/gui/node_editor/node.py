@@ -164,7 +164,7 @@ class ShaderNode(Node):
 
         if internal_type == INTERNAL_TYPE_FLOAT:
             # Create an widgets widget
-            input_widget = FloatInput(internal_type, min_=input_range[0], max_=input_range[1])
+            input_widget = FloatInput(min_=input_range[0], max_=input_range[1], internal_type=internal_type)
         elif internal_type == INTERNAL_TYPE_ARRAY_RGB or INTERNAL_TYPE_ARRAY_RGBA:
             input_widget = ColorInput(internal_type)
         elif internal_type == INTERNAL_TYPE_SHADER:
