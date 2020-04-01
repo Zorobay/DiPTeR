@@ -1,12 +1,10 @@
-import sys
-from pathlib import Path
-
 import numpy as np
+import typing
 from PIL import Image
 from PyQt5.QtCore import QTimer, pyqtSignal
-from PyQt5.QtGui import QImage
+from PyQt5.QtGui import QImage, QSurfaceFormat, QColorSpace
 from PyQt5.QtWidgets import QOpenGLWidget
-from glumpy import gloo, gl
+from glumpy import gl
 from glumpy.gloo import Program
 
 from src.opengl import object_vertices
@@ -16,7 +14,7 @@ from src.shaders import OBJECT_MATRIX_NAME, VIEW_MATRIX_NAME, PROJECTION_MATRIX_
 class OpenGLTestRenderer(QOpenGLWidget):
     render_ready = pyqtSignal(object)
 
-    def __init__(self, width: int, height: int, program: Program, frame_rate=60, frame_count=20):
+    def __init__(self, width: int, height: int, program: Program, callback: typing.Callable=None, cb_freg=0, frame_rate=60, frame_count=10):
         super().__init__()
 
         # Set Widget settings
@@ -28,9 +26,12 @@ class OpenGLTestRenderer(QOpenGLWidget):
         self._timer = None
         self.I = None
         self.V = None
+        self.callback = callback
+        self.cb_freg = cb_freg
+        self.rendered_image = None
 
         # Define variables for settings
-        self._clear_color = np.array((0.4, 0.4, 0.4, 1.0), dtype=np.float32)
+        self._clear_color = np.array((0.,0.,0.,0.), dtype=np.float32)
         self._frame_rate = frame_rate
         self._frame_count = frame_count
         self._current_frame = 0
@@ -56,8 +57,7 @@ class OpenGLTestRenderer(QOpenGLWidget):
     def initializeGL(self):
         gl.glEnable(gl.GL_DEPTH_TEST)
         gl.glShadeModel(gl.GL_FLAT)
-        gl.glEnable(gl.GL_BLEND)
-        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+        gl.glDisable(gl.GL_BLEND)
         gl.glFrontFace(gl.GL_CCW)
         gl.glClearColor(*self._clear_color)
         gl.glDisable(gl.GL_CULL_FACE)
@@ -77,22 +77,22 @@ class OpenGLTestRenderer(QOpenGLWidget):
         self._timer.timeout.connect(self.update)
         self._timer.start()
 
-
     def paintGL(self):
-        if self._current_frame >= self._frame_count:
-            self.close()
-
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
         self.program.draw(gl.GL_TRIANGLES, self.I)
-        self._current_frame +=1
+        self._current_frame += 1
+
+        if self.callback and (self._current_frame % self.cb_freg) == 0 and self._current_frame > 0:
+            self.callback(self.get_image())
+
+        if self._current_frame >= self._frame_count:
+            self.rendered_image = self.get_image()
+            self.close()
 
     def get_image(self) -> np.ndarray:
-        # TODO There must be a way to get more exact numbers!
-        filename = "temp_render.png"
-        img:QImage = self.grabFramebuffer()
-        img.save(filename)
-        img = Image.open(filename)
-        arr = np.asarray(img) / 255.
-        return np.flip(arr, 0)
-
-        # TODO Remove file!
+        img: QImage = self.grabFramebuffer()
+        img = img.convertToFormat(QImage.Format_RGBA8888)
+        ptr = img.bits()
+        ptr.setsize(img.byteCount())
+        arr = (np.array(ptr).reshape(img.width(), img.height(), 4) / 255.).astype(np.float32)
+        return arr

@@ -3,7 +3,7 @@ from src.shaders.shader_super import *
 
 class TestFragInterpolationShader(Shader):
     FRAGMENT_SHADER_FILENAME = "test/test_frag_interpolation_frag.glsl"
-    VERTEX_SHADER_FILENAME = "test/vertex_shader.glsl"
+    VERTEX_SHADER_FILENAME = "vertex_shader.glsl"
 
     def __init__(self):
         super().__init__()
@@ -16,4 +16,8 @@ class TestFragInterpolationShader(Shader):
         frag_color = None
 
         frag_color = anp.append(vert_pos, 1.0)
+        return frag_color
+
+    def shade_torch(self, vert_pos, *args):
+        frag_color = torch.cat((vert_pos, torch.tensor([1.])))
         return frag_color
