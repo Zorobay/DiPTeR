@@ -4,6 +4,7 @@ import numpy as np
 import torch
 
 from src.misc.render_funcs import render_torch
+from src.mytensor import Teensor
 from src.opengl.object_vertices import get_2d_plane
 from src.shaders.brick_shader import BrickShader
 from tests.stuff_for_testing import funcs
@@ -31,16 +32,12 @@ class TestBrickShader(ShaderTest):
         self.args[4] = val
 
         py, op = self.render_both()
-        #save_images(["python_brick_clipping", "opengl_brick_clipping"], [py, op])
         assert_abs_mean_diff(py, op, "Average pixel difference of {} is too large when clipping colors!")
 
     def test_brick_elongate_zero(self):
         key = "brick_elongate"
-        key_i = 2
-        val = 0.0
-        self.program[key] = val
-        self.args = self.default_args
-        self.args[key_i] = val
+        self.set_arg(key, torch.tensor(0.0))
+        self.set_arg("brick_scale", torch.tensor(10.))
 
         py, gl = self.render_both()
         assert_abs_mean_diff(py, gl, "Average pixel difference of {} is too large for zero 'brick_elongate'!")
@@ -69,8 +66,8 @@ class TestBrickShader(ShaderTest):
         assert_abs_mean_diff(py, op, "Average pixel difference of {} is too large when 'brick_elongate' is at 100 (max)!")
 
     def test_brick_random(self):
-        self.W = 20
-        self.H = 20
+        self.W = 50
+        self.H = 100
         self.args = self.shader.get_parameters_list_torch(False)
         self.args = funcs.randomize_inputs_torch(self.args, self.shader)
         self.shader.set_inputs(self.args)

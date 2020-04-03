@@ -94,5 +94,5 @@ class OpenGLTestRenderer(QOpenGLWidget):
         img = img.convertToFormat(QImage.Format_RGBA8888)
         ptr = img.bits()
         ptr.setsize(img.byteCount())
-        arr = (np.array(ptr).reshape(img.width(), img.height(), 4) / 255.).astype(np.float32)
+        arr = (np.array(ptr).reshape(img.height(), img.width(), 4) / 255.).astype(np.float32)
         return arr

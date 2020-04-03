@@ -9,7 +9,7 @@ from PIL import Image, ImageChops
 from PyQt5.QtWidgets import QApplication
 from glumpy.gloo import Program
 
-from src.opengl.shader_types import INTERNAL_TYPE_ARRAY_RGB, INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGBA
+from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB, INTERNAL_TYPE_ARRAY_RGBA
 from src.shaders.shader_super import Shader
 from tests.stuff_for_testing.opengl_test_renderer import OpenGLTestRenderer
 
@@ -69,7 +69,6 @@ def render_opengl_callback_loop(width, height, program: Program, callback: typin
     renderer.show()
     app.exec_()
 
-
 def assert_abs_mean_diff(pys: typing.Union[np.ndarray, list], gls: typing.Union[np.ndarray, list],
                          msg="Test failed, as absolute mean difference of {} was higher than allowed!",
                          tol=0.01, test_name: str = "?"):
@@ -81,10 +80,9 @@ def assert_abs_mean_diff(pys: typing.Union[np.ndarray, list], gls: typing.Union[
         err = np.mean(np.abs(py - gl))
         _logger.debug("Test <%s> yielded an absolute mean error of %f. Tolerance set to %f.", test_name, err, tol)
 
-        fig = plt.figure(figsize=(12, 4))
-        ax1, ax2, ax3 = fig.subplots(1, 3)
-
         if err > tol:
+            fig = plt.figure(figsize=(12, 4))
+            ax1, ax2, ax3 = fig.subplots(1, 3)
             i1 = Image.fromarray((py[:, :, :3] * 255).astype(np.uint8))
             i2 = Image.fromarray((gl[:, :, :3] * 255).astype(np.uint8))
             diff = ImageChops.difference(i1, i2)
@@ -93,12 +91,18 @@ def assert_abs_mean_diff(pys: typing.Union[np.ndarray, list], gls: typing.Union[
             ax2.imshow(i2)
             ax2.set_title("GL Render")
             ax3.imshow(diff)
+            ax3.set_title("Difference")
             plt.show()
 
-        # assert err <= tol, msg.format(err)
+        assert err <= tol, msg.format(err)
 
 
-def assert_abs_max_diff(py, gl, tol=0.01):
-    err = np.max(np.abs(py - gl))
+def assert_abs_max_diff(pys, gls, tol=0.01):
 
-    assert err <= tol, "Absolute max difference of {} is not under tolerance of {}".format(err, tol)
+    if not isinstance(pys, list) and not isinstance(gls, list):
+        pys = [pys]
+        gls = [gls]
+
+    for py, gl in zip(pys, gls):
+        err = np.max(np.abs(py - gl))
+        assert err <= tol, "Absolute max difference of {} is not under tolerance of {}".format(err, tol)

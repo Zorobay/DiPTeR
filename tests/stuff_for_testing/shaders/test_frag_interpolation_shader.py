@@ -1,3 +1,5 @@
+from numpy.core.multiarray import ndarray
+
 from src.shaders.shader_super import *
 
 
@@ -15,7 +17,6 @@ class TestFragInterpolationShader(Shader):
     def shade(self, vert_pos: ndarray, *args) -> ndarray:
         frag_color = None
 
-        frag_color = anp.append(vert_pos, 1.0)
         return frag_color
 
     def shade_torch(self, vert_pos, *args):

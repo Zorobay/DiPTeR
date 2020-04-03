@@ -1,3 +1,5 @@
+from numpy.core.multiarray import ndarray
+
 from src.shaders.shader_super import *
 
 
@@ -13,17 +15,7 @@ class TestLinesShader(Shader):
 
     def shade(self, vert_pos: ndarray, *args) -> ndarray:
         frag_color = None
-        if vert_pos[0] > 0.05 and vert_pos[0] < 0.06:
-            frag_color = anp.array((0., 1., 0., 1.))
-        elif vert_pos[0] >= 0.1 and vert_pos[0] <= 0.2:
-            frag_color = anp.array((1.0, 1., 0., 1.0))
-        else:
-            frag_color = anp.array((1., 1., 1., 1.))
-
-        if vert_pos[1] >= 0.7 and vert_pos[1] <= 0.9:
-            frag_color = anp.array((0., 0., 1., 1.))
-
-        return frag_color
+        return None
 
     def shade_torch(self, vert_pos, *args):
         frag_color = None
