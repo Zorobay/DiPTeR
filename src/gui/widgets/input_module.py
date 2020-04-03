@@ -30,6 +30,7 @@ class Input:
         raise NotImplementedError("Input subclass need to implement this method!")
 
 
+
 class InputModule(QWidget):
     input_changed = pyqtSignal(str, object, str, object)  # uniform variable name, widgets value, internal type, widgets module ID
 

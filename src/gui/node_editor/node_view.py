@@ -5,22 +5,22 @@ from PyQt5.QtCore import Qt, QPoint, QPointF
 from PyQt5.QtGui import QWheelEvent, QMouseEvent
 from PyQt5.QtWidgets import QGraphicsView, QMenu, QGraphicsSceneMouseEvent, QMessageBox
 
-from src.gui.node_editor.control_center import ControlCenter
+from src.gui.node_editor.control_center import Material
 from src.gui.node_editor.edge import Edge
 from src.gui.node_editor.material import Material
-from src.gui.widgets.material_selector import MaterialSelector
 from src.misc import string_funcs, array_funcs
 from src.shaders.brick_shader import BrickShader
 from src.shaders.color_shader import ColorShader
+from src.shaders.hsv_shader import HSVShader
+from src.shaders.rgb_shader import RGBShader
 from src.shaders.shader_super import Shader
-from tests.stuff_for_testing.shaders.test_lines_shader import TestLinesShader
 
-SHADERS_TO_CONTEXT_MENU = [BrickShader, ColorShader, TestLinesShader]
+SHADERS_TO_CONTEXT_MENU = [BrickShader, ColorShader, RGBShader, HSVShader]
 
 
 class NodeView(QGraphicsView):
 
-    def __init__(self, cc: ControlCenter):
+    def __init__(self, cc: Material):
         super().__init__(None)
 
         self.cc = cc

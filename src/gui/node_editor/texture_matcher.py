@@ -6,13 +6,14 @@ import numpy as np
 import torch
 from PIL import Image
 from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QThread, Qt
-from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
+from src.gui.widgets.labelled_input import LabelledInput
+from src.misc import render_funcs
 from src.gui.rendering.opengl_widget import OpenGLWidget
-from src.gui.widgets.float_input import FloatInput
-from src.gui.widgets.int_input import IntInput
+from src.gui.widgets.line_input import FloatInput, IntInput
 from src.shaders.shader_super import Shader
 
 _logger = logging.getLogger(__name__)
@@ -21,19 +22,6 @@ MAX_ITER = "max_iter"
 EARLY_STOPPING_THRESH = "early_stopping_thresh"
 LEARNING_RATE = "learning_rate"
 DECAY = "decay"
-
-
-class Input(QWidget):
-
-    def __init__(self, label, widget: QWidget):
-        super().__init__()
-        self.label = label
-        self.widget = widget
-
-        self.layout = QHBoxLayout()
-        self.layout.addWidget(QLabel(self.label))
-        self.layout.addWidget(self.widget)
-        self.setLayout(self.layout)
 
 
 class SettingsPanel(QWidget):
@@ -78,9 +66,9 @@ class SettingsPanel(QWidget):
 
         self._layout.addWidget(self._match_button)
         self._layout.addWidget(self._load_texture_button)
-        self._layout.addWidget(Input("Max iterations", self._max_iter_input))
-        self._layout.addWidget(Input("Learning Rate", self._learning_rate))
-        self._layout.addWidget(Input("Early stopping loss thresh", self._early_stopping_loss_thresh))
+        self._layout.addWidget(LabelledInput("Max iterations", self._max_iter_input))
+        self._layout.addWidget(LabelledInput("Learning Rate", self._learning_rate))
+        self._layout.addWidget(LabelledInput("Early stopping loss thresh", self._early_stopping_loss_thresh))
 
         self._layout.setAlignment(Qt.AlignTop)
         self.setLayout(self._layout)
@@ -118,7 +106,8 @@ class TextureMatcher(QWidget):
         super().__init__(parent=None)
 
         # self._openGL = openGL
-        self._shader = shader
+        self._shader = shader.__class__()  # Instantiate a new shader
+        self._shader.set_inputs(shader.get_parameters_list_torch())
 
         # Define components
         self._settings_drawer = QDockWidget(self, Qt.Drawer)
@@ -129,7 +118,7 @@ class TextureMatcher(QWidget):
         self._tex_axis = self._figure.add_subplot(211)
         self._loss_axis = self._figure.add_subplot(212)
         self._layout = QGridLayout()
-        self._program = None
+        self._program = self._shader.get_program()
 
         # Define properties
         self._loss_plot_color = (1., 0.6, 0., 1.0)
@@ -169,11 +158,10 @@ class TextureMatcher(QWidget):
 
     def _set_image_to_match(self, image):
         self._image_to_match = image
-        self._tex_axis.imshow(self._image_to_match)
+        self._tex_axis.imshow(self._image_to_match, vmin=0, vmax=1)
         self._figure_canvas.draw()
 
     def _set_gl_program(self):
-        self._program = self._shader.get_program_copy()
         self._openGL.set_program(self._program)
 
     def _run_gradient_descent_torch(self):
@@ -199,9 +187,11 @@ class TextureMatcher(QWidget):
         self._loss_axis.plot(props['loss_hist'], color=self._loss_plot_color)
         self._figure_canvas.draw()
         self._figure_canvas.flush_events()
+        params = props['params']
 
-        self._program['color'] = props['params'][0].detach().numpy()
-        _logger.info("{}. loss: {}, params: {}".format(props['iter'], props['loss'], props['params']))
+        self._shader.set_inputs(params)
+        #self._program['color'] = props['params'][0].detach().numpy()
+        _logger.info("{}. loss: {}, params: {}".format(props['iter'], props['loss'], params))
 
     def _update_settings(self, key: str, settings: dict):
         self._settings = settings
@@ -256,27 +246,32 @@ class GradientDescent(QObject):
         loss_hist = np.empty(max_iter, dtype=np.float32)
 
         for i in range(max_iter):
-            new_loss = self.loss_torch(*params)
-            new_loss_np = float(new_loss.detach())
-            grads = torch.autograd.grad(outputs=new_loss, inputs=params, create_graph=True, retain_graph=True, allow_unused=True)
-            loss_hist[i] = new_loss_np
-            props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1], 'learning_rate': lr, 'params': params}
+            with torch.autograd.detect_anomaly():
+                new_loss = self.loss_torch_(*params)
+                new_loss_np = float(new_loss.detach())
+                grads = torch.autograd.grad(outputs=new_loss, inputs=params, create_graph=True, retain_graph=True, allow_unused=True)
+                loss_hist[i] = new_loss_np
+                props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1], 'learning_rate': lr, 'params': params}
 
-            with torch.no_grad():
-                for p, g in zip(params, grads):
-                    if g is not None:
-                        p -= lr * g
+                with torch.no_grad():
+                    for p, g in zip(params, grads):
+                        if g is not None:
+                            p -= lr * g
 
-                lr *= lr_decay
+                    lr *= lr_decay
 
-            if new_loss <= early_stopping_thresh:
-                return params, loss_hist
+                if new_loss <= early_stopping_thresh:
+                    return params, loss_hist
 
-            self.gd_iteration.emit(props)
+                self.gd_iteration.emit(props)
 
         return params, loss_hist
 
     def loss_torch(self, *args):
+        render = render_funcs.render_torch(self.width, self.height, self.f, *args)
+        return torch.mean(torch.abs(self.truth - render))
+
+    def loss_torch_(self, *args):
         width = self.truth.shape[0]
         height = self.truth.shape[1]
         x_res = 1.0 / width
@@ -292,39 +287,3 @@ class GradientDescent(QObject):
                 loss_sum += torch.sum(torch.abs(self.truth[y, x, :] - val))
 
         return loss_sum / (width * height * 4)
-
-
-def loss(*args):
-    self.width = truth.shape[0]
-    height = truth.shape[1]
-    x_res = 1.0 / self.width
-    y_res = 1.0 / height
-    x_pos = anp.linspace(0, 1.0, self.width, endpoint=False) + (x_res / 2.0)
-    y_pos = anp.linspace(0, 1.0, height, endpoint=False) + (y_res / 2.0)
-    loss_sum = 0
-
-    for x in range(self.width):
-        for y in range(height):
-            vert_pos = anp.array((x_pos[x], y_pos[y], 0.))
-            val = f(vert_pos, *args)
-            loss_sum += anp.sum(anp.abs(truth[y, x, :] - val))
-
-    return loss_sum / (self.width * height * 4)
-
-
-def gradient_descent(loss_grad, init_params, lr=0.01, lr_decay=0.99, max_iter=150, early_stopping_thresh=0.01):
-    params = init_params
-    loss_hist = []
-
-    for i in range(max_iter):
-        gradient = loss_grad(*params)
-        params.subtract([lr * g for g in gradient])
-        new_loss = loss(*params)
-        loss_hist.append(new_loss)
-
-        print("{}. new loss: {:.5f}, lr: {:.5f}, Params: {}".format(i, new_loss, lr, params))
-        if new_loss <= early_stopping_thresh:
-            return params, loss_hist
-        lr = lr * lr_decay
-
-    return params, loss_hist

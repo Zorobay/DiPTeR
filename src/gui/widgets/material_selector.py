@@ -1,14 +1,14 @@
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtWidgets import QWidget, QPushButton, QComboBox, QHBoxLayout, QInputDialog
 
-from src.gui.node_editor.control_center import ControlCenter
+from src.gui.node_editor.control_center import Material
 from src.gui.node_editor.material import Material
 
 
 class MaterialSelector(QWidget):
     material_changed = pyqtSignal(Material)
 
-    def __init__(self, cc: ControlCenter, *args, **kwargs):
+    def __init__(self, cc: Material, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.cc = cc

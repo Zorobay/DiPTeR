@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QOpenGLWidget, QMenu, QFileDialog
 from glumpy import gl, glm, gloo
 from glumpy.gloo import Program
 
-from src.gui.node_editor.control_center import ControlCenter
+from src.gui.node_editor.control_center import Material
 from src.gui.node_editor.material import Material
 from src.gui.widgets.material_selector import MaterialSelector
 from src.opengl import object_vertices
@@ -18,7 +18,7 @@ class OpenGLWidget(QOpenGLWidget):
     FREE_RENDER_MODE = 1
     init_done = pyqtSignal()
 
-    def __init__(self, width: int, height: int, cc: ControlCenter = None, render_mode: int = FREE_RENDER_MODE):
+    def __init__(self, width: int, height: int, cc: Material = None, render_mode: int = FREE_RENDER_MODE):
         super().__init__()
 
         # Set Widget settings

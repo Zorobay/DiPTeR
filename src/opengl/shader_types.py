@@ -6,6 +6,8 @@ import OpenGL.raw.GL.VERSION.GL_4_3 as gl_types_4
 import numpy as np
 from OpenGL.constant import IntConstant
 
+from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_FLOAT
+
 
 class Type:
     """
@@ -38,16 +40,6 @@ def from_gl_type(gl_type: IntConstant) -> Type:
     assert gl_type in GL_TO_TYPE, "{} is either not a valid OpenGL type constant or it is not supported yet!".format(gl_type)
     return GL_TO_TYPE[gl_type]
 
-
-# ----- Internal Types --------
-
-ARRAY = "type_array_"
-INTERNAL_TYPE_FLOAT = "type_float"
-INTERNAL_TYPE_INT = "type_int"
-INTERNAL_TYPE_ARRAY_FLOAT = ARRAY + "float"
-INTERNAL_TYPE_ARRAY_RGB = ARRAY + "rgb"
-INTERNAL_TYPE_ARRAY_RGBA = ARRAY + "rgba"
-INTERNAL_TYPE_SHADER = "type_shader"
 
 # ----- Translations from GLSL --------
 GL_TO_TYPE = {

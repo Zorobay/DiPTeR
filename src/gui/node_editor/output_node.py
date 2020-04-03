@@ -1,7 +1,7 @@
 from src.gui.node_editor.node import ShaderNode, Node
 from src.gui.node_editor.node_scene import NodeScene
 from src.gui.node_editor.socket import Socket
-from src.opengl.shader_types import INTERNAL_TYPE_SHADER
+from src.opengl.internal_types import INTERNAL_TYPE_SHADER
 
 
 class OutputNode(Node):

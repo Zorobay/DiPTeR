@@ -1,9 +1,8 @@
 import logging
+import typing
 import uuid
 
-import typing
 from PyQt5.QtCore import QObject, pyqtSignal
-from PyQt5.QtWidgets import QMessageBox
 
 from src.gui.node_editor.edge import Edge
 from src.gui.node_editor.material import Material
@@ -66,7 +65,6 @@ class ControlCenter(QObject):
 
         material = Material(self, name)
         self._materials.append(material)
-        self.active_material_changed.emit(material)
 
         _logger.debug("New material {} ({}) added.".format(material.name, material.id))
         return material

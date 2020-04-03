@@ -19,7 +19,7 @@ class Material(QObject):
 
     shader_ready = pyqtSignal(Shader)
     program_ready = pyqtSignal(Program)
-    material_changed = pyqtSignal(uuid.UUID)
+    changed = pyqtSignal()
     edge_spawned = pyqtSignal(object)
     edge_despawned = pyqtSignal()
 
@@ -55,7 +55,7 @@ class Material(QObject):
         node = ShaderNode(self.node_scene, self._shader.get_name(), self._shader)
         node.edge_started.connect(self._spawn_edge)
         node.edge_ended.connect(self._end_edge)
-        node.input_changed.connect(lambda id_: self.material_changed.emit(id_))
+        node.input_changed.connect(lambda id_: self.changed.emit())
         self._nodes[node.id] = node
         self._id = node.id
         self._program = node.get_program()
@@ -66,6 +66,7 @@ class Material(QObject):
         # Emit event to tell OpenGL that the Program and Shader is ready
         self.program_ready.emit(self.program)
         self.shader_ready.emit(self.shader)
+        self.changed.emit()
 
         _logger.debug("Added new node {} to material {}.".format(node.title, self.name))
 

@@ -5,7 +5,7 @@ from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QColor, QPalette
 from PyQt5.QtWidgets import QPushButton, QColorDialog
 
-from src.opengl.shader_types import INTERNAL_TYPE_ARRAY_RGB, INTERNAL_TYPE_ARRAY_RGBA
+from src.opengl.internal_types import INTERNAL_TYPE_ARRAY_RGB, INTERNAL_TYPE_ARRAY_RGBA
 from src.gui.widgets.input_module import Input
 
 

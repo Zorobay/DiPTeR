@@ -1,17 +1,17 @@
 import logging
 import re
+import typing
 from abc import ABC, abstractmethod
 from pathlib import Path
+
 import numpy as np
 import torch
-
 from glumpy import gloo
 from glumpy.gloo import Program
-from torch import Tensor
+from tensorflow_core import Tensor
 
 from src.misc import string_funcs
-from src.opengl.shader_types import INTERNAL_TYPE_ARRAY_RGBA
-from src.shaders.lib.glsl_builtins import *
+from src.opengl.internal_types import *
 
 _logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ GLSL_INCLUDE_DIR = "res/lib/"
 REG_GLSL_IMPORT = re.compile(r"\s*#\s*import\s*[\"'](\w*\.?\w*)[\"']", flags=re.ASCII)
 
 # Define useful constants for numerical manipulation
-TINY_FLOAT = anp.finfo(anp.float32).tiny
+TINY_FLOAT = torch.finfo(torch.float32).eps
 
 
 def preprocess_imports(code: typing.List[str]) -> str:
@@ -36,7 +36,7 @@ def preprocess_imports(code: typing.List[str]) -> str:
 
 
 class Shader(ABC):
-    VERTEX_SHADER_FILENAME = None
+    VERTEX_SHADER_FILENAME = "vertex_shader.glsl"
     FRAGMENT_SHADER_FILENAME = None
 
     def __init__(self):
@@ -51,7 +51,6 @@ class Shader(ABC):
     def get_vertex_shader(self, new_instance=False) -> gloo.VertexShader:
         """Compiles the vertex shader code associated with this shader and returns it in a glumpy VertexShader object."""
         if not self._vertex_shader or new_instance:
-            assert self.__class__.VERTEX_SHADER_FILENAME, "Name of GLSL vertex shader need to be set by subclass"
             vertex_shader_path = Path(Path.cwd() / "res" / self.VERTEX_SHADER_FILENAME)
 
             try:
@@ -133,7 +132,7 @@ class Shader(ABC):
         assert len(inputs) == len(self.get_inputs())
         i = 0
         for _, uniform, _, _, _ in self.get_inputs():
-            self._program[uniform] = inputs[i]
+            self._program[uniform] = inputs[i].detach()
             i += 1
 
     def get_name(self) -> str:
@@ -152,7 +151,7 @@ class Shader(ABC):
 
         for _, uniform, internal_type, _, _ in self.get_inputs():
             val = self._program[uniform]
-            if not "array" in internal_type:
+            if "array" not in internal_type:
                 val = val[0]  # Uniforms are stored in array even if they're single floats
 
             params.append(val)
@@ -165,7 +164,7 @@ class Shader(ABC):
 
         for _, uniform, internal_type, _, _ in self.get_inputs():
             val = self._program[uniform]
-            if not "array" in internal_type:
+            if "array" not in internal_type:
                 val = val[0]  # Uniforms are stored in array even if they're single floats
 
             tensor = torch.from_numpy(np.array(val))
@@ -191,6 +190,9 @@ class Shader(ABC):
             ("Color", INTERNAL_TYPE_ARRAY_RGBA)
         ]
 
+    def shade(self, vert_pos: np.ndarray, *args) -> np.ndarray:
+        pass
+
     @abstractmethod
-    def shade(self, vert_pos: ndarray, *args) -> ndarray:
+    def shade_torch(self, vert_pos: Tensor, *args) -> Tensor:
         pass

@@ -7,7 +7,7 @@ from PIL import Image
 from PyQt5.QtWidgets import QWidget, QGridLayout, QComboBox, QLabel, QPushButton, QFileDialog, QVBoxLayout, QHBoxLayout
 from autograd import grad
 
-from src.gui.node_editor.control_center import ControlCenter
+from src.gui.node_editor.control_center import Material
 from src.gui.widgets.material_selector import MaterialSelector
 from src.gui.node_editor.texture_matcher import TextureMatcher
 from src.gui.rendering.opengl_widget import OpenGLWidget
@@ -43,7 +43,7 @@ class OpenGLSettingsWidget(QWidget):
     # Define defaults
     OBJECT_VERTICES_DEFAULT = 0
 
-    def __init__(self, cc: ControlCenter, open_gl_widget: OpenGLWidget, parent=None):
+    def __init__(self, cc: Material, open_gl_widget: OpenGLWidget, parent=None):
         super().__init__(parent)
 
         self.cc = cc
