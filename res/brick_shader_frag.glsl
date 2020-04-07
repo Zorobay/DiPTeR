@@ -17,9 +17,7 @@ out vec4 frag_color;
 
 vec3 brickTile(vec3 tile, vec3 scale, float shift){
     // tiles (repeats) the coordinates in 'tile' and scales them down by a factor in 'scale'
-    tile.x *= scale.x;
-    tile.y *= scale.y;
-    tile.z *= scale.z;
+    tile *= scale;
 
     float st = step(1.0, mod(tile.y,2.0));
     tile.x += shift*st;

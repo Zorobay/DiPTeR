@@ -1,9 +1,11 @@
 import logging
+import time
 import typing
 
-import autograd.numpy as anp
+from torchvision import transforms
 import numpy as np
 import torch
+import torch.nn.functional as F
 from PIL import Image
 from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QThread, Qt
 from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout
@@ -22,6 +24,8 @@ MAX_ITER = "max_iter"
 EARLY_STOPPING_THRESH = "early_stopping_thresh"
 LEARNING_RATE = "learning_rate"
 DECAY = "decay"
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class SettingsPanel(QWidget):
@@ -185,12 +189,12 @@ class TextureMatcher(QWidget):
 
     def _gd_iter_callback(self, props):
         self._loss_axis.plot(props['loss_hist'], color=self._loss_plot_color)
+        self._loss_axis.set_xlabel("Iteration ({:.3f}s/iter)".format(props['iter_time']))
         self._figure_canvas.draw()
         self._figure_canvas.flush_events()
         params = props['params']
 
         self._shader.set_inputs(params)
-        #self._program['color'] = props['params'][0].detach().numpy()
         _logger.info("{}. loss: {}, params: {}".format(props['iter'], props['loss'], params))
 
     def _update_settings(self, key: str, settings: dict):
@@ -209,7 +213,7 @@ class GradientDescent(QObject):
         super().__init__()
         self.image_to_match = image_to_match
         self.shader = shader
-        self.width, self.height = 50, 50
+        self.width, self.height = 100,100
         self.lr = 0.15
         self.decay = 0.97
         self.max_iter = 500
@@ -232,7 +236,12 @@ class GradientDescent(QObject):
 
     @pyqtSlot(name='run')
     def run(self):
-        self.truth = torch.from_numpy(np.asarray(self.image_to_match.resize((self.width, self.height))) / 255.)
+        loader = transforms.Compose([
+            transforms.Resize((self.width, self.height)),  # scale imported image
+            transforms.ToTensor()])  # transform it into a torch tensor
+
+        self.truth = loader(self.image_to_match).to(device, torch.float32)
+        #self.truth = torch.from_numpy(np.asarray(self.image_to_match.resize((self.width, self.height))) / 255.)
         self.f = self.shader.shade_torch
 
         init_params = self.shader.get_parameters_list_torch(requires_grad=True)
@@ -241,31 +250,37 @@ class GradientDescent(QObject):
                                                          early_stopping_thresh=self.early_stopping_thresh)
         self.finished.emit(params, loss_hist)
 
-    def _gradient_descent_torch(self, init_params, lr=0.01, lr_decay=0.99, max_iter=150, early_stopping_thresh=0.01) -> typing.Tuple[list, list]:
+    def _gradient_descent_torch(self, init_params:list, lr=0.01, lr_decay=0.99, max_iter=150, early_stopping_thresh=0.01) -> typing.Tuple[list,
+                                                                                                                                          np.ndarray]:
         params = init_params
         loss_hist = np.empty(max_iter, dtype=np.float32)
 
         for i in range(max_iter):
-            with torch.autograd.detect_anomaly():
-                new_loss = self.loss_torch_(*params)
-                new_loss_np = float(new_loss.detach())
-                grads = torch.autograd.grad(outputs=new_loss, inputs=params, create_graph=True, retain_graph=True, allow_unused=True)
-                loss_hist[i] = new_loss_np
-                props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1], 'learning_rate': lr, 'params': params}
+            start = time.time()
+            new_loss = self.loss_torch2(*params)
+            new_loss_np = float(new_loss.detach())
+            grads = torch.autograd.grad(outputs=new_loss, inputs=params, create_graph=True, retain_graph=True, allow_unused=False, only_inputs=True)
+            loss_hist[i] = new_loss_np
+            props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1], 'learning_rate': lr, 'params': params}
 
-                with torch.no_grad():
-                    for p, g in zip(params, grads):
-                        if g is not None:
-                            p -= lr * g
+            with torch.no_grad():
+                for p, g in zip(params, grads):
+                    if g is not None:
+                        p -= lr * g
 
-                    lr *= lr_decay
+                lr *= lr_decay
 
-                if new_loss <= early_stopping_thresh:
-                    return params, loss_hist
+            props['iter_time'] = time.time() - start
+            self.gd_iteration.emit(props)
 
-                self.gd_iteration.emit(props)
+            if new_loss <= early_stopping_thresh:
+                break
 
         return params, loss_hist
+
+    def loss_torch2(self, *args):
+        render = render_funcs.render_torch2(self.width, self.height, self.f, *args)
+        return F.mse_loss(render, self.truth)
 
     def loss_torch(self, *args):
         render = render_funcs.render_torch(self.width, self.height, self.f, *args)
@@ -276,8 +291,8 @@ class GradientDescent(QObject):
         height = self.truth.shape[1]
         x_res = 1.0 / width
         y_res = 1.0 / height
-        x_pos = torch.from_numpy(anp.linspace(0, 1.0, width, endpoint=False) + (x_res / 2.0))
-        y_pos = torch.from_numpy(anp.linspace(0, 1.0, height, endpoint=False) + (y_res / 2.0))
+        x_pos = torch.from_numpy(np.linspace(0, 1.0, width, endpoint=False) + (x_res / 2.0))
+        y_pos = torch.from_numpy(np.linspace(0, 1.0, height, endpoint=False) + (y_res / 2.0))
         loss_sum = 0
 
         for x in range(width):
