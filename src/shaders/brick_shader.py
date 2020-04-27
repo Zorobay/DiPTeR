@@ -5,8 +5,7 @@ from numpy import ndarray
 from torch import Tensor, tensor
 
 import src.shaders.lib.glsl_builtins as gl
-import src.shaders.lib.glgl_builtins_torch as to
-from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGBA
+from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB
 from src.shaders.lib.pattern_torch import box
 from src.shaders.shader_super import Shader, TINY_FLOAT
 
@@ -24,39 +23,19 @@ class BrickShader(Shader):
             ("Brick Scale", "brick_scale", INTERNAL_TYPE_FLOAT, (0.0, 100.0), 10.0),
             ("Brick Elongate", "brick_elongate", INTERNAL_TYPE_FLOAT, (0.0, 100.0), 2.0),
             ("Brick Shift", "brick_shift", INTERNAL_TYPE_FLOAT, (0., 1.), 0.5),
-            ("Brick Color", "color_brick", INTERNAL_TYPE_ARRAY_RGBA, (0, 1), anp.array((0.69, 0.25, 0.255, 1.))),
-            ("Mortar Color", "color_mortar", INTERNAL_TYPE_ARRAY_RGBA, (0, 1), anp.array((0.9, 0.9, 0.9, 1.)))
+            ("Brick Color", "color_brick", INTERNAL_TYPE_ARRAY_RGB, (0, 1), anp.array((0.69, 0.25, 0.255))),
+            ("Mortar Color", "color_mortar", INTERNAL_TYPE_ARRAY_RGB, (0, 1), anp.array((0.9, 0.9, 0.9)))
         ]
-
-    def _brickTile(self, tile: ndarray, scale: ndarray, shift: float):
-        tile[0] *= scale[0]
-        tile[1] *= scale[1]
-        tile[2] *= scale[2]
-
-        st: float = gl.step(1.0, anp.mod(tile[1], 2.0))
-        tile[0] += shift * st
-
-        return gl.fract(tile)
-    def shade(self, vert_pos: ndarray, mortar_scale: float, brick_scale: float, brick_elongate: float, brick_shift: float,
-              color_brick: ndarray, color_mortar: ndarray) -> ndarray:
-        # Increment each divisor by TINY_FLOAT to prevent DivisionByZeroErrors
-        brick_elongate += TINY_FLOAT
-
-        uv3 = vert_pos
-        uv3 = self._brickTile(uv3, anp.array((brick_scale / brick_elongate, brick_scale, brick_scale)), brick_shift)
-        b = box(uv3[:2], anp.array((mortar_scale, mortar_scale)), 0.0)
-        frag_color = gl.mix(color_mortar, color_brick, b)
-        return frag_color
 
     def _brickTileTorch(self, tile: Tensor, scale: Tensor, shift: Tensor):
         tx = tile[0] * scale[0]
         ty = tile[1] * scale[1]
         tz = tile[2] * scale[2]
 
-        st: Tensor = to.step(1.0, torch.fmod(ty, 2.0))
+        st: Tensor = gl.step(1.0, torch.fmod(ty, 2.0))
         tx_shifted = tx + shift * st
 
-        return to.fract(torch.stack([tx_shifted, ty, tz]))
+        return gl.fract(torch.stack([tx_shifted, ty, tz]))
 
     def shade_torch(self, vert_pos: Tensor, mortar_scale: Tensor, brick_scale: Tensor, brick_elongate: Tensor, brick_shift: Tensor,
                     color_brick: Tensor, color_mortar: Tensor) -> Tensor:
@@ -67,6 +46,6 @@ class BrickShader(Shader):
         print("{}, {}, {}".format(vert_pos, scale, brick_shift))
         b = box(uv3[0:2], tensor((mortar_scale, mortar_scale)), tensor(0.0))
         print("{}".format(mortar_scale))
-        frag_color = to.mix(color_mortar, color_brick, b)
+        frag_color = gl.mix(color_mortar, color_brick, b)
         print("{},{}".format(color_mortar, color_brick))
         return frag_color

@@ -5,17 +5,14 @@ from PyQt5.QtCore import Qt, QPoint, QPointF
 from PyQt5.QtGui import QWheelEvent, QMouseEvent
 from PyQt5.QtWidgets import QGraphicsView, QMenu, QGraphicsSceneMouseEvent, QMessageBox
 
-from src.gui.node_editor.control_center import Material
 from src.gui.node_editor.edge import Edge
 from src.gui.node_editor.material import Material
 from src.misc import string_funcs, array_funcs
-from src.shaders.brick_shader import BrickShader
-from src.shaders.color_shader import ColorShader
 from src.shaders.hsv_shader import HSVShader
-from src.shaders.rgb_shader import RGBShader
 from src.shaders.shader_super import Shader
 
-SHADERS_TO_CONTEXT_MENU = [BrickShader, ColorShader, RGBShader, HSVShader]
+# SHADERS_TO_CONTEXT_MENU = [BrickShader, ColorShader, RGBShader, HSVShader]
+SHADERS_TO_CONTEXT_MENU = [HSVShader]
 
 
 class NodeView(QGraphicsView):

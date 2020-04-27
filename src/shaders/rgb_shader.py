@@ -15,4 +15,4 @@ class RGBShader(Shader):
         ]
 
     def shade_torch(self, vert_pos: Tensor, red: Tensor, green: Tensor, blue: Tensor) -> Tensor:
-        return torch.stack([red, green, blue, torch.tensor(1.0)], axis=0)
+        return torch.tensor((red, green, blue))

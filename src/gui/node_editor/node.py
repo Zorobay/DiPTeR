@@ -18,7 +18,7 @@ from src.gui.widgets.line_input import FloatInput
 from src.gui.widgets.input_module import InputModule
 from src.gui.widgets.output_module import OutputModule
 from src.gui.widgets.shader_input import ShaderInput
-from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB, INTERNAL_TYPE_ARRAY_RGBA, INTERNAL_TYPE_SHADER
+from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB, INTERNAL_TYPE_SHADER
 from src.shaders.shader_super import Shader
 
 

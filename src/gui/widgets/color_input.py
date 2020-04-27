@@ -5,7 +5,7 @@ from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QColor, QPalette
 from PyQt5.QtWidgets import QPushButton, QColorDialog
 
-from src.opengl.internal_types import INTERNAL_TYPE_ARRAY_RGB, INTERNAL_TYPE_ARRAY_RGBA
+from src.opengl.internal_types import INTERNAL_TYPE_ARRAY_RGB, INTERNAL_TYPE_ARRAY_RGB
 from src.gui.widgets.input_module import Input
 
 
@@ -25,7 +25,7 @@ class ColorInput(QPushButton, Input):
     def get_gl_value(self) -> np.ndarray:
         if self._internal_type == INTERNAL_TYPE_ARRAY_RGB:
             return np.array((self._color.getRgbF()[:3]), dtype=np.float32)
-        elif self._internal_type == INTERNAL_TYPE_ARRAY_RGBA:
+        elif self._internal_type == INTERNAL_TYPE_ARRAY_RGB:
             return np.array((self._color.getRgbF()), dtype=np.float32)
         else:
             raise TypeError("Internal type {} not supported for ColorInput!".format(self._internal_type))

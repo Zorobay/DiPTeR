@@ -8,8 +8,7 @@ import numpy as np
 import torch
 from glumpy import gloo
 from glumpy.gloo import Program
-from tensorflow_core import Tensor
-
+from torch import Tensor
 from src.misc import string_funcs
 from src.opengl.internal_types import *
 
