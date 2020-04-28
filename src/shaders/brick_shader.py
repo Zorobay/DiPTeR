@@ -6,7 +6,7 @@ from torch import Tensor, tensor
 
 import src.shaders.lib.glsl_builtins as gl
 from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB
-from src.shaders.lib.pattern_torch import box
+from src.shaders.lib.pattern import box
 from src.shaders.shader_super import Shader, TINY_FLOAT
 
 

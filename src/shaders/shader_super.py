@@ -186,7 +186,7 @@ class Shader(ABC):
             :return: a tuple on the form (formatted name, internal type)
         """
         return [
-            ("Color", INTERNAL_TYPE_ARRAY_RGBA)
+            ("Color", INTERNAL_TYPE_ARRAY_RGB)
         ]
 
     def shade(self, vert_pos: np.ndarray, *args) -> np.ndarray:

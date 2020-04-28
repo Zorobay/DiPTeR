@@ -9,7 +9,7 @@ from PIL import Image, ImageChops
 from PyQt5.QtWidgets import QApplication
 from glumpy.gloo import Program
 
-from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB, INTERNAL_TYPE_ARRAY_RGBA
+from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB
 from src.shaders.shader_super import Shader
 from tests.stuff_for_testing.opengl_test_renderer import OpenGLTestRenderer
 
@@ -38,7 +38,7 @@ def randomize_inputs_torch(args, shader: Shader, alpha_one=True) -> typing.List[
         typ = info[2]
         shape = arg.shape
         val = torch.from_numpy(np.random.uniform(ran[0], ran[1], shape)).float()
-        if typ == INTERNAL_TYPE_ARRAY_RGBA and alpha_one:
+        if typ == INTERNAL_TYPE_ARRAY_RGB and alpha_one:
             val[-1] = 1.
 
         out.append(val)
