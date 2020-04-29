@@ -8,11 +8,13 @@ from PyQt5.QtWidgets import QGraphicsView, QMenu, QGraphicsSceneMouseEvent, QMes
 from src.gui.node_editor.edge import Edge
 from src.gui.node_editor.material import Material
 from src.misc import string_funcs, array_funcs
+from src.shaders.brick_shader import BrickShader
+from src.shaders.color_shader import ColorShader
 from src.shaders.hsv_shader import HSVShader
+from src.shaders.rgb_shader import RGBShader
 from src.shaders.shader_super import Shader
 
-# SHADERS_TO_CONTEXT_MENU = [BrickShader, ColorShader, RGBShader, HSVShader]
-SHADERS_TO_CONTEXT_MENU = [HSVShader]
+SHADERS_TO_CONTEXT_MENU = [HSVShader, ColorShader, RGBShader, BrickShader]
 
 
 class NodeView(QGraphicsView):
@@ -85,7 +87,7 @@ class NodeView(QGraphicsView):
         self.setScene(self.cc.active_scene)
 
     def wheelEvent(self, wheel_event: QWheelEvent):
-        scroll_steps = wheel_event.angleDelta().y() / 8 / 15  # Get actual number of steps (default is 15 deg/step)
+        scroll_steps = wheel_event.angleDelta().ty() / 8 / 15  # Get actual number of steps (default is 15 deg/step)
 
         if scroll_steps > 0:
             for sc in range(int(scroll_steps)):

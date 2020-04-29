@@ -80,7 +80,7 @@ class Socket(QGraphicsWidget):
     def get_socket_scene_center(self) -> QPointF:
         pos = self.scenePos()
         pos.setX(pos.x() + self._bbox.right() / 2)
-        pos.setY(pos.y() + self._bbox.bottom() / 2)
+        pos.setY(pos.ty() + self._bbox.bottom() / 2)
         return pos
 
     def add_connected_edge(self, edge: Edge):

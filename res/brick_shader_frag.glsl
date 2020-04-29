@@ -6,8 +6,8 @@ uniform float mortar_scale;
 uniform float brick_scale;
 uniform float brick_elongate;
 uniform float brick_shift;
-uniform vec4 color_brick;
-uniform vec4 color_mortar;
+uniform vec3 color_brick;
+uniform vec3 color_mortar;
 
 out vec4 frag_color;
 
@@ -31,5 +31,5 @@ void main()
     vec3 uv3 = vert_pos;
 
     uv3 = brickTile(uv3, vec3(brick_scale/brick_elongate, brick_scale, brick_scale), brick_shift);
-    frag_color = mix(color_mortar, color_brick, box(uv3.xy, vec2(mortar_scale, mortar_scale), 0.0));
+    frag_color = vec4(mix(color_mortar, color_brick, box(uv3.xy, vec2(mortar_scale, mortar_scale))), 1.0);
 }

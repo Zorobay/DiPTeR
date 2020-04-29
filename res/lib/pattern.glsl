@@ -1,7 +1,7 @@
 #version 430
 
 float box(vec2 coord, vec2 size) {
-    edge_smooth = vec2(0.0001);
+    vec2 edge_smooth = vec2(0.00001);
     // Normalize
     size = vec2(0.5) - size * 0.5;
     vec2 uv = smoothstep(size, size + edge_smooth, coord);

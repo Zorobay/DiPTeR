@@ -4,7 +4,6 @@ import numpy as np
 import torch
 
 from src.misc.render_funcs import render_torch
-from src.mytensor import Teensor
 from src.opengl.object_vertices import get_2d_plane
 from src.shaders.brick_shader import BrickShader
 from tests.stuff_for_testing import funcs
@@ -26,7 +25,7 @@ class TestBrickShader(ShaderTest):
         assert_abs_mean_diff(py, gl, "The average absolute pixel difference of {} is too large!")
 
     def test_color_clipping(self):
-        val = torch.tensor((2.0, -1, 0.0, 1.0))
+        val = torch.tensor((2.0, -1, 0.0))
         self.program['color_brick'] = val
         self.args = self.default_args
         self.args[4] = val

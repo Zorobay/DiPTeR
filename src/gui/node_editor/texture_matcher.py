@@ -27,6 +27,7 @@ DECAY = "decay"
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+CHANNELS = 3
 
 class SettingsPanel(QWidget):
     match_start = pyqtSignal()
@@ -301,4 +302,4 @@ class GradientDescent(QObject):
                 val = self.f(vert_pos, *args)
                 loss_sum += torch.sum(torch.abs(self.truth[y, x, :] - val))
 
-        return loss_sum / (width * height * 4)
+        return loss_sum / (width * height * CHANNELS)

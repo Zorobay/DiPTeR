@@ -105,4 +105,18 @@ def assert_abs_max_diff(pys, gls, tol=0.01):
 
     for py, gl in zip(pys, gls):
         err = np.max(np.abs(py - gl))
+        if err > tol:
+            fig = plt.figure(figsize=(12, 4))
+            ax1, ax2, ax3 = fig.subplots(1, 3)
+            i1 = Image.fromarray((py * 255).astype(np.uint8))
+            i2 = Image.fromarray((gl * 255).astype(np.uint8))
+            diff = ImageChops.difference(i1, i2)
+            ax1.imshow(i1)
+            ax1.set_title("Python Render")
+            ax2.imshow(i2)
+            ax2.set_title("GL Render")
+            ax3.imshow(diff)
+            ax3.set_title("Difference")
+            plt.show()
+
         assert err <= tol, "Absolute max difference of {} is not under tolerance of {}".format(err, tol)

@@ -179,7 +179,7 @@ class OpenGLWidget(QOpenGLWidget):
         if self._render_mode == self.TEXTURE_RENDER_MODE:
             return
 
-        scroll_steps = wheel_event.angleDelta().y() / 8 / 15  # Get actual number of steps (default is 15 deg/step)
+        scroll_steps = wheel_event.angleDelta().ty() / 8 / 15  # Get actual number of steps (default is 15 deg/step)
 
         view_y = self._world_to_view[-1, 2]
         if (view_y >= 0 and scroll_steps > 0) or (view_y <= -self._far_clip_z and scroll_steps < 0):
@@ -194,7 +194,7 @@ class OpenGLWidget(QOpenGLWidget):
 
         if mouse_event.buttons() == Qt.LeftButton:
             x = mouse_event.x()
-            y = mouse_event.y()
+            y = mouse_event.ty()
             x_delta = 0
             y_delta = 0
 

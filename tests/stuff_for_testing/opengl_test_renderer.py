@@ -91,8 +91,8 @@ class OpenGLTestRenderer(QOpenGLWidget):
 
     def get_image(self) -> np.ndarray:
         img: QImage = self.grabFramebuffer()
-        img = img.convertToFormat(QImage.Format_RGBA8888)
+        img = img.convertToFormat(QImage.Format_RGBX8888)
         ptr = img.bits()
         ptr.setsize(img.byteCount())
         arr = (np.array(ptr).reshape(img.height(), img.width(), 4) / 255.).astype(np.float32)
-        return arr
+        return arr[:,:,:3]

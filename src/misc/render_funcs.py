@@ -6,21 +6,23 @@ import torch
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+CHANNELS = 3
 
-def render(width: int, height: int, f: typing.Callable, *args):
-    img = np.zeros((width, height, 4))
 
-    x_res = 1.0 / width
-    y_res = 1.0 / height
-    x_pos = np.linspace(0, 1.0, width, endpoint=False) + (x_res / 2.0)
-    y_pos = np.linspace(0, 1.0, height, endpoint=False) + (y_res / 2.0)
-
-    for x in range(width):
-        for y in range(height):
-            vert_pos = anp.array((x_pos[x], y_pos[y], 0.))
-            img[y, x, :] = f(vert_pos, *args)
-
-    return img
+# def render(width: int, height: int, f: typing.Callable, *args):
+#     img = np.zeros((width, height, 4))
+#
+#     x_res = 1.0 / width
+#     y_res = 1.0 / height
+#     x_pos = np.linspace(0, 1.0, width, endpoint=False) + (x_res / 2.0)
+#     y_pos = np.linspace(0, 1.0, height, endpoint=False) + (y_res / 2.0)
+#
+#     for x in range(width):
+#         for y in range(height):
+#             vert_pos = anp.array((x_pos[x], y_pos[y], 0.))
+#             img[y, x, :] = f(vert_pos, *args)
+#
+#     return img
 
 
 def get_coordinates2(width: int, height: int) -> typing.Tuple[torch.Tensor, torch.Tensor]:
@@ -30,6 +32,7 @@ def get_coordinates2(width: int, height: int) -> typing.Tuple[torch.Tensor, torc
     y_pos = torch.from_numpy(np.linspace(0., 1.0, height, endpoint=False)).flip(0) + (y_res / 2.0)
     return x_pos, y_pos
 
+
 def get_coordinates(width: int, height: int) -> typing.Tuple[torch.Tensor, torch.Tensor]:
     x_res = 1.0 / width
     y_res = 1.0 / height
@@ -37,8 +40,9 @@ def get_coordinates(width: int, height: int) -> typing.Tuple[torch.Tensor, torch
     y_pos = torch.from_numpy(np.linspace(0., 1.0, height, endpoint=False)) + (y_res / 2.0)
     return x_pos, y_pos
 
+
 def render_torch(width: int, height: int, f: typing.Callable, *args):
-    img = np.zeros((height, width, 4))
+    img = np.zeros((height, width, CHANNELS))
     x_pos, y_pos = get_coordinates(width, height)
 
     for row in range(height):
@@ -51,7 +55,7 @@ def render_torch(width: int, height: int, f: typing.Callable, *args):
 
 
 def render_torch2(width: int, height: int, f: typing.Callable, *args):
-    img = torch.zeros((4, width, height), device=device)
+    img = torch.zeros((CHANNELS, width, height), device=device)
     x_pos, y_pos = get_coordinates(width, height)
 
     for row in range(height):
@@ -70,7 +74,7 @@ def render_torch3(width: int, height: int, f, *args):
 
 
 def render_torch_with_callback(width: int, height: int, row_callback: typing.Callable, f: typing.Callable, *args):
-    img = np.zeros((height, width, 4))
+    img = np.zeros((height, width, CHANNELS))
     x_pos, y_pos = get_coordinates(width, height)
 
     for row in range(height):
@@ -104,4 +108,4 @@ class Loss:
                 val = self.f(vert_pos, *args)
                 loss_sum += anp.sum(anp.abs(self.truth[y, x, :] - val))
 
-        return loss_sum / (self.width * self.height * 4)
+        return loss_sum / (self.width * self.height * CHANNELS)

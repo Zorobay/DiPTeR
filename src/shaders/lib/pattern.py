@@ -4,7 +4,7 @@ import src.shaders.lib.glsl_builtins as gl
 
 
 def box(coord: Tensor, size: Tensor) -> Tensor:
-    edge_smooth = 0.0001
+    edge_smooth = 0.00001
     size = 0.5 - size * 0.5
     uv = gl.smoothstep(size, size + edge_smooth, coord)
     uv *= gl.smoothstep(size, size + edge_smooth, 1.0 - coord)

@@ -3,7 +3,7 @@ import math
 import torch
 from torch.testing import assert_allclose
 
-from src.shaders.lib import trig_torch as trig
+from src.shaders.lib import trig
 
 
 def test_deg_to_rad():
