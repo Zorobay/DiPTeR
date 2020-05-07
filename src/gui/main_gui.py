@@ -36,6 +36,9 @@ class MainWidget(QWidget):
         self.grid_layout.addWidget(self.openGL, 0, 1, 2, 1)
         self.grid_layout.addWidget(self.opengl_settings, 0, 2, 2, 1)
 
+        # Add starting material to Scene
+        self.material_selector.add_material("Material")
+
         self.setLayout(self.grid_layout)
 
 
