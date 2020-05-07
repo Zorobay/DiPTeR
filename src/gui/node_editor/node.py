@@ -4,8 +4,8 @@ import uuid
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QRectF, pyqtSignal
-from PyQt5.QtGui import QBrush, QFont, QColor, QPalette, QPainter
-from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsWidget
+from PyQt5.QtGui import QBrush, QFont, QColor, QPalette, QPainter, QPen
+from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsWidget, QGraphicsSceneMouseEvent
 from glumpy.gloo import Program
 
 # from src.gui.node_editor.control_center import ControlCenter
@@ -14,8 +14,8 @@ from src.gui.node_editor.layouts import GraphicsGridLayout
 from src.gui.node_editor.node_scene import NodeScene
 from src.gui.node_editor.socket import Socket
 from src.gui.widgets.color_input import ColorInput
-from src.gui.widgets.line_input import FloatInput
 from src.gui.widgets.input_module import InputModule
+from src.gui.widgets.line_input import FloatInput
 from src.gui.widgets.output_module import OutputModule
 from src.gui.widgets.shader_input import ShaderInput
 from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB, INTERNAL_TYPE_SHADER
@@ -39,6 +39,7 @@ class Node(QGraphicsWidget):
         self._sockets = {}
 
         # define Node properties
+        self._selected = False
         self._input_index = 2
         self._width = 250
         self._height = 50
@@ -124,7 +125,11 @@ class Node(QGraphicsWidget):
         return QRectF(0, 0, self._width, self._height).normalized()
 
     def paint(self, painter: QPainter, option, widget=None):
-        painter.setPen(Qt.NoPen)  # Disables the border
+        if self.isSelected():
+            painter.setPen(QPen(Qt.black))  # Disables the border
+        else:
+            painter.setPen(Qt.NoPen)
+
         painter.setBrush(QBrush(self._bg_color))
         painter.drawRoundedRect(0, 0, self._width, self._height, self._rounding, 1)
 

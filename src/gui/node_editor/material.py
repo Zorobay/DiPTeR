@@ -70,6 +70,9 @@ class Material(QObject):
 
         _logger.debug("Added new node {} to material {}.".format(node.title, self.name))
 
+    def get_nodes(self) -> typing.Dict[uuid.UUID, ShaderNode]:
+        return self._nodes
+
     def remove_edge(self, edge: Edge):
         self.node_scene.removeItem(edge)
         self._is_drawing_edge = False

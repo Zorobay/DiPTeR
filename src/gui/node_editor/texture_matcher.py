@@ -26,6 +26,7 @@ LEARNING_RATE = "learning_rate"
 DECAY = "decay"
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = "cpu"
 
 CHANNELS = 3
 
@@ -162,7 +163,7 @@ class TextureMatcher(QWidget):
         self.setLayout(self._layout)
 
     def _set_image_to_match(self, image):
-        self._image_to_match = image
+        self._image_to_match = image.convert("RGB")
         self._tex_axis.imshow(self._image_to_match, vmin=0, vmax=1)
         self._figure_canvas.draw()
 
@@ -242,7 +243,6 @@ class GradientDescent(QObject):
             transforms.ToTensor()])  # transform it into a torch tensor
 
         self.truth = loader(self.image_to_match).to(device, torch.float32)
-        #self.truth = torch.from_numpy(np.asarray(self.image_to_match.resize((self.width, self.height))) / 255.)
         self.f = self.shader.shade_torch
 
         init_params = self.shader.get_parameters_list_torch(requires_grad=True)

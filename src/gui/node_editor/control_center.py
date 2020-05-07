@@ -96,3 +96,21 @@ class ControlCenter(QObject):
             return True
 
         return False
+
+    def delete_node(self, node_id: uuid):
+        """
+        Deletes a node from the active material.
+
+        :param node_id: The UUID of the node to be deleted
+        :return: True if successful, False otherwise.
+        """
+        if self.active_material:
+            nodes = self.active_material.get_nodes()
+            try:
+                node = nodes[node_id]
+                del nodes[node_id]
+                self.active_material.node_scene.removeItem(node)
+            except KeyError:
+                return False
+
+        return False

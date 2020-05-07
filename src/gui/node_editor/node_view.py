@@ -5,21 +5,25 @@ from PyQt5.QtCore import Qt, QPoint, QPointF
 from PyQt5.QtGui import QWheelEvent, QMouseEvent
 from PyQt5.QtWidgets import QGraphicsView, QMenu, QGraphicsSceneMouseEvent, QMessageBox
 
+from src.gui.node_editor.control_center import ControlCenter
 from src.gui.node_editor.edge import Edge
 from src.gui.node_editor.material import Material
 from src.misc import string_funcs, array_funcs
 from src.shaders.brick_shader import BrickShader
+from src.shaders.checker_shader import CheckerShader
 from src.shaders.color_shader import ColorShader
 from src.shaders.hsv_shader import HSVShader
+from src.shaders.mix_shader import MixShader
 from src.shaders.rgb_shader import RGBShader
 from src.shaders.shader_super import Shader
+from tests.stuff_for_testing.shaders.test_box_shader import TestBoxShader
 
-SHADERS_TO_CONTEXT_MENU = [HSVShader, ColorShader, RGBShader, BrickShader]
+SHADERS_TO_CONTEXT_MENU = [CheckerShader, HSVShader, ColorShader, RGBShader, BrickShader, TestBoxShader, MixShader]
 
 
 class NodeView(QGraphicsView):
 
-    def __init__(self, cc: Material):
+    def __init__(self, cc: ControlCenter):
         super().__init__(None)
 
         self.cc = cc
@@ -37,20 +41,6 @@ class NodeView(QGraphicsView):
     def _init_view(self):
         self.setDragMode(self.NoDrag)
         self.cc.active_material_changed.connect(self._set_scene_from_material)
-
-    def contextMenuEvent(self, cm_event):
-        pos = cm_event.pos()
-        self._spawn_add_node_menu(self.mapToGlobal(pos))
-
-    def keyPressEvent(self, key_event):
-        key = key_event.key()
-        modifiers = key_event.modifiers()
-
-        if modifiers == Qt.ControlModifier and key == Qt.Key_A:
-            mouse_pos = QtGui.QCursor().pos()
-            self._spawn_add_node_menu(mouse_pos)
-        else:
-            super().keyPressEvent(key_event)
 
     def _spawn_add_node_menu(self, pos: QPoint):
         shader: typing.Type[Shader] = self._add_node_menu.execute(pos)
@@ -86,6 +76,37 @@ class NodeView(QGraphicsView):
     def _set_scene_from_material(self, material: Material):
         self.setScene(self.cc.active_scene)
 
+    # ------------------------------------
+    # ------ Event handling -------------
+    # ------------------------------------
+    def contextMenuEvent(self, cm_event):
+        pos = cm_event.pos()
+        self._spawn_add_node_menu(self.mapToGlobal(pos))
+
+    def keyPressEvent(self, key_event):
+        key = key_event.key()
+        modifiers = key_event.modifiers()
+
+        if modifiers == Qt.ControlModifier and key == Qt.Key_A:
+            mouse_pos = QtGui.QCursor().pos()
+            self._spawn_add_node_menu(mouse_pos)
+        elif key == Qt.Key_Delete:
+            mat = self.cc.active_material
+            if mat:
+                nodes = mat.get_nodes()
+                delete = []
+
+                for id_ in nodes:
+                    n = nodes[id_]
+                    if n.isSelected():
+                        delete.append(id_)
+
+                for id_ in delete:
+                    self.cc.delete_node(id_)
+
+        else:
+            super().keyPressEvent(key_event)
+
     def wheelEvent(self, wheel_event: QWheelEvent):
         scroll_steps = wheel_event.angleDelta().ty() / 8 / 15  # Get actual number of steps (default is 15 deg/step)
 
@@ -97,6 +118,13 @@ class NodeView(QGraphicsView):
                 self.scale(1.1, 1.1)
 
     def mousePressEvent(self, event: QMouseEvent):
+        # Unselect all nodes
+        mat = self.cc.active_material
+        if mat:
+            nodes = mat.get_nodes()
+            for n in nodes:
+                nodes[n].setSelected(False)
+
         # Handle start of panning
         if event.button() == Qt.MiddleButton:
             self._pan_last_pos = event.pos()
