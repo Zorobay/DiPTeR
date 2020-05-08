@@ -141,6 +141,12 @@ class OpenGLWidget(QOpenGLWidget):
         if self._program is not None:
             self._program.bind(self._V)
 
+    def reset_view(self):
+        """Resets the rotation and scaling of the rendered object."""
+        self._world_to_view = np.eye(4, dtype=np.float32)
+        self._object_to_world = np.eye(4, dtype=np.float32)
+        self._init_camera()
+
     def _set_perspective_projection(self, w: int, h: int):
         ratio = w / float(h)
         self._view_to_projection = glm.perspective(45.0, ratio, znear=self._near_clip_z, zfar=self._far_clip_z)

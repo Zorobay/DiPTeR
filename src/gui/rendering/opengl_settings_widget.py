@@ -4,6 +4,7 @@ from pathlib import Path
 import autograd.numpy as anp
 import numpy as np
 from PIL import Image
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget, QGridLayout, QComboBox, QLabel, QPushButton, QFileDialog, QVBoxLayout, QHBoxLayout
 from autograd import grad
 
@@ -52,6 +53,7 @@ class OpenGLSettingsWidget(QWidget):
         # Define gui component variables
         self._layout = QVBoxLayout()
         self._object_list = QComboBox()
+        self._reset_view_button = QPushButton("Reset Scene View")
         self._match_texture_button = QPushButton("Match Texture")
         self._matcher = None
 
@@ -73,12 +75,20 @@ class OpenGLSettingsWidget(QWidget):
         scene_object_layout.addWidget(self._object_list)
         self._layout.addLayout(scene_object_layout)
 
+        # Setup reset scene view button
+        self._reset_view_button.clicked.connect(self._reset_view)
+        self._layout.addWidget(self._reset_view_button)
+
         # Setup Match Texture Button
         self._match_texture_button.clicked.connect(self._match_texture)
         self._layout.addWidget(self._match_texture_button)
 
+        self._layout.setAlignment(Qt.AlignTop)
         self.setLayout(self._layout)
         self.show()
+
+    def _reset_view(self):
+        self._open_gl_widget.reset_view()
 
     def _send_defaults_to_gl(self):
         self._handle_object_vertices_list_change(self.OBJECT_VERTICES_DEFAULT)
