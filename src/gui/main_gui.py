@@ -2,18 +2,18 @@ import logging
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QApplication, QMainWindow, QAction
 
-from src.gui.node_editor.control_center import Material, ControlCenter
-from src.gui.rendering.python_rendering_widget import PythonRenderingWidget
-from src.gui.widgets.material_selector import MaterialSelector
+from src.gui.node_editor.control_center import ControlCenter
 from src.gui.node_editor.node_view import NodeView
 from src.gui.rendering.opengl_settings_widget import OpenGLSettingsWidget
 from src.gui.rendering.opengl_widget import OpenGLWidget
+from src.gui.rendering.python_rendering_widget import PythonRenderingWidget
+from src.gui.widgets.material_selector import MaterialSelector
 
 _logger = logging.getLogger(__name__)
 
 
 class MainWidget(QWidget):
-    def __init__(self, cc:Material):
+    def __init__(self, cc: ControlCenter):
         super().__init__()
 
         self.cc = cc

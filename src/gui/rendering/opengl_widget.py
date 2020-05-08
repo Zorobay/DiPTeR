@@ -1,13 +1,12 @@
 import numpy as np
-from PyQt5.QtCore import QTimer, Qt, pyqtSignal, QObject, QEvent
+from PyQt5.QtCore import QTimer, Qt, pyqtSignal
 from PyQt5.QtGui import QMouseEvent, QImage
 from PyQt5.QtWidgets import QOpenGLWidget, QMenu, QFileDialog
 from glumpy import gl, glm, gloo
 from glumpy.gloo import Program
 
-from src.gui.node_editor.control_center import Material
+from src.gui.node_editor.control_center import ControlCenter
 from src.gui.node_editor.material import Material
-from src.gui.widgets.material_selector import MaterialSelector
 from src.opengl import object_vertices
 from src.shaders import OBJECT_MATRIX_NAME, VIEW_MATRIX_NAME, PROJECTION_MATRIX_NAME
 from src.shaders.color_shader import ColorShader
@@ -18,7 +17,7 @@ class OpenGLWidget(QOpenGLWidget):
     FREE_RENDER_MODE = 1
     init_done = pyqtSignal()
 
-    def __init__(self, width: int, height: int, cc: Material = None, render_mode: int = FREE_RENDER_MODE):
+    def __init__(self, width: int, height: int, cc: ControlCenter = None, render_mode: int = FREE_RENDER_MODE):
         super().__init__()
 
         # Set Widget settings
@@ -94,13 +93,9 @@ class OpenGLWidget(QOpenGLWidget):
 
     def _init_default_shader(self):
         self._shader = ColorShader()
-
-        if self._render_mode == self.FREE_RENDER_MODE:
-            V, I = object_vertices.get_3d_cube()
-        elif self._render_mode == self.TEXTURE_RENDER_MODE:
-            V, I = object_vertices.get_2d_plane()
-
         self._program = self._shader.get_program()
+
+        V, I = object_vertices.get_2d_plane()
         self.set_vertices(V, I)
 
         for nf, nu, t, ra, de in self._shader.get_inputs():
@@ -179,7 +174,7 @@ class OpenGLWidget(QOpenGLWidget):
         if self._render_mode == self.TEXTURE_RENDER_MODE:
             return
 
-        scroll_steps = wheel_event.angleDelta().ty() / 8 / 15  # Get actual number of steps (default is 15 deg/step)
+        scroll_steps = wheel_event.angleDelta().y() / 8 / 15  # Get actual number of steps (default is 15 deg/step)
 
         view_y = self._world_to_view[-1, 2]
         if (view_y >= 0 and scroll_steps > 0) or (view_y <= -self._far_clip_z and scroll_steps < 0):
@@ -194,7 +189,7 @@ class OpenGLWidget(QOpenGLWidget):
 
         if mouse_event.buttons() == Qt.LeftButton:
             x = mouse_event.x()
-            y = mouse_event.ty()
+            y = mouse_event.y()
             x_delta = 0
             y_delta = 0
 

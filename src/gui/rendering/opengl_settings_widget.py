@@ -66,6 +66,8 @@ class OpenGLSettingsWidget(QWidget):
         # Setup 3d object chooser
         self._object_list.addItems(vertex_func_name_to_label(self._object_vertices_func_names))
         self._object_list.currentIndexChanged.connect(self._handle_object_vertices_list_change)
+        self._object_list.setCurrentIndex(0)
+
         scene_object_layout = QHBoxLayout()
         scene_object_layout.addWidget(QLabel("Scene object:"))
         scene_object_layout.addWidget(self._object_list)
