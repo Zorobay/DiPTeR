@@ -9,6 +9,7 @@ import torch
 from glumpy import gloo
 from glumpy.gloo import Program
 from torch import Tensor
+
 from src.misc import string_funcs
 from src.opengl.internal_types import *
 
@@ -157,16 +158,21 @@ class Shader(ABC):
 
         return params
 
-    def get_parameters_list_torch(self, requires_grad=False):
+    def get_parameters_list_torch(self, requires_grad=False, randomize=False):
 
         params = []
 
-        for _, uniform, internal_type, _, _ in self.get_inputs():
+        for _, uniform, internal_type, ran, _ in self.get_inputs():
             val = self._program[uniform]
             if "array" not in internal_type:
-                val = val[0]  # Uniforms are stored in array even if they're single floats
+                val = np.array(val[0])  # Uniforms are stored in array even if they're single floats
 
-            tensor = torch.from_numpy(np.array(val))
+            if randomize:
+                tensor = torch.from_numpy(np.random.uniform(ran[0], ran[1], size=val.size))
+            else:
+                tensor = torch.from_numpy(val)
+
+            tensor = tensor.float()
             tensor.requires_grad = requires_grad
             params.append(tensor)
 

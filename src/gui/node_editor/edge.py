@@ -49,5 +49,5 @@ class Edge(QGraphicsLineItem):
         self._update_line()
 
     def _update_line(self):
-        self.setLine(self.out_pos.x(), self.out_pos.ty(), self.in_pos.x(), self.in_pos.ty())
+        self.setLine(self.out_pos.x(), self.out_pos.y(), self.in_pos.x(), self.in_pos.y())
 

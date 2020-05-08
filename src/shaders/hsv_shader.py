@@ -19,6 +19,5 @@ class HSVShader(Shader):
         K = torch.tensor((1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0))
         p = torch.abs(gl.fract(torch.stack([h, h, h]) + K[0:3]) * torch.tensor(6.0) - torch.stack([K[3], K[3], K[3]]))
         color = v * gl.mix(torch.stack([K[0], K[0], K[0]]), torch.clamp(p - torch.stack([K[0], K[0], K[0]]), 0, 1.0), s)
-        #return color.repeat((*vert_pos.shape[0:2], 1))
         return color
 

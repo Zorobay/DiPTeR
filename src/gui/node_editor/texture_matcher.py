@@ -2,7 +2,6 @@ import logging
 import time
 import typing
 
-from torchvision import transforms
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -11,11 +10,12 @@ from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QThread, Qt
 from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from torchvision import transforms
 
-from src.gui.widgets.labelled_input import LabelledInput
-from src.misc import render_funcs
 from src.gui.rendering.opengl_widget import OpenGLWidget
+from src.gui.widgets.labelled_input import LabelledInput
 from src.gui.widgets.line_input import FloatInput, IntInput
+from src.misc import render_funcs
 from src.shaders.shader_super import Shader
 
 _logger = logging.getLogger(__name__)
@@ -29,6 +29,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device = "cpu"
 
 CHANNELS = 3
+
 
 class SettingsPanel(QWidget):
     match_start = pyqtSignal()
@@ -211,17 +212,19 @@ class GradientDescent(QObject):
     gd_iteration = pyqtSignal(dict)
     finished = pyqtSignal(list, np.ndarray)
 
-    def __init__(self, image_to_match: Image.Image, shader: Shader, settings: dict):
+    def __init__(self, image_to_match: Image.Image, shader: Shader, settings: dict, optimizer: torch.optim.Optimizer = torch.optim.Adam):
         super().__init__()
         self.image_to_match = image_to_match
         self.shader = shader
-        self.width, self.height = 100,100
+        self.optimizer = optimizer
+        self.width, self.height = 100, 100
         self.lr = 0.15
         self.decay = 0.97
         self.max_iter = 500
         self.early_stopping_thresh = 0.01
         self.truth = None
         self.f = None
+        self.mse_loss = torch.nn.MSELoss(reduction='mean')
 
         self._read_settings(settings)
 
@@ -245,20 +248,44 @@ class GradientDescent(QObject):
         self.truth = loader(self.image_to_match).to(device, torch.float32)
         self.f = self.shader.shade_torch
 
-        init_params = self.shader.get_parameters_list_torch(requires_grad=True)
+        init_params = self.shader.get_parameters_list_torch(requires_grad=True, randomize=False)
 
-        params, loss_hist = self._gradient_descent_torch(init_params, lr=self.lr, lr_decay=self.decay, max_iter=self.max_iter,
-                                                         early_stopping_thresh=self.early_stopping_thresh)
+        params, loss_hist = self._run_gd(init_params, lr=self.lr, max_iter=self.max_iter, early_stopping_thresh=self.early_stopping_thresh)
         self.finished.emit(params, loss_hist)
 
-    def _gradient_descent_torch(self, init_params:list, lr=0.01, lr_decay=0.99, max_iter=150, early_stopping_thresh=0.01) -> typing.Tuple[list,
-                                                                                                                                          np.ndarray]:
+    def _run_gd(self, init_params: list, lr=0.01, max_iter=150, early_stopping_thresh=0.01) -> typing.Tuple[list, np.ndarray]:
+        P = init_params
+        optimizer = self.optimizer(P, lr=lr)
+        loss_hist = np.empty(max_iter, dtype=np.float32)
+
+        for i in range(max_iter):
+            optimizer.zero_grad()
+            start = time.time()
+            new_loss = self.loss_torch2(*P)
+            new_loss_np = float(new_loss.detach())
+            loss_hist[i] = new_loss_np
+            props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1], 'learning_rate': lr, 'params': P}
+
+            new_loss.backward(retain_graph=False,create_graph=False)
+
+            optimizer.step()
+
+            props['iter_time'] = time.time() - start
+            self.gd_iteration.emit(props)
+
+            if new_loss <= early_stopping_thresh:
+                break
+
+        return P, loss_hist
+
+    def _gradient_descent_torch(self, init_params: list, lr=0.01, lr_decay=0.99, max_iter=150, early_stopping_thresh=0.01) -> typing.Tuple[list,
+                                                                                                                                           np.ndarray]:
         params = init_params
         loss_hist = np.empty(max_iter, dtype=np.float32)
 
         for i in range(max_iter):
             start = time.time()
-            new_loss = self.loss_torch2(*params)
+            new_loss = self.MSELoss(*params)
             new_loss_np = float(new_loss.detach())
             grads = torch.autograd.grad(outputs=new_loss, inputs=params, create_graph=True, retain_graph=True, allow_unused=False, only_inputs=True)
             loss_hist[i] = new_loss_np
@@ -278,6 +305,10 @@ class GradientDescent(QObject):
                 break
 
         return params, loss_hist
+
+    def MSELoss(self, *args):
+        render = render_funcs.render_torch2(self.width, self.height, self.f, *args)
+        return self.mse_loss(render, self.truth)
 
     def loss_torch2(self, *args):
         render = render_funcs.render_torch2(self.width, self.height, self.f, *args)
