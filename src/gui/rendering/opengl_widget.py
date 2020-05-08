@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 from PyQt5.QtCore import QTimer, Qt, pyqtSignal
 from PyQt5.QtGui import QMouseEvent, QImage
@@ -10,6 +12,8 @@ from src.gui.node_editor.material import Material
 from src.opengl import object_vertices
 from src.shaders import OBJECT_MATRIX_NAME, VIEW_MATRIX_NAME, PROJECTION_MATRIX_NAME
 from src.shaders.color_shader import ColorShader
+
+_logger = logging.getLogger(__name__)
 
 
 class OpenGLWidget(QOpenGLWidget):
@@ -28,6 +32,7 @@ class OpenGLWidget(QOpenGLWidget):
         self.cc = cc
         self._render_mode = render_mode
         self._program = None
+        self._default_program = None
         self._shader = None
         self._timer = None
         self._I = None
@@ -71,7 +76,7 @@ class OpenGLWidget(QOpenGLWidget):
         self._init_default_shader()
 
         if self.cc:
-            self.cc.active_material_changed.connect(self._subscribe_to_material)
+            self.cc.active_material_changed.connect(self._active_material_changed)
 
         # Start an update timer to refresh rendering
         self._timer = QTimer()
@@ -80,7 +85,12 @@ class OpenGLWidget(QOpenGLWidget):
         self._timer.start()
         self.init_done.emit()
 
-    def _subscribe_to_material(self, material: Material):
+    def _active_material_changed(self, material: Material):
+        if material.program is not None:
+            self.set_program(material.program)
+        else:
+            self.set_program(self._default_program)
+
         material.program_ready.connect(self.set_program)
 
     def set_program(self, program: Program):
@@ -94,12 +104,15 @@ class OpenGLWidget(QOpenGLWidget):
     def _init_default_shader(self):
         self._shader = ColorShader()
         self._program = self._shader.get_program()
+        self._default_program = self._program
 
         V, I = object_vertices.get_2d_plane()
         self.set_vertices(V, I)
 
         for nf, nu, t, ra, de in self._shader.get_inputs():
             self._program[nu] = de
+
+        _logger.info("Done initializing default shader.")
 
     def paintGL(self):
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)

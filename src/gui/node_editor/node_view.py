@@ -16,9 +16,10 @@ from src.shaders.hsv_shader import HSVShader
 from src.shaders.mix_shader import MixShader
 from src.shaders.rgb_shader import RGBShader
 from src.shaders.shader_super import Shader
+from src.shaders.cloud_shader import CloudShader
 from tests.stuff_for_testing.shaders.test_box_shader import TestBoxShader
 
-SHADERS_TO_CONTEXT_MENU = [CheckerShader, HSVShader, ColorShader, RGBShader, BrickShader, TestBoxShader, MixShader]
+SHADERS_TO_CONTEXT_MENU = [CloudShader,CheckerShader, HSVShader, ColorShader, RGBShader, BrickShader, TestBoxShader, MixShader]
 
 
 class NodeView(QGraphicsView):
@@ -40,7 +41,12 @@ class NodeView(QGraphicsView):
 
     def _init_view(self):
         self.setDragMode(self.NoDrag)
-        self.cc.active_material_changed.connect(self._set_scene_from_material)
+        self.cc.active_material_changed.connect(self._set_scene)
+
+    def _set_scene(self, material: Material):
+        assert material.node_scene == self.cc.active_scene
+
+        self.setScene(self.cc.active_scene)
 
     def _spawn_add_node_menu(self, pos: QPoint):
         shader: typing.Type[Shader] = self._add_node_menu.execute(pos)
@@ -72,9 +78,6 @@ class NodeView(QGraphicsView):
 
     def addItem(self, *args, **kwargs):
         self.scene().addItem(*args, **kwargs)
-
-    def _set_scene_from_material(self, material: Material):
-        self.setScene(self.cc.active_scene)
 
     # ------------------------------------
     # ------ Event handling -------------
@@ -108,7 +111,7 @@ class NodeView(QGraphicsView):
             super().keyPressEvent(key_event)
 
     def wheelEvent(self, wheel_event: QWheelEvent):
-        scroll_steps = wheel_event.angleDelta().ty() / 8 / 15  # Get actual number of steps (default is 15 deg/step)
+        scroll_steps = wheel_event.angleDelta().y() / 8 / 15  # Get actual number of steps (default is 15 deg/step)
 
         if scroll_steps > 0:
             for sc in range(int(scroll_steps)):

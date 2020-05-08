@@ -20,7 +20,7 @@ class ControlCenter(QObject):
         super().__init__()
 
         # Define data
-        self._materials = []
+        self._materials = {}
         self._active_material = None
 
         self._init_control_center()
@@ -58,15 +58,15 @@ class ControlCenter(QObject):
         :param name: The display name of the Material to be created.
         :return: the newly created Material or None is the name was not unique.
         """
-        for m in self._materials:
+        for _, m in self._materials.items():
             if m.name == name:
                 _logger.error("Material with name {} already exists! Failed to create new material.".format(m.name))
                 return None
 
         material = Material(self, name)
-        self._materials.append(material)
-
+        self._materials[material.id] = material
         _logger.debug("New material {} ({}) added.".format(material.name, material.id))
+
         return material
 
     def set_active_material_id(self, material_id: uuid.UUID) -> bool:
@@ -74,8 +74,8 @@ class ControlCenter(QObject):
         Set the material with id 'material_id' to the new active material. If the id is invalid, will return False, else True.
         :param material_id: the id of the material to set as active.
         """
-        for m in self._materials:
-            if m.id == material_id:
+        for id_, m in self._materials.items():
+            if id_ == material_id:
                 self._active_material = m
                 self.active_material_changed.emit(m)
                 _logger.debug("Set new active material {} ({}).".format(m.name, m.id))

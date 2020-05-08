@@ -39,6 +39,9 @@ class Material(QObject):
         self._shader = None
         self._is_drawing_edge = False
 
+    def __str__(self):
+        return "Material ({})".format(self.name)
+
     @property
     def name(self):
         return self._name

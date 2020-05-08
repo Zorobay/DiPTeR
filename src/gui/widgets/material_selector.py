@@ -41,6 +41,8 @@ class MaterialSelector(QWidget):
         mat = self.cc.new_material(name)
         self._material_ids.append(mat.id)
         self._material_combo_box.addItem(name)
+        self._material_combo_box.size()
+        self._material_combo_box.setCurrentIndex(self._material_combo_box.count()-1)
 
     def _add_button_clicked(self):
         name, ok = QInputDialog.getText(self, "New Material Name", "Material Name", text="Material{}".format(self.cc.get_num_materials()))
