@@ -15,7 +15,7 @@ from torchvision import transforms
 from src.gui.rendering.opengl_widget import OpenGLWidget
 from src.gui.widgets.labelled_input import LabelledInput
 from src.gui.widgets.line_input import FloatInput, IntInput
-from src.misc import render_funcs
+from src.misc import render_funcs, losses
 from src.shaders.shader_super import Shader
 
 _logger = logging.getLogger(__name__)
@@ -90,6 +90,9 @@ class SettingsPanel(QWidget):
 
     def set_gd_finished(self):
         self._match_button.setText("Match Texture")
+
+    def set_gd_finishing(self):
+        self._match_button.setText("Stopping...")
 
     def _settings_changed(self, key: str, new_val: typing.Any):
         self.settings[key] = new_val
@@ -184,8 +187,9 @@ class TextureMatcher(QWidget):
 
     def _stop_gradient_descent(self):
         if self.thread.isRunning():
+            self._settings_panel.set_gd_finishing()
+            self.gd.stop()
             self.thread.quit()
-            self._finish_gradient_descent()
 
     def _finish_gradient_descent(self):
         self._settings_panel.set_gd_finished()
@@ -225,6 +229,7 @@ class GradientDescent(QObject):
         self.truth = None
         self.f = None
         self.mse_loss = torch.nn.MSELoss(reduction='mean')
+        self._stop = False
 
         self._read_settings(settings)
 
@@ -238,6 +243,9 @@ class GradientDescent(QObject):
                 self.lr = val
             elif key == DECAY:
                 self.decay = val
+
+    def stop(self):
+        self._stop = True
 
     @pyqtSlot(name='run')
     def run(self):
@@ -259,14 +267,17 @@ class GradientDescent(QObject):
         loss_hist = np.empty(max_iter, dtype=np.float32)
 
         for i in range(max_iter):
+            if self._stop:
+                return P, loss_hist
+
             optimizer.zero_grad()
             start = time.time()
-            new_loss = self.loss_torch2(*P)
+            new_loss = self.MSELoss(*P)
             new_loss_np = float(new_loss.detach())
             loss_hist[i] = new_loss_np
             props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1], 'learning_rate': lr, 'params': P}
 
-            new_loss.backward(retain_graph=False,create_graph=False)
+            new_loss.backward(retain_graph=False, create_graph=False)
 
             optimizer.step()
 
@@ -305,6 +316,21 @@ class GradientDescent(QObject):
                 break
 
         return params, loss_hist
+
+    def sbe(self, *args):
+        start = time.time()
+        render = render_funcs.render_torch2(self.width, self.height, self.f, *args)
+        end = time.time()
+        print("Time rendering: {}".format(end - start))
+        return losses.squared_bin_loss(render, self.truth)
+
+    def vert_bin_loss(self, *args):
+        loss = losses.VerticalBinLoss(bin_size=5)
+        start = time.time()
+        render = render_funcs.render_torch2(self.width, self.height, self.f, *args)
+        end = time.time()
+        print("Time rendering: {}".format(end - start))
+        return loss(self.truth, render)
 
     def MSELoss(self, *args):
         render = render_funcs.render_torch2(self.width, self.height, self.f, *args)
