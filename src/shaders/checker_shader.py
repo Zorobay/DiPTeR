@@ -1,11 +1,11 @@
 import typing
+
 import torch
-from torch import Tensor, tensor
+from torch import Tensor
 
 import src.shaders.lib.glsl_builtins as gl
 from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB
-from src.shaders.lib.pattern import box
-from src.shaders.shader_super import Shader, TINY_FLOAT
+from src.shaders.shader_super import Shader
 
 
 class CheckerShader(Shader):
@@ -18,11 +18,10 @@ class CheckerShader(Shader):
         return [
             ("Color1", "color1", INTERNAL_TYPE_ARRAY_RGB, (0, 1), torch.ones(3)),
             ("Color2", "color2", INTERNAL_TYPE_ARRAY_RGB, (0, 1), torch.zeros(3)),
-            ("Scale", "scale", INTERNAL_TYPE_FLOAT, (0,100), 10.0)
+            ("Scale", "scale", INTERNAL_TYPE_FLOAT, (0, 100), 10.0)
         ]
 
-    def shade_torch(self, vert_pos: Tensor, color1: Tensor, color2: Tensor, scale: Tensor) -> Tensor:
-
+    def shade_mat(self, vert_pos: Tensor, color1: Tensor, color2: Tensor, scale: Tensor) -> Tensor:
         p = vert_pos * scale
 
         p_int = torch.abs(torch.floor(p))
@@ -32,3 +31,15 @@ class CheckerShader(Shader):
             return color1
         else:
             return color2
+
+    def shade(self, vert_pos: Tensor, color1: Tensor, color2: Tensor, scale: Tensor) -> Tensor:
+        p = vert_pos * scale
+
+        p_int = torch.abs(torch.floor(p))
+
+        check = torch.eq(torch.eq(gl.mod(p_int[0], 2.0), gl.mod(p_int[1], 2.0)), gl.mod(p_int[2], 2.0))
+        if check:
+            return color1
+        else:
+            return color2
+        #return gl.mix(color2, color1, check)

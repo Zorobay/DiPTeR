@@ -35,8 +35,17 @@ class BrickShader(Shader):
 
         return gl.fract(torch.stack([tx_shifted, ty, tz]))
 
-    def shade_torch(self, vert_pos: Tensor, mortar_scale: Tensor, brick_scale: Tensor, brick_elongate: Tensor, brick_shift: Tensor,
-                    color_brick: Tensor, color_mortar: Tensor) -> Tensor:
+    def shade_mat(self, vert_pos: Tensor, mortar_scale: Tensor, brick_scale: Tensor, brick_elongate: Tensor, brick_shift: Tensor,
+              color_brick: Tensor, color_mortar: Tensor) -> Tensor:
+
+        scale = torch.stack([torch.div(brick_scale, brick_elongate + TINY_FLOAT), brick_scale, brick_scale])
+        uv3 = self._brickTileTorch(vert_pos, scale, brick_shift)
+        b = box(uv3[0:2], torch.stack((mortar_scale, mortar_scale)))
+        frag_color = gl.mix(color_mortar, color_brick, b)
+        return frag_color
+
+    def shade(self, vert_pos: Tensor, mortar_scale: Tensor, brick_scale: Tensor, brick_elongate: Tensor, brick_shift: Tensor,
+              color_brick: Tensor, color_mortar: Tensor) -> Tensor:
 
         scale = torch.stack([torch.div(brick_scale, brick_elongate + TINY_FLOAT), brick_scale, brick_scale])
         uv3 = self._brickTileTorch(vert_pos, scale, brick_shift)

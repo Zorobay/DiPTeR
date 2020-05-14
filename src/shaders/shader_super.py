@@ -195,9 +195,6 @@ class Shader(ABC):
             ("Color", INTERNAL_TYPE_ARRAY_RGB)
         ]
 
-    def shade(self, vert_pos: np.ndarray, *args) -> np.ndarray:
-        pass
-
     @abstractmethod
-    def shade_torch(self, vert_pos: Tensor, *args) -> Tensor:
+    def shade(self, vert_pos: Tensor, *args) -> Tensor:
         pass

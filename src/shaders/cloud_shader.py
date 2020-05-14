@@ -17,7 +17,7 @@ class CloudShader(Shader):
             ("Scale", "scale", INTERNAL_TYPE_FLOAT, (0,100), 1.0)
         ]
 
-    def shade_torch(self, vert_pos: Tensor) -> Tensor:
+    def shade(self, vert_pos: Tensor) -> Tensor:
         uv = vert_pos[:2]
         noise = Noise2D(uv)
         return torch.stack((noise, noise, noise))
