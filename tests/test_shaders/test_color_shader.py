@@ -25,7 +25,7 @@ class TestColorShader:
         self.args = []
 
     def render_both(self):
-        python_render = render_torch(self.W, self.H, self.shader.shade_torch, *self.default_args)
+        python_render = render_torch(self.W, self.H, self.shader.shade, *self.default_args)
         opengl_render = render_opengl(self.W, self.H, self.program)
         return python_render, opengl_render
 
@@ -46,7 +46,7 @@ class TestColorShader:
 
         def cb(gl):
             params.append(self.args)
-            py = np.flip(render_torch(self.W, self.H, self.shader.shade_torch, *self.args), axis=0)
+            py = np.flip(render_torch(self.W, self.H, self.shader.shade, *self.args), axis=0)
             pys.append(py)
             gls.append(gl)
 

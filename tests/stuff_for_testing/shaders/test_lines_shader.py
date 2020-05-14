@@ -17,7 +17,7 @@ class TestLinesShader(Shader):
         frag_color = None
         return None
 
-    def shade_torch(self, vert_pos, *args):
+    def shade(self, vert_pos, *args):
         frag_color = None
 
         if vert_pos[0] > 0.05 and vert_pos[0] < 0.06:

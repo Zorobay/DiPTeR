@@ -19,5 +19,5 @@ class TestFragInterpolationShader(Shader):
 
         return frag_color
 
-    def shade_torch(self, vert_pos, *args):
+    def shade(self, vert_pos, *args):
         return vert_pos

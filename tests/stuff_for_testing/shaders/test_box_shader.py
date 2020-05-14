@@ -13,7 +13,7 @@ class TestBoxShader(Shader):
     def shade(self, vert_pos: ndarray, *args) -> ndarray:
         return np.zeros((4))
 
-    def shade_torch(self, vert_pos: torch.Tensor, width: Tensor, height: Tensor) -> torch.Tensor:
+    def shade(self, vert_pos: torch.Tensor, width: Tensor, height: Tensor) -> torch.Tensor:
         bg_color = torch.tensor((1., 1., 1.))
         box_color = torch.tensor((0., 0., 0.))
         frag_color = gl.mix(bg_color, box_color, box(vert_pos[:2], torch.stack([width, height])))

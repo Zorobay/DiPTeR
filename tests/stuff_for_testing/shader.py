@@ -39,7 +39,7 @@ class ShaderTest:
         raise AttributeError("The uniform {} does not exist in shader {}!".format(name, self.shader_class))
 
     def render_py_torch(self):
-        return render_funcs.render_torch(self.W, self.H, self.shader.shade_torch, *self.args)
+        return render_funcs.render_torch(self.W, self.H, self.shader.shade, *self.args)
 
     def render_gl(self):
         return funcs.render_opengl(self.W, self.H, self.program)
