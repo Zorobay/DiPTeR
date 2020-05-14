@@ -6,7 +6,7 @@ from PyQt5.QtGui import QColor, QPalette
 from PyQt5.QtWidgets import QPushButton, QColorDialog
 
 from src.opengl.internal_types import INTERNAL_TYPE_ARRAY_RGB, INTERNAL_TYPE_ARRAY_RGB
-from src.gui.widgets.input_module import Input
+from src.gui.widgets.io_module import Input
 
 
 class ColorInput(QPushButton, Input):

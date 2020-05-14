@@ -3,7 +3,7 @@ import numpy as np
 
 from PyQt5.QtWidgets import QVBoxLayout, QWidget
 
-from src.gui.widgets.input_module import Input
+from src.gui.widgets.io_module import Input
 from src.gui.widgets.line_input import FloatInput
 
 

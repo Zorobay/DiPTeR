@@ -17,9 +17,8 @@ from src.gui.node_editor.node_scene import NodeScene
 from src.gui.node_editor.socket import Socket
 from src.gui.widgets.array_input import ArrayInput
 from src.gui.widgets.color_input import ColorInput
-from src.gui.widgets.input_module import InputModule
+from src.gui.widgets.io_module import InputModule, OutputModule
 from src.gui.widgets.line_input import FloatInput
-from src.gui.widgets.output_module import OutputModule
 from src.gui.widgets.shader_input import ShaderInput
 from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB, INTERNAL_TYPE_SHADER, \
     INTERNAL_TYPE_ARRAY_FLOAT
@@ -41,6 +40,7 @@ class Node(QGraphicsWidget):
         self._id = uuid.uuid4()
 
         self._sockets = {}
+        self._socket_connections = {}
 
         # define Node properties
         self._selected = False

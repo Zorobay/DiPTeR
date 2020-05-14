@@ -2,7 +2,7 @@ import typing
 
 from PyQt5.QtWidgets import QWidget
 
-from src.gui.widgets.input_module import Input
+from src.gui.widgets.io_module import Input
 
 
 class ShaderInput(QWidget, Input):

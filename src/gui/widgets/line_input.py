@@ -6,7 +6,7 @@ import numpy as np
 from PyQt5.QtGui import QValidator, QDoubleValidator, QIntValidator
 from PyQt5.QtWidgets import QLineEdit
 
-from src.gui.widgets.input_module import Input
+from src.gui.widgets.io_module import Input
 from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_INT
 
 Number = typing.Union[int, float]
