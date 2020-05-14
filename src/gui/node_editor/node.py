@@ -1,6 +1,8 @@
 import abc
 import typing
 import uuid
+import numpy as np
+import torch
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QRectF, pyqtSignal
@@ -13,12 +15,14 @@ from src.gui.node_editor.edge import Edge
 from src.gui.node_editor.layouts import GraphicsGridLayout
 from src.gui.node_editor.node_scene import NodeScene
 from src.gui.node_editor.socket import Socket
+from src.gui.widgets.array_input import ArrayInput
 from src.gui.widgets.color_input import ColorInput
 from src.gui.widgets.input_module import InputModule
 from src.gui.widgets.line_input import FloatInput
 from src.gui.widgets.output_module import OutputModule
 from src.gui.widgets.shader_input import ShaderInput
-from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB, INTERNAL_TYPE_SHADER
+from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB, INTERNAL_TYPE_SHADER, \
+    INTERNAL_TYPE_ARRAY_FLOAT
 from src.shaders.shader_super import Shader
 
 
@@ -174,6 +178,15 @@ class ShaderNode(Node):
             input_widget = ColorInput(internal_type)
         elif internal_type == INTERNAL_TYPE_SHADER:
             input_widget = ShaderInput(internal_type)
+        elif internal_type == INTERNAL_TYPE_ARRAY_FLOAT:
+            if isinstance(default_value, np.ndarray):
+                size = default_value.size
+            elif isinstance(default_value, torch.Tensor):
+                size = default_value.numel()
+            else:
+                raise TypeError("Type of default value needs to be numpy array or torch Tensor!")
+            input_widget = ArrayInput(size, min_=input_range[0], max_=input_range[1], internal_type=internal_type)
+
         else:
             raise TypeError("Internal type {} is not yet supported!".format(internal_type))
 

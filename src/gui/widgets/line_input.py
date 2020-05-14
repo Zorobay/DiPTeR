@@ -1,4 +1,5 @@
 import typing
+import torch
 from abc import abstractmethod
 
 import numpy as np
@@ -154,9 +155,10 @@ class FloatInput(LineInput):
         self._init_widget()
 
     def set_default_value(self, default_value: typing.Any):
-        assert isinstance(default_value, (float, np.float32)), "Incompatible type of default value for FloatInput!"
+        assert isinstance(default_value, (float, np.float32, torch.FloatTensor, torch.cuda.FloatTensor)),\
+            "Incompatible type of default value for FloatInput!"
 
-        self.setText(str(default_value))
+        self.setText(str(float(default_value)))
 
     def get_gl_value(self) -> typing.Any:
         text = self.text().strip()
