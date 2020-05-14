@@ -12,7 +12,7 @@ from src.gui.node_editor.control_center import ControlCenter
 from src.gui.node_editor.material import Material
 from src.gui.widgets.labelled_input import LabelledInput
 from src.gui.widgets.line_input import IntInput
-from src.misc.render_funcs import render_torch, render_torch_with_callback, render_torch3, render_torch2
+from src.misc.render_funcs import render_torch, render_torch_with_callback, render_torch_matrix, render_torch_loop
 from src.shaders.color_shader import ColorShader
 from src.shaders.shader_super import Shader
 
@@ -73,12 +73,20 @@ class PythonRenderingWidget(QWidget):
         params = shader.get_parameters_list_torch(False)
         _logger.debug("Rendering {}...".format(shader.__class__.__name__))
         start = time.time()
-        img = render_torch(self._width, self._height, shader.shade_torch, *params)
+        if self._material.shader.get_name() in ["RGB Shader", "HSV Shader", "Brick Shader", "Gradient Shader", "Mix Shader", "Color Shader",
+                                                "Checker Shader"]:
+            Ps = [p.repeat(self._width, self._height, 1) for p in params]
+            img = render_torch_matrix(self._width, self._height, shader.shade_mat, *Ps)
+        else:
+            img = render_torch_loop(self._width, self._height, shader.shade, *params)
         total_time = time.time() - start
         _logger.debug("Rendering DONE in {:.4f}s.".format(total_time))
 
         self._axis.imshow(img)
         self._set_title()
+        self._axis.set_xlabel("x")
+        self._axis.set_ylabel("y")
+        self._axis.invert_yaxis()
         self._figure_canvas.draw()
         self._figure_canvas.flush_events()
 

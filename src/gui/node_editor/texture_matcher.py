@@ -4,27 +4,27 @@ import typing
 
 import numpy as np
 import torch
-import torch.nn.functional as F
 from PIL import Image
 from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QThread, Qt
-from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout
+from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QComboBox
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from torchvision import transforms
 
 from src.gui.rendering.opengl_widget import OpenGLWidget
 from src.gui.widgets.labelled_input import LabelledInput
 from src.gui.widgets.line_input import FloatInput, IntInput
-from src.misc import render_funcs, losses
+from src.misc import render_funcs, losses, image_funcs
 from src.shaders.shader_super import Shader
 
 _logger = logging.getLogger(__name__)
 
+LOSS_FUNC = "loss_func"
 MAX_ITER = "max_iter"
 EARLY_STOPPING_THRESH = "early_stopping_thresh"
 LEARNING_RATE = "learning_rate"
 DECAY = "decay"
 
+ren_i = 0
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device = "cpu"
 
@@ -44,11 +44,14 @@ class SettingsPanel(QWidget):
         self._load_texture_button = QPushButton("Load Texture")
         self._texture_label = QLabel("load texture...")
         self._match_button = QPushButton("Match Texture")
+        self._loss_combo_box = QComboBox()
         self._max_iter_input = IntInput(0, 10000)
         self._early_stopping_loss_thresh = FloatInput(0, 1)
         self._learning_rate = FloatInput(0, 1)
 
         # Define data
+        self._loss_func_map = {"Squared Bin Loss": losses.squared_bin_loss, "MSE Loss": losses.mean_squared_error}
+        self._selected_loss_func = None
         self.loaded_image = None
         self._max_iter = 100
         self.settings = {}
@@ -60,6 +63,10 @@ class SettingsPanel(QWidget):
         self._match_button.setEnabled(False)
         self._match_button.clicked.connect(self._toggle_matching)
         self._load_texture_button.clicked.connect(self._load_texture)
+
+        self._loss_combo_box.addItems(list(self._loss_func_map))
+        self._loss_combo_box.currentTextChanged.connect(self._set_loss_func)
+        self._loss_combo_box.setCurrentIndex(0)
 
         self._max_iter_input.input_changed.connect(lambda: self._settings_changed(MAX_ITER, self._max_iter_input.get_gl_value()))
         self._max_iter_input.set_default_value(100)
@@ -73,6 +80,7 @@ class SettingsPanel(QWidget):
 
         self._layout.addWidget(self._match_button)
         self._layout.addWidget(self._load_texture_button)
+        self._layout.addWidget(LabelledInput("Loss function", self._loss_combo_box))
         self._layout.addWidget(LabelledInput("Max iterations", self._max_iter_input))
         self._layout.addWidget(LabelledInput("Learning Rate", self._learning_rate))
         self._layout.addWidget(LabelledInput("Early stopping loss thresh", self._early_stopping_loss_thresh))
@@ -87,6 +95,11 @@ class SettingsPanel(QWidget):
             self.loaded_image = Image.open(filename)
             self._match_button.setEnabled(True)
             self.texture_loaded.emit(self.loaded_image)
+
+    def _set_loss_func(self, key: str):
+        f = self._loss_func_map[key]
+        self._selected_loss_func = f
+        self._settings_changed(LOSS_FUNC, self._selected_loss_func)
 
     def set_gd_finished(self):
         self._match_button.setText("Match Texture")
@@ -139,6 +152,7 @@ class TextureMatcher(QWidget):
         self._settings = {}
         self.thread = None
         self.gd = None
+        self.ren_i = 0
 
         self._init_widget()
 
@@ -150,7 +164,7 @@ class TextureMatcher(QWidget):
 
         # Setup Image axis
         self._tex_axis.set_title("Target Texture")
-        self._tex_axis.set_axis_off()
+        # self._tex_axis.set_axis_off()
 
         # Setup Loss axis
         self._loss_axis.set_title("Loss")
@@ -168,7 +182,12 @@ class TextureMatcher(QWidget):
 
     def _set_image_to_match(self, image):
         self._image_to_match = image.convert("RGB")
-        self._tex_axis.imshow(self._image_to_match, vmin=0, vmax=1)
+        # We want to display the same image that we are testing the loss against. This image is columns majos (x,y)
+        # which is not what matplotlib want's so we have to transpose it back to row major
+        tensor_image = image_funcs.image_to_tensor(image, (100, 100)).transpose(0, 1)
+
+        self._tex_axis.imshow(tensor_image, vmin=0, vmax=1)
+        self._tex_axis.invert_yaxis()
         self._figure_canvas.draw()
 
     def _set_gl_program(self):
@@ -187,15 +206,21 @@ class TextureMatcher(QWidget):
 
     def _stop_gradient_descent(self):
         if self.thread.isRunning():
+            _logger.info("Stopping Gradient Descent Thread...")
             self._settings_panel.set_gd_finishing()
             self.gd.stop()
             self.thread.quit()
 
     def _finish_gradient_descent(self):
         self._settings_panel.set_gd_finished()
+        _logger.info("Gradient Descent Thread Stopped.")
 
     def _gd_iter_callback(self, props):
-        self._loss_axis.plot(props['loss_hist'], color=self._loss_plot_color)
+        if not self.ren_i % 1 == 0:
+            self.ren_i += 1
+            return
+        self.ren_i += 1
+        self._loss_axis.plot(props['loss_hist'], '.-', color=self._loss_plot_color, label="Loss")
         self._loss_axis.set_xlabel("Iteration ({:.3f}s/iter)".format(props['iter_time']))
         self._figure_canvas.draw()
         self._figure_canvas.flush_events()
@@ -206,10 +231,6 @@ class TextureMatcher(QWidget):
 
     def _update_settings(self, key: str, settings: dict):
         self._settings = settings
-
-
-global truth
-global f
 
 
 class GradientDescent(QObject):
@@ -229,13 +250,16 @@ class GradientDescent(QObject):
         self.truth = None
         self.f = None
         self.mse_loss = torch.nn.MSELoss(reduction='mean')
+        self.loss_func = self.mse_loss
         self._stop = False
 
         self._read_settings(settings)
 
     def _read_settings(self, settings: dict):
         for key, val in settings.items():
-            if key == MAX_ITER:
+            if key == LOSS_FUNC:
+                self.loss_func = val
+            elif key == MAX_ITER:
                 self.max_iter = val
             elif key == EARLY_STOPPING_THRESH:
                 self.early_stopping_thresh = val
@@ -249,12 +273,8 @@ class GradientDescent(QObject):
 
     @pyqtSlot(name='run')
     def run(self):
-        loader = transforms.Compose([
-            transforms.Resize((self.width, self.height)),  # scale imported image
-            transforms.ToTensor()])  # transform it into a torch tensor
-
-        self.truth = loader(self.image_to_match).to(device, torch.float32)
-        self.f = self.shader.shade_torch
+        self.truth = image_funcs.image_to_tensor(self.image_to_match, (self.width, self.height))
+        self.f = self.shader.shade
 
         init_params = self.shader.get_parameters_list_torch(requires_grad=True, randomize=False)
 
@@ -272,10 +292,15 @@ class GradientDescent(QObject):
 
             optimizer.zero_grad()
             start = time.time()
-            new_loss = self.MSELoss(*P)
+            new_loss = self.render_and_loss(*P)
             new_loss_np = float(new_loss.detach())
             loss_hist[i] = new_loss_np
-            props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1], 'learning_rate': lr, 'params': P}
+            props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1], 'learning_rate': lr, 'params': P, 'iter_time': 0.0}
+
+            # We need to break here, otherwise the parameters will change when we call optimizer.step()
+            if new_loss <= early_stopping_thresh:
+                self.gd_iteration.emit(props)
+                break
 
             new_loss.backward(retain_graph=False, create_graph=False)
 
@@ -284,79 +309,9 @@ class GradientDescent(QObject):
             props['iter_time'] = time.time() - start
             self.gd_iteration.emit(props)
 
-            if new_loss <= early_stopping_thresh:
-                break
-
         return P, loss_hist
 
-    def _gradient_descent_torch(self, init_params: list, lr=0.01, lr_decay=0.99, max_iter=150, early_stopping_thresh=0.01) -> typing.Tuple[list,
-                                                                                                                                           np.ndarray]:
-        params = init_params
-        loss_hist = np.empty(max_iter, dtype=np.float32)
-
-        for i in range(max_iter):
-            start = time.time()
-            new_loss = self.MSELoss(*params)
-            new_loss_np = float(new_loss.detach())
-            grads = torch.autograd.grad(outputs=new_loss, inputs=params, create_graph=True, retain_graph=True, allow_unused=False, only_inputs=True)
-            loss_hist[i] = new_loss_np
-            props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1], 'learning_rate': lr, 'params': params}
-
-            with torch.no_grad():
-                for p, g in zip(params, grads):
-                    if g is not None:
-                        p -= lr * g
-
-                lr *= lr_decay
-
-            props['iter_time'] = time.time() - start
-            self.gd_iteration.emit(props)
-
-            if new_loss <= early_stopping_thresh:
-                break
-
-        return params, loss_hist
-
-    def sbe(self, *args):
-        start = time.time()
-        render = render_funcs.render_torch2(self.width, self.height, self.f, *args)
-        end = time.time()
-        print("Time rendering: {}".format(end - start))
-        return losses.squared_bin_loss(render, self.truth)
-
-    def vert_bin_loss(self, *args):
-        loss = losses.VerticalBinLoss(bin_size=5)
-        start = time.time()
-        render = render_funcs.render_torch2(self.width, self.height, self.f, *args)
-        end = time.time()
-        print("Time rendering: {}".format(end - start))
-        return loss(self.truth, render)
-
-    def MSELoss(self, *args):
-        render = render_funcs.render_torch2(self.width, self.height, self.f, *args)
-        return self.mse_loss(render, self.truth)
-
-    def loss_torch2(self, *args):
-        render = render_funcs.render_torch2(self.width, self.height, self.f, *args)
-        return F.mse_loss(render, self.truth)
-
-    def loss_torch(self, *args):
-        render = render_funcs.render_torch(self.width, self.height, self.f, *args)
-        return torch.mean(torch.abs(self.truth - render))
-
-    def loss_torch_(self, *args):
-        width = self.truth.shape[0]
-        height = self.truth.shape[1]
-        x_res = 1.0 / width
-        y_res = 1.0 / height
-        x_pos = torch.from_numpy(np.linspace(0, 1.0, width, endpoint=False) + (x_res / 2.0))
-        y_pos = torch.from_numpy(np.linspace(0, 1.0, height, endpoint=False) + (y_res / 2.0))
-        loss_sum = 0
-
-        for x in range(width):
-            for y in range(height):
-                vert_pos = torch.tensor((x_pos[x], y_pos[y], 0.))
-                val = self.f(vert_pos, *args)
-                loss_sum += torch.sum(torch.abs(self.truth[y, x, :] - val))
-
-        return loss_sum / (width * height * CHANNELS)
+    def render_and_loss(self, *args):
+        # Ps = [p.repeat(self.width, self.height, 1) for p in args]
+        render = render_funcs.render_torch_loop(self.width, self.height, self.f, *args)
+        return self.loss_func(render, self.truth)

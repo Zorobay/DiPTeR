@@ -17,9 +17,12 @@ from src.shaders.mix_shader import MixShader
 from src.shaders.rgb_shader import RGBShader
 from src.shaders.shader_super import Shader
 from src.shaders.cloud_shader import CloudShader
+from src.shaders.gradient_shader import GradientShader
+from src.shaders.tile_shader import TileShader
 from tests.stuff_for_testing.shaders.test_box_shader import TestBoxShader
 
-SHADERS_TO_CONTEXT_MENU = [CloudShader,CheckerShader, HSVShader, ColorShader, RGBShader, BrickShader, TestBoxShader, MixShader]
+SHADERS_TO_CONTEXT_MENU = [TileShader, GradientShader,CloudShader,CheckerShader, HSVShader, ColorShader, RGBShader, BrickShader, TestBoxShader,
+                           MixShader]
 
 
 class NodeView(QGraphicsView):
