@@ -73,6 +73,22 @@ class Material(QObject):
 
         _logger.debug("Added new node {} to material {}.".format(node.title, self.name))
 
+    def delete_node(self, node_id: uuid.UUID):
+        """Delete a node with the matching id from this material as well as the scene.
+
+        :returns: True if successful, False otherwise.
+        """
+        nodes = self.get_nodes()
+
+        try:
+            node = nodes[node_id]
+            del nodes[node_id]
+            self.node_scene.removeItem(node)
+            self.changed.emit()
+            return True
+        except KeyError:
+            return False
+
     def get_nodes(self) -> typing.Dict[uuid.UUID, ShaderNode]:
         return self._nodes
 

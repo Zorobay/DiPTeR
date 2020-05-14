@@ -105,12 +105,6 @@ class ControlCenter(QObject):
         :return: True if successful, False otherwise.
         """
         if self.active_material:
-            nodes = self.active_material.get_nodes()
-            try:
-                node = nodes[node_id]
-                del nodes[node_id]
-                self.active_material.node_scene.removeItem(node)
-            except KeyError:
-                return False
+            return self.active_material.delete_node(node_id)
 
         return False
