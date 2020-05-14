@@ -1,4 +1,4 @@
-# DiPTer - Differentiable Procedural Texture Renderer
+# DiPTeR - Differentiable Procedural Texture Renderer
 
 DiPTer is a tool to create procedurally generated textures that are fully differentiable.
  
@@ -9,7 +9,7 @@ DiPTer is a tool to create procedurally generated textures that are fully differ
 
 ### Install dependencies
 
-Python dependencies can be installed from the `environment.yml` file using conda. However, I've had problems installing from this format before, so as an alternative, install
+Python dependencies can be installed from the `environment.yaml` file using conda. However, I've had problems installing from this format before, so as an alternative, install
  from the `env.txt` file instead using `conda env create --file env.txt`.
   
 ### Glumpy and freetype
