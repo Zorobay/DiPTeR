@@ -25,14 +25,6 @@ CHANNELS = 3
 #     return img
 
 
-def get_coordinates2(width: int, height: int) -> typing.Tuple[torch.Tensor, torch.Tensor]:
-    x_res = 1.0 / width
-    y_res = 1.0 / height
-    x_pos = torch.from_numpy(np.linspace(0., 1.0, width, endpoint=False)) + (x_res / 2.0)
-    y_pos = torch.from_numpy(np.linspace(0., 1.0, height, endpoint=False)).flip(0) + (y_res / 2.0)
-    return x_pos, y_pos
-
-
 def get_coordinates(width: int, height: int) -> typing.Tuple[torch.Tensor, torch.Tensor]:
     x_res = 1.0 / width
     y_res = 1.0 / height
@@ -54,21 +46,21 @@ def render_torch(width: int, height: int, f: typing.Callable, *args):
     return img
 
 
-def render_torch2(width: int, height: int, f: typing.Callable, *args):
-    img = torch.zeros((CHANNELS, width, height), device=device)
+def render_torch_loop(width: int, height: int, f: typing.Callable, *args):
+    img = torch.zeros((width, height, CHANNELS), device=device)
     x_pos, y_pos = get_coordinates(width, height)
 
     for row in range(height):
         for col in range(width):
             vert_pos = torch.tensor((x_pos[col], y_pos[row], 0.), dtype=torch.float32)
             val = f(vert_pos, *args)
-            img[:, height - 1 - row, col] = val
+            img[col, row,:] = val
 
     return img
 
 
-def render_torch3(width: int, height: int, f, *args):
-    x_pos, y_pos = torch.meshgrid((get_coordinates2(width, height)))
+def render_torch_matrix(width: int, height: int, f, *args):
+    x_pos, y_pos = torch.meshgrid((get_coordinates(width, height)))
     pix_pos = torch.stack([x_pos, y_pos, torch.zeros_like(x_pos)], dim=2)
     return f(pix_pos, *args)
 
