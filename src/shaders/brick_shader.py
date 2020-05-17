@@ -5,12 +5,12 @@ from torch import Tensor
 import src.shaders.lib.glsl_builtins as gl
 from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB
 from src.shaders.lib.pattern import box
-from src.shaders.shader_super import Shader, TINY_FLOAT
+from src.shaders.shader_super import FunctionShader, TINY_FLOAT
 
 
-class BrickShader(Shader):
-    VERTEX_SHADER_FILENAME = "vertex_shader.glsl"
-    FRAGMENT_SHADER_FILENAME = "brick_shader_frag.glsl"
+class BrickShader(FunctionShader):
+    SHADER_FILENAME = "vertex_shader.glsl"
+    FRAGMENT_SHADER_FILENAME = "brick_shader.glsl"
 
     def __init__(self):
         super().__init__()

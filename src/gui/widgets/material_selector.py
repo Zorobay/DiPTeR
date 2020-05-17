@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import QWidget, QPushButton, QComboBox, QHBoxLayout, QInput
 
 from src.gui.node_editor.control_center import Material, ControlCenter
 from src.gui.node_editor.material import Material
+from src.shaders.material_output_shader import MaterialOutputShader
 
 
 class MaterialSelector(QWidget):
@@ -43,6 +44,9 @@ class MaterialSelector(QWidget):
         self._material_combo_box.addItem(name)
         self._material_combo_box.size()
         self._material_combo_box.setCurrentIndex(self._material_combo_box.count()-1)
+
+        # Add a default material output shader to the material
+        #mat.add_node(MaterialOutputShader)
 
     def _add_button_clicked(self):
         name, ok = QInputDialog.getText(self, "New Material Name", "Material Name", text="Material{}".format(self.cc.get_num_materials()))

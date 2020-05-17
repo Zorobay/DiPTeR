@@ -3,9 +3,9 @@ from numpy.core.multiarray import ndarray
 from src.shaders.shader_super import *
 
 
-class TestFragInterpolationShader(Shader):
+class TestFragInterpolationShader(FunctionShader):
     FRAGMENT_SHADER_FILENAME = "test/test_frag_interpolation_frag.glsl"
-    VERTEX_SHADER_FILENAME = "vertex_shader.glsl"
+    SHADER_FILENAME = "vertex_shader.glsl"
 
     def __init__(self):
         super().__init__()

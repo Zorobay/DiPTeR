@@ -6,7 +6,7 @@ from src.shaders.lib.noise import Noise2D
 from src.shaders.shader_super import *
 
 
-class CloudShader(Shader):
+class CloudShader(FunctionShader):
     FRAGMENT_SHADER_FILENAME = "cloud_shader_frag.glsl"
 
     def __init__(self):

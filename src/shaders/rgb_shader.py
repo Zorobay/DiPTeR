@@ -1,8 +1,9 @@
 from src.shaders.shader_super import *
 
 
-class RGBShader(Shader):
-    FRAGMENT_SHADER_FILENAME = "rgb_shader_frag.glsl"
+class RGBShader(FunctionShader):
+    FRAGMENT_SHADER_FILENAME = "rgb_shader.glsl"
+    FRAGMENT_SHADER_FUNCTION = "rgb"
 
     def __init__(self):
         super().__init__()

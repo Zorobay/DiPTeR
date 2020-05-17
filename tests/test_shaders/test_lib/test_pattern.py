@@ -7,7 +7,7 @@ from src.shaders.lib import pattern as pattern
 def test_box():
     coord = tensor((0.5, 0.))
     size = tensor((1., 1.))
-    # Should not belong to box because of the minimum edge smooth value added in box function
+    # Should not belong to box because of the minimum edge smooth value added in box primary_function
     assert_allclose(pattern.box(coord, size), tensor(0.0))
 
     coord = tensor((0.5, 0.001))

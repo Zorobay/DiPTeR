@@ -14,7 +14,7 @@ from src.gui.rendering.opengl_widget import OpenGLWidget
 from src.gui.widgets.labelled_input import LabelledInput
 from src.gui.widgets.line_input import FloatInput, IntInput
 from src.misc import render_funcs, losses, image_funcs
-from src.shaders.shader_super import Shader
+from src.shaders.shader_super import FunctionShader
 
 _logger = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ class SettingsPanel(QWidget):
 
         self._layout.addWidget(self._match_button)
         self._layout.addWidget(self._load_texture_button)
-        self._layout.addWidget(LabelledInput("Loss function", self._loss_combo_box))
+        self._layout.addWidget(LabelledInput("Loss primary_function", self._loss_combo_box))
         self._layout.addWidget(LabelledInput("Max iterations", self._max_iter_input))
         self._layout.addWidget(LabelledInput("Learning Rate", self._learning_rate))
         self._layout.addWidget(LabelledInput("Early stopping loss thresh", self._early_stopping_loss_thresh))
@@ -125,12 +125,12 @@ class SettingsPanel(QWidget):
 
 class TextureMatcher(QWidget):
 
-    def __init__(self, shader: Shader):
+    def __init__(self, shader: FunctionShader):
         super().__init__(parent=None)
 
         # self._openGL = openGL
         self._shader = shader.__class__()  # Instantiate a new shader
-        self._shader.set_inputs(shader.get_parameters_list_torch())
+        self._shader.set_inputs(shader.get_parameters_list())
 
         # Define components
         self._settings_drawer = QDockWidget(self, Qt.Drawer)
@@ -237,7 +237,7 @@ class GradientDescent(QObject):
     gd_iteration = pyqtSignal(dict)
     finished = pyqtSignal(list, np.ndarray)
 
-    def __init__(self, image_to_match: Image.Image, shader: Shader, settings: dict, optimizer: torch.optim.Optimizer = torch.optim.Adam):
+    def __init__(self, image_to_match: Image.Image, shader: FunctionShader, settings: dict, optimizer: torch.optim.Optimizer = torch.optim.Adam):
         super().__init__()
         self.image_to_match = image_to_match
         self.shader = shader
@@ -276,7 +276,7 @@ class GradientDescent(QObject):
         self.truth = image_funcs.image_to_tensor(self.image_to_match, (self.width, self.height))
         self.f = self.shader.shade
 
-        init_params = self.shader.get_parameters_list_torch(requires_grad=True, randomize=False)
+        init_params = self.shader.get_parameters_list(requires_grad=True, randomize=False)
 
         params, loss_hist = self._run_gd(init_params, lr=self.lr, max_iter=self.max_iter, early_stopping_thresh=self.early_stopping_thresh)
         self.finished.emit(params, loss_hist)

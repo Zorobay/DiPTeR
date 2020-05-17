@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import QApplication
 from glumpy.gloo import Program
 
 from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB
-from src.shaders.shader_super import Shader
+from src.shaders.shader_super import FunctionShader
 from tests.stuff_for_testing.opengl_test_renderer import OpenGLTestRenderer
 
 _logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ def randomize_input(internal_type, range, default):
         return np.random.uniform(range[0], range[1])
 
 
-def randomize_inputs_torch(args, shader: Shader, alpha_one=True) -> typing.List[torch.Tensor]:
+def randomize_inputs_torch(args, shader: FunctionShader, alpha_one=True) -> typing.List[torch.Tensor]:
     out = []
     for (i, arg), info in zip(enumerate(args), shader.get_inputs()):
         ran = info[3]

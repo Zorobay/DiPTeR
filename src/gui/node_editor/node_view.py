@@ -15,7 +15,7 @@ from src.shaders.color_shader import ColorShader
 from src.shaders.hsv_shader import HSVShader
 from src.shaders.mix_shader import MixShader
 from src.shaders.rgb_shader import RGBShader
-from src.shaders.shader_super import Shader
+from src.shaders.shader_super import FunctionShader
 from src.shaders.cloud_shader import CloudShader
 from src.shaders.gradient_shader import GradientShader
 from src.shaders.tile_shader import TileShader
@@ -52,7 +52,7 @@ class NodeView(QGraphicsView):
         self.setScene(self.cc.active_scene)
 
     def _spawn_add_node_menu(self, pos: QPoint):
-        shader: typing.Type[Shader] = self._add_node_menu.execute(pos)
+        shader: typing.Type[FunctionShader] = self._add_node_menu.execute(pos)
         if shader is not None:
             res = self.cc.new_node(shader)
             if not res:
@@ -104,7 +104,7 @@ class NodeView(QGraphicsView):
 
                 for id_ in nodes:
                     n = nodes[id_]
-                    if n.isSelected():
+                    if n.isSelected() and n.isDeletable():
                         delete.append(id_)
 
                 for id_ in delete:
@@ -139,18 +139,6 @@ class NodeView(QGraphicsView):
         else:
             super().mousePressEvent(event)
 
-    # def mouseReleaseEvent(self, event: QMouseEvent):
-    #     # Handle end of panning
-    #     if event.button() == Qt.MiddleButton:
-    #         self.setCursor(Qt.ArrowCursor)
-    #         event.accept()
-    #     elif event.button() == Qt.LeftButton and self.is_drawing_edge:
-    #         print("Mouse released on view while drawing edge!")
-    #         event.accept()
-    #     else:
-    #         print("mouse released on node view")
-    #         #event.ignore()
-
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
         if event.buttons() == Qt.MiddleButton:
             delta: QPointF = event.pos() - self._pan_last_pos
@@ -178,7 +166,7 @@ class AddNodeMenu(QMenu):
             action = self.addAction(" ".join(words))
             self._action_shader_map.append((action, shader))
 
-    def execute(self, *args) -> typing.Type[Shader]:
+    def execute(self, *args) -> typing.Type[FunctionShader]:
         action = self.exec_(*args)
         if action is None:
             return None

@@ -6,10 +6,10 @@ from PyQt5.QtCore import QObject, pyqtSignal, Qt
 from glumpy.gloo import Program
 
 from src.gui.node_editor.edge import Edge
-from src.gui.node_editor.node import ShaderNode
+from src.gui.node_editor.node import ShaderNode, MaterialOutputNode
 from src.gui.node_editor.node_scene import NodeScene
 from src.gui.node_editor.socket import Socket
-from src.shaders.shader_super import Shader
+from src.shaders.shader_super import FunctionShader, CompilableShader
 
 _logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ _logger = logging.getLogger(__name__)
 class Material(QObject):
     """Class that keeps track of all nodes present on the NodeScene, as well as their relation to each other."""
 
-    shader_ready = pyqtSignal(Shader)
+    shader_ready = pyqtSignal(CompilableShader)
     program_ready = pyqtSignal(Program)
     changed = pyqtSignal()
     edge_spawned = pyqtSignal(object)
@@ -32,12 +32,15 @@ class Material(QObject):
         self.node_scene = NodeScene()
 
         # Define data variables to track nodes and edges
+        self._mat_output_node = None
         self._nodes = {}
         self._edges = {}
 
         self._program = None
         self._shader = None
         self._is_drawing_edge = False
+
+        self._add_material_output_node()
 
     def __str__(self):
         return "Material ({})".format(self.name)
@@ -50,8 +53,26 @@ class Material(QObject):
     def id(self):
         return self._id
 
-    def add_node(self, shader: typing.Type[Shader]):
-        if not isinstance(shader, Shader):
+    def _add_material_output_node(self):
+        node = MaterialOutputNode(self.node_scene)
+        node.edge_started.connect(self._spawn_edge)
+        node.edge_ended.connect(self._end_edge)
+        self._shader = node.get_shader()
+
+        self._mat_output_node = node
+        self._nodes[node.id] = node
+        self._program = node.get_program()
+        self.node_scene.addItem(node)
+
+        # Emit event to tell OpenGL that the Program and Shader is ready
+        self.program_ready.emit(self.program)
+        self.shader_ready.emit(self.shader)
+
+        _logger.debug("Added default Material Output Node {} to material {}.".format(node.title, self.name))
+
+
+    def add_node(self, shader: typing.Type[FunctionShader]):
+        if not isinstance(shader, FunctionShader):
             shader = shader()  # Instantiate the shader if only a type was given
 
         self._shader = shader
@@ -60,15 +81,10 @@ class Material(QObject):
         node.edge_ended.connect(self._end_edge)
         node.input_changed.connect(lambda id_: self.changed.emit())
         self._nodes[node.id] = node
-        self._id = node.id
-        self._program = node.get_program()
 
         # Spawn node to scene
         self.node_scene.addItem(node)
 
-        # Emit event to tell OpenGL that the Program and Shader is ready
-        self.program_ready.emit(self.program)
-        self.shader_ready.emit(self.shader)
         self.changed.emit()
 
         _logger.debug("Added new node {} to material {}.".format(node.title, self.name))
@@ -108,29 +124,31 @@ class Material(QObject):
         self.node_scene.addItem(edge)
         self.edge_spawned.emit(edge)
 
-        _logger.debug("Added new Edge ({}) at pos ({}) -> ({}) to material {}.".format(edge.id, edge.out_pos, edge.in_pos, self.name))
+        #_logger.debug("Added new Edge ({}) at pos ({}) -> ({}) to material {}.".format(edge.id, edge.out_pos, edge.in_pos, self.name))
 
     def _end_edge(self, node_id: uuid.UUID, edge: Edge):
         items = edge.collidingItems(Qt.IntersectsItemShape)
 
-        node = self._nodes[node_id]
-        connected_socket_id = edge.out_socket_id if edge.out_socket_id else edge.in_socket_id
-        connected_socket_type = node.get_socket_type(connected_socket_id)
+        source_node = self._nodes[node_id]
+        connected_socket = edge.out_socket if edge.out_socket else edge.in_socket
+        connected_socket_type = connected_socket.socket_type
 
         for item in items:
             if isinstance(item, Socket) \
-                    and item.id != connected_socket_id \
+                    and item != connected_socket \
                     and item.socket_type != connected_socket_type \
-                    and not node.has_socket(item.id):
+                    and not source_node.has_socket(item):
 
                 if item.socket_type == Socket.SOCKET_INPUT:
-                    edge.in_socket_id = item.id
+                    edge.in_socket = item
                 else:
-                    edge.out_socket_id = item.id
+                    edge.out_socket = item
 
                 # Connect edge to socket where edge was released. Connection of socket to starting node is done in the Socket class.
                 item.add_connected_edge(edge)
+                _logger.info("Connected source node {} and node {} with edge".format(source_node.title, item.parent_node.title))
                 return
 
         # Edge did not intersect with another valid socket, so it will be removed
+        _logger.info("Discarded edge started from node {}".format(source_node.title))
         self.node_scene.removeItem(edge)

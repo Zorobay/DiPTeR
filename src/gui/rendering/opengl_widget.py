@@ -12,6 +12,7 @@ from src.gui.node_editor.material import Material
 from src.opengl import object_vertices
 from src.shaders import OBJECT_MATRIX_NAME, VIEW_MATRIX_NAME, PROJECTION_MATRIX_NAME
 from src.shaders.color_shader import ColorShader
+from src.shaders.default_shader import DefaultShader
 
 _logger = logging.getLogger(__name__)
 
@@ -102,15 +103,12 @@ class OpenGLWidget(QOpenGLWidget):
         glm.translate(self._world_to_view, 0, 0, -5)
 
     def _init_default_shader(self):
-        self._shader = ColorShader()
+        self._shader = DefaultShader()
         self._program = self._shader.get_program()
         self._default_program = self._program
 
         V, I = object_vertices.get_2d_plane()
         self.set_vertices(V, I)
-
-        for nf, nu, t, ra, de in self._shader.get_inputs():
-            self._program[nu] = de
 
         _logger.info("Done initializing default shader.")
 

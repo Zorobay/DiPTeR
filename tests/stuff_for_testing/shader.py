@@ -3,14 +3,14 @@ import typing
 import torch
 
 from src.misc import render_funcs
-from src.shaders.shader_super import Shader
+from src.shaders.shader_super import FunctionShader
 from tests.stuff_for_testing import funcs
 from tests.stuff_for_testing.funcs import assert_abs_mean_diff, assert_abs_max_diff
 
 
 class ShaderTest:
 
-    def __init__(self, shader: typing.Type[Shader]):
+    def __init__(self, shader: typing.Type[FunctionShader]):
         self.shader_class = shader
         self.shader = None
         self.program = None
@@ -27,16 +27,16 @@ class ShaderTest:
         self.args = self.default_args
 
     def set_arg(self, name: str, val: typing.Any):
-        """Sets a new value to the uniform 'name' in both the program and the self.args parameters."""
+        """Sets a new value to the argument 'name' in both the program and the self.args parameters."""
         assert self.args
         for i, info in enumerate(self.shader.get_inputs()):
-            uniform = info[1]
-            if uniform == name:
+            arg = info[1]
+            if arg == name:
                 self.args[i] = val
-                self.program[uniform] = val
+                self.program[arg] = val
                 return
 
-        raise AttributeError("The uniform {} does not exist in shader {}!".format(name, self.shader_class))
+        raise AttributeError("The argument {} does not exist in shader {}!".format(name, self.shader_class))
 
     def render_py_torch(self):
         return render_funcs.render_torch(self.W, self.H, self.shader.shade, *self.args)
@@ -71,13 +71,13 @@ class ShaderTest:
     def test_all_params_min(self):
         for i, info in enumerate(self.shader.get_inputs()):
             min_ = info[3][0]
-            uniform = info[1]
+            arg = info[1]
             in_type = info[2]
             if "array" in in_type:
                 shape = info[4].shape
-                self.set_arg(uniform, torch.ones(shape) * min_)
+                self.set_arg(arg, torch.ones(shape) * min_)
             else:
-                self.set_arg(uniform, torch.ones(1) * min_)
+                self.set_arg(arg, torch.ones(1) * min_)
 
         py, gl = self.render_both()
         assert_abs_max_diff(py, gl, tol=self.PIXEL_TOLERANCE)

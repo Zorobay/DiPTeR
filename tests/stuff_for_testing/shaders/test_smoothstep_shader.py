@@ -4,7 +4,7 @@ from src.shaders.lib import glsl_builtins as gl
 from src.shaders.shader_super import *
 
 
-class TestSmoothstepShader(Shader):
+class TestSmoothstepShader(FunctionShader):
     FRAGMENT_SHADER_FILENAME = "test/test_smoothstep_frag.glsl"
 
     def __init__(self):

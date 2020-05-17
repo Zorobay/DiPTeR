@@ -2,8 +2,9 @@ from src.shaders.lib import glsl_builtins as gl
 from src.shaders.shader_super import *
 
 
-class MixShader(Shader):
-    FRAGMENT_SHADER_FILENAME = "mix_shader_frag.glsl"
+class MixShader(FunctionShader):
+    FRAGMENT_SHADER_FILENAME = "mix_shader.glsl"
+    FRAGMENT_SHADER_FUNCTION = "mix"
 
     def __init__(self):
         super().__init__()

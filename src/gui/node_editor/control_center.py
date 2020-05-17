@@ -7,7 +7,8 @@ from PyQt5.QtCore import QObject, pyqtSignal
 from src.gui.node_editor.edge import Edge
 from src.gui.node_editor.material import Material
 from src.gui.node_editor.node_scene import NodeScene
-from src.shaders.shader_super import Shader
+from src.shaders.material_output_shader import MaterialOutputShader
+from src.shaders.shader_super import FunctionShader
 
 _logger = logging.getLogger(__name__)
 
@@ -67,6 +68,9 @@ class ControlCenter(QObject):
         self._materials[material.id] = material
         _logger.debug("New material {} ({}) added.".format(material.name, material.id))
 
+        # Add material output node to material
+        #material.add_node(MaterialOutputShader)
+
         return material
 
     def set_active_material_id(self, material_id: uuid.UUID) -> bool:
@@ -84,7 +88,7 @@ class ControlCenter(QObject):
         _logger.error("Id <{}> does not match any material. New active material not set.".format(material_id))
         return False
 
-    def new_node(self, shader: typing.Type[Shader]):
+    def new_node(self, shader: typing.Type[FunctionShader]):
         """
         Create a new node for the active material. Returns False if there is no active material, else returns True.
 

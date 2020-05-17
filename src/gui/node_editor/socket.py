@@ -1,6 +1,7 @@
 import logging
 import uuid
 
+import typing
 from PyQt5.QtCore import Qt, QRectF, pyqtSignal, QPointF
 from PyQt5.QtGui import QColor, QBrush, QPainter, QPen
 from PyQt5.QtWidgets import QGraphicsWidget, QGraphicsLinearLayout, QGraphicsItem, QGraphicsSceneMouseEvent, QGraphicsSceneHoverEvent
@@ -13,16 +14,19 @@ _logger = logging.getLogger(__name__)
 class Socket(QGraphicsWidget):
     edge_started = pyqtSignal(Edge)
     edge_released = pyqtSignal(Edge)
+    connection_changed = pyqtSignal(object, Edge)  # Socket, Edge
     position_changed = pyqtSignal(QPointF)
 
     SOCKET_INPUT = 0
     SOCKET_OUTPUT = 1
 
-    def __init__(self, parent_node, socket_type: int):
+    def __init__(self, parent_node, socket_type: int, argument: str):
         super().__init__(parent_node)
         self._parent_node = parent_node
         self._socket_type = socket_type
         self._id = uuid.uuid4()
+        self._argument = argument
+        self._connected_sockets = set()
         self._connected_edges = set()
 
         # Define socket properties
@@ -53,17 +57,36 @@ class Socket(QGraphicsWidget):
 
         return False
 
+    def __hash__(self):
+        return self.id.__hash__()
+
     @property
     def id(self):
         return self._id
 
     @property
+    def argument(self):
+        return self._argument
+
+    @property
+    def parent_node(self):
+        return self._parent_node
+
+    @property
     def socket_type(self):
         return self._socket_type
 
-    @property
-    def connected(self):
+    def isConnected(self) -> bool:
         return len(self._connected_edges) > 0
+
+    def get_connected_edges(self) -> typing.Set[Edge]:
+        return self._connected_edges
+
+    def get_connected_sockets(self) -> typing.Set['Socket']:
+        return self._connected_sockets
+
+    def get_connected_nodes(self) -> typing.List['Node']:
+        return [s.parent_node for s in self._connected_sockets]
 
     def get_size(self):
         """Returns a tuple with the width,height of this socket."""
@@ -85,7 +108,24 @@ class Socket(QGraphicsWidget):
 
     def add_connected_edge(self, edge: Edge):
         self._connected_edges.add(edge)
-        _logger.debug("Connected edge ({}) to socket ({}) of node {}".format(edge.id, self.id, self._parent_node.title))
+
+        if edge.out_socket == self:
+            self._connected_sockets.add(edge.in_socket)
+        else:
+            self._connected_sockets.add(edge.out_socket)
+
+        # Only emit change event for input sockets, as nothing really changed for the output socket (at least not for the node as a whole)
+        if self.socket_type == Socket.SOCKET_INPUT:
+            self.connection_changed.emit(self, edge)
+
+    def remove_connected_edge(self, edge: Edge):
+        assert edge in self._connected_edges
+
+        self._connected_edges.remove(edge)
+        if edge.out_socket == self:
+            self._connected_sockets.remove(edge.in_socket)
+        else:
+            self._connected_sockets.remove(edge.out_socket)
 
     # -------- Event Handling ---------
     # ----------------------------------
@@ -97,7 +137,7 @@ class Socket(QGraphicsWidget):
 
     def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent):
         #self._circle_brush = self._circle_connected_brush if self.connected else self._circle_disconnected_brush
-        if not self.connected:
+        if not self.isConnected():
             self._border_brush = self._border_disconnected_brush
             self.update()
 
@@ -113,9 +153,9 @@ class Socket(QGraphicsWidget):
                 start_pos: QPointF = self.get_socket_scene_center()
                 edge = Edge(start_pos)
                 if self.socket_type == self.SOCKET_INPUT:
-                    edge.in_socket_id = self.id
+                    edge.in_socket = self
                 else:
-                    edge.out_socket_id = self.id
+                    edge.out_socket = self
                 self._current_edge = edge
                 self._moving_edge = True
                 self.edge_started.emit(edge)
@@ -131,7 +171,7 @@ class Socket(QGraphicsWidget):
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent):
         self.edge_released.emit(self._current_edge)
 
-        if self._current_edge.out_socket_id and self._current_edge.in_socket_id:
+        if self._current_edge.out_socket and self._current_edge.in_socket:
             self.add_connected_edge(self._current_edge)
 
         self._current_edge = None
@@ -144,7 +184,6 @@ class Socket(QGraphicsWidget):
                 if self._socket_type == self.SOCKET_INPUT:
                     edge.in_pos = self.get_socket_scene_center()
                 else:
-                    print("output socket moved")
                     edge.out_pos = self.get_socket_scene_center()
 
         return super().itemChange(change, value)

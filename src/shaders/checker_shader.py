@@ -5,10 +5,10 @@ from torch import Tensor
 
 import src.shaders.lib.glsl_builtins as gl
 from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB
-from src.shaders.shader_super import Shader
+from src.shaders.shader_super import FunctionShader
 
 
-class CheckerShader(Shader):
+class CheckerShader(FunctionShader):
     FRAGMENT_SHADER_FILENAME = "checker_shader_frag.glsl"
 
     def __init__(self):

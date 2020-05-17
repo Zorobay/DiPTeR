@@ -4,7 +4,7 @@ from src.shaders.lib.pattern import *
 from src.shaders.shader_super import *
 
 
-class TestBoxShader(Shader):
+class TestBoxShader(FunctionShader):
     FRAGMENT_SHADER_FILENAME = "test/test_box_frag.glsl"
 
     def __init__(self):

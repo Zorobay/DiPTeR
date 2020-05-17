@@ -31,7 +31,7 @@ class Input:
 
 
 class InputModule(QWidget):
-    input_changed = pyqtSignal(str, object, str, object)  # uniform variable name, widgets value, internal type, widgets module ID
+    input_changed = pyqtSignal(str, object, str, object)  # argument variable name, widgets value, internal type, widgets module ID
 
     def __init__(self, label: str, internal_type: str, uniform_var: str, input_widget: Input):
         super().__init__()
@@ -61,11 +61,11 @@ class InputModule(QWidget):
 
     @pyqtSlot(name="_input_changed")
     def _input_changed(self):
-        self.input_changed.emit(self.uniform_var, self.widget.get_gl_value(), self._internal_type, self.id)
+        self.input_changed.emit(self.argument, self.widget.get_gl_value(), self._internal_type, self.id)
 
     @property
-    def uniform_var(self) -> str:
-        """The name of the uniform variable in the GLSL code that this widgets is connected to."""
+    def argument(self) -> str:
+        """The name of the argument variable in the GLSL other_code that this widgets is connected to."""
         return self._uniform_var
 
     @property

@@ -1,20 +1,15 @@
 import types
-from pathlib import Path
 
 import autograd.numpy as anp
 import numpy as np
-from PIL import Image
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QWidget, QGridLayout, QComboBox, QLabel, QPushButton, QFileDialog, QVBoxLayout, QHBoxLayout
-from autograd import grad
+from PyQt5.QtWidgets import QWidget, QComboBox, QLabel, QPushButton, QVBoxLayout, QHBoxLayout
 
-from src.gui.node_editor.control_center import Material
-from src.gui.widgets.material_selector import MaterialSelector
+from src.gui.node_editor.control_center import Material, ControlCenter
 from src.gui.node_editor.texture_matcher import TextureMatcher
 from src.gui.rendering.opengl_widget import OpenGLWidget
 from src.opengl import object_vertices
 from src.shaders.brick_shader import BrickShader
-from src.shaders.color_shader import ColorShader
 
 
 def find_module_func_names(module):
@@ -28,7 +23,7 @@ def find_module_func_names(module):
 
 
 def vertex_func_name_to_label(vertex_func_names: list):
-    """Processes a list of function names from the object_vertices module into formatted labels."""
+    """Processes a list of primary_function names from the object_vertices module into formatted labels."""
     labels = []
     for f in vertex_func_names:
         if f.startswith("get_"):
@@ -44,7 +39,7 @@ class OpenGLSettingsWidget(QWidget):
     # Define defaults
     OBJECT_VERTICES_DEFAULT = 0
 
-    def __init__(self, cc: Material, open_gl_widget: OpenGLWidget, parent=None):
+    def __init__(self, cc: ControlCenter, open_gl_widget: OpenGLWidget, parent=None):
         super().__init__(parent)
 
         self.cc = cc
@@ -107,7 +102,6 @@ class OpenGLSettingsWidget(QWidget):
                 self._matcher = TextureMatcher(shader)
                 self._matcher.show()
 
-
     # def _load_texture(self):
     #     filename, _ = QFileDialog.getOpenFileName(self, "Open Texture", filter="Image Files (*.png *.jpg)")
     #     if filename:
@@ -140,7 +134,6 @@ class OpenGLSettingsWidget(QWidget):
     #             if new_loss <= early_stopping_thresh:
     #                 break
     #             lr = lr * lr_decay
-
 
 
 def loss(truth: np.ndarray, *args) -> float:

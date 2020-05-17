@@ -18,7 +18,7 @@ def fract(x: Tensor) -> Tensor:
 
 def smoothstep(edge0: ty.Union[float, Tensor], edge1: ty.Union[float, Tensor], x: Tensor) -> Tensor:
     """
-    performs smooth Hermite interpolation between 0 and 1 when edge0 < x < edge1. This is useful in cases where a threshold function with a smooth
+    performs smooth Hermite interpolation between 0 and 1 when edge0 < x < edge1. This is useful in cases where a threshold primary_function with a smooth
     transition is desired.
     """
     t = torch.clamp((x - edge0) / ((edge1 - edge0) + SMALL), 0., 1.)

@@ -14,7 +14,7 @@ from src.gui.widgets.labelled_input import LabelledInput
 from src.gui.widgets.line_input import IntInput
 from src.misc.render_funcs import render_torch, render_torch_with_callback, render_torch_matrix, render_torch_loop
 from src.shaders.color_shader import ColorShader
-from src.shaders.shader_super import Shader
+from src.shaders.shader_super import FunctionShader
 
 _logger = logging.getLogger("PythonRenderingWidget")
 
@@ -70,7 +70,7 @@ class PythonRenderingWidget(QWidget):
 
     def _render(self):
         shader = self._material.shader
-        params = shader.get_parameters_list_torch(False)
+        params = shader.get_parameters_list(False)
         _logger.debug("Rendering {}...".format(shader.__class__.__name__))
         start = time.time()
         if self._material.shader.get_name() in ["RGB Shader", "HSV Shader", "Brick Shader", "Gradient Shader", "Mix Shader", "Color Shader",

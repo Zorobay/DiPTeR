@@ -4,15 +4,14 @@ from PyQt5.QtCore import QPoint, QRectF, Qt, QPointF
 from PyQt5.QtGui import QColor, QPainter, QPen
 from PyQt5.QtWidgets import QGraphicsWidget, QGraphicsLineItem, QGraphicsItem
 
-
 class Edge(QGraphicsLineItem):
 
     def __init__(self, start_pos):
         super().__init__()
 
         self._id = uuid.uuid4()
-        self.out_socket_id = None
-        self.in_socket_id = None
+        self.out_socket: 'Socket' = None
+        self.in_socket: 'Socket' = None
         self._out_pos = start_pos
         self._in_pos = start_pos
 

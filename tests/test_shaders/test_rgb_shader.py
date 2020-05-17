@@ -26,7 +26,7 @@ class TestRGBShader(ShaderTest):
     def test_rgb_random(self):
         self.W = 50
         self.H = 100
-        self.args = self.shader.get_parameters_list_torch(False)
+        self.args = self.shader.get_parameters_list(False)
         self.args = funcs.randomize_inputs_torch(self.args, self.shader)
         self.shader.set_inputs(self.args)
 

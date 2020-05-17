@@ -2,7 +2,7 @@ from src.shaders.lib import pattern
 from src.shaders.shader_super import *
 
 
-class TileShader(Shader):
+class TileShader(FunctionShader):
     FRAGMENT_SHADER_FILENAME = "tile_shader_frag.glsl"
 
     def __init__(self):

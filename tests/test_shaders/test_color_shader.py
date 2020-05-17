@@ -36,7 +36,7 @@ class TestColorShader:
     def test_random_parameters(self):
         self.W = 100
         self.H = 100
-        self.args = self.shader.get_parameters_list_torch(False)
+        self.args = self.shader.get_parameters_list(False)
         gls = []
         pys = []
         params = []

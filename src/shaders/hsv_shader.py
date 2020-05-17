@@ -2,8 +2,9 @@ from src.shaders.lib import glsl_builtins as gl
 from src.shaders.shader_super import *
 
 
-class HSVShader(Shader):
-    FRAGMENT_SHADER_FILENAME = "hsv_shader_frag.glsl"
+class HSVShader(FunctionShader):
+    FRAGMENT_SHADER_FILENAME = "hsv_shader.glsl"
+    FRAGMENT_SHADER_FUNCTION = "hsv"
 
     def __init__(self):
         super().__init__()

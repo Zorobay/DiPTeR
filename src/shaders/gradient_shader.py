@@ -1,7 +1,7 @@
 from src.shaders.shader_super import *
 
 
-class GradientShader(Shader):
+class GradientShader(FunctionShader):
     FRAGMENT_SHADER_FILENAME = "gradient_shader_frag.glsl"
 
     def __init__(self):

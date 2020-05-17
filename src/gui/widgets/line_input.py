@@ -18,7 +18,7 @@ class NumberValidator:
     TOO_SMALL = 2
 
     def __init__(self, bottom, top):
-        """Subclasses must pass a function used to convert the string to be validated into the correct data type."""
+        """Subclasses must pass a primary_function used to convert the string to be validated into the correct data type."""
         self._reason_for_invalid = None
         self.bottom = bottom
         self.top = top
@@ -57,7 +57,7 @@ class NumberValidator:
     def validate_intermediate(self, intermediate_input: str) -> Number:
         """Validate the intermediate input. This is called after the string has been cleaned and checked if its empty (including '+' or '-').
 
-        This function should raise a ValueError if the string does not follow the formatting of the wanted number type. This includes converting a
+        This primary_function should raise a ValueError if the string does not follow the formatting of the wanted number type. This includes converting a
         valid float with decimals to an integer (as integers should not contain decimals). This enables fixup() to clean the string properly.
 
         :return: The string input converted to a number.

@@ -2,7 +2,7 @@ import src.opengl.internal_types
 from src.shaders.shader_super import *
 
 
-class ColorShader(Shader):
+class ColorShader(FunctionShader):
     FRAGMENT_SHADER_FILENAME = "color_shader_frag.glsl"
 
     def __init__(self):
