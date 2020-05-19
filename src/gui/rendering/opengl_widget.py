@@ -10,8 +10,7 @@ from glumpy.gloo import Program
 from src.gui.node_editor.control_center import ControlCenter
 from src.gui.node_editor.material import Material
 from src.opengl import object_vertices
-from src.shaders import OBJECT_MATRIX_NAME, VIEW_MATRIX_NAME, PROJECTION_MATRIX_NAME
-from src.shaders.color_shader import ColorShader
+from src.shaders import OBJECT_MATRIX_NAME, VIEW_MATRIX_NAME, PROJECTION_MATRIX_NAME, UNIFORM_VERTEX_MAXES, UNIFORM_VERTEX_MINS, IN_VERTEX_POS_NAME
 from src.shaders.default_shader import DefaultShader
 
 _logger = logging.getLogger(__name__)
@@ -55,6 +54,8 @@ class OpenGLWidget(QOpenGLWidget):
         self._object_to_world = np.eye(4, dtype=np.float32)
         self._world_to_view = np.eye(4, dtype=np.float32)
         self._view_to_projection = np.eye(4, dtype=np.float32)
+        self._maxes = np.array((-1, -1, -1), dtype=np.float32)
+        self._mins = np.array((1., 1., 1.), dtype=np.float32)
 
     @property
     def frame_rate(self):
@@ -69,7 +70,7 @@ class OpenGLWidget(QOpenGLWidget):
     def initializeGL(self):
         gl.glEnable(gl.GL_DEPTH_TEST)
         gl.glEnable(gl.GL_BLEND)
-        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+        # gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         gl.glFrontFace(gl.GL_CCW)
         gl.glClearColor(*self._clear_color)
         gl.glDisable(gl.GL_CULL_FACE)
@@ -119,6 +120,8 @@ class OpenGLWidget(QOpenGLWidget):
             self._program[OBJECT_MATRIX_NAME] = self._object_to_world
             self._program[VIEW_MATRIX_NAME] = self._world_to_view
             self._program[PROJECTION_MATRIX_NAME] = self._view_to_projection
+            self._program[UNIFORM_VERTEX_MAXES] = self._maxes
+            self._program[UNIFORM_VERTEX_MINS] = self._mins
 
             self._program.draw(gl.GL_TRIANGLES, self._I)
 
@@ -136,6 +139,11 @@ class OpenGLWidget(QOpenGLWidget):
         """
         self._I = I.view(gloo.IndexBuffer)
         self._V = V.view(gloo.VertexBuffer)
+
+        # Find extremes of vertices
+        self._mins = V[IN_VERTEX_POS_NAME].min(axis=0)
+        self._maxes = V[IN_VERTEX_POS_NAME].max(axis=0)
+
         if self._program is not None:
             self._program.bind(self._V)
 
