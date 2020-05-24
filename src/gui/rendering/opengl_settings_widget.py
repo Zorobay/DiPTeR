@@ -23,7 +23,7 @@ def find_module_func_names(module):
 
 
 def vertex_func_name_to_label(vertex_func_names: list):
-    """Processes a list of primary_function names from the object_vertices module into formatted labels."""
+    """Processes a list of function names from the object_vertices module into formatted labels."""
     labels = []
     for f in vertex_func_names:
         if f.startswith("get_"):
@@ -97,59 +97,7 @@ class OpenGLSettingsWidget(QWidget):
     def _match_texture(self):
         mat = self.cc.active_material
         if mat:
-            shader = mat.shader
-            if shader:
-                self._matcher = TextureMatcher(shader)
+            out_node = mat.get_material_output_node()
+            if out_node:
+                self._matcher = TextureMatcher(out_node)
                 self._matcher.show()
-
-    # def _load_texture(self):
-    #     filename, _ = QFileDialog.getOpenFileName(self, "Open Texture", filter="Image Files (*.png *.jpg)")
-    #     if filename:
-    #         self._texture_label.setText(Path(filename).stem)
-    #         self._loaded_texture = Image.open(filename)
-    #
-    # def _start_gradient_descent(self):
-    #     if self._loaded_texture:
-    #         W, H = 50, 50
-    #         truth = np.asarray(self._loaded_texture.resize((W, H)), dtype=np.float32) / 255.
-    #         shader = self._open_gl_widget.material._shader
-    #         f = shader.shade
-    #         loss_grad = grad(loss, list(range(1 + len(shader.get_parameters_list()))))
-    #
-    #         max_iter = 100
-    #         early_stopping_thresh = 0.02
-    #         lr_decay = 0.99
-    #         lr = 0.1
-    #         params = shader.get_parameters_list()
-    #         loss_hist = []
-    #
-    #         for i in range(max_iter):
-    #             _, gradient = loss_grad(truth, *params)
-    #             params -= lr * np.array(gradient)
-    #             new_loss = loss(truth, *params)
-    #             loss_hist.append(new_loss)
-    #             shader.set_input_by_uniform("color", params[0])
-    #
-    #             print("{}. new loss: {:.5f}, lr: {:.5f}, Params: {}".format(i, new_loss, lr, params))
-    #             if new_loss <= early_stopping_thresh:
-    #                 break
-    #             lr = lr * lr_decay
-
-
-def loss(truth: np.ndarray, *args) -> float:
-    width = truth.shape[0]
-    height = truth.shape[1]
-    x_res = 1.0 / width
-    y_res = 1.0 / height
-    x_pos = anp.linspace(0, 1.0, width, endpoint=False) + (x_res / 2.0)
-    y_pos = anp.linspace(0, 1.0, height, endpoint=False) + (y_res / 2.0)
-    loss_sum = 0
-    sh = BrickShader()
-
-    for x in range(width):
-        for y in range(height):
-            vert_pos = anp.array((x_pos[x], y_pos[y], 0.))
-            val = sh.shade(vert_pos, *args)
-            loss_sum += anp.sum(anp.abs(truth[y, x, :] - val))
-
-    return loss_sum / (width * height * 4)

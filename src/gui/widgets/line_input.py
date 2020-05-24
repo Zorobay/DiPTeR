@@ -18,7 +18,7 @@ class NumberValidator:
     TOO_SMALL = 2
 
     def __init__(self, bottom, top):
-        """Subclasses must pass a primary_function used to convert the string to be validated into the correct data type."""
+        """Subclasses must pass a function used to convert the string to be validated into the correct data type."""
         self._reason_for_invalid = None
         self.bottom = bottom
         self.top = top
@@ -57,7 +57,7 @@ class NumberValidator:
     def validate_intermediate(self, intermediate_input: str) -> Number:
         """Validate the intermediate input. This is called after the string has been cleaned and checked if its empty (including '+' or '-').
 
-        This primary_function should raise a ValueError if the string does not follow the formatting of the wanted number type. This includes converting a
+        This function should raise a ValueError if the string does not follow the formatting of the wanted number type. This includes converting a
         valid float with decimals to an integer (as integers should not contain decimals). This enables fixup() to clean the string properly.
 
         :return: The string input converted to a number.
@@ -134,11 +134,14 @@ class LineInput(QLineEdit, Input):
     @abstractmethod
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._old_text = ""
+        self.editingFinished.connect(self._handle_change)
+        self.textChanged.connect(self._handle_change)
 
     def _handle_change(self):
-        if self.isModified():
+        if self.text() != self._old_text:
             self.input_changed.emit()
-            self.setModified(False)
+            self._old_text = self.text()
 
     def get_value(self) -> str:
         return self.text()
@@ -152,7 +155,7 @@ class FloatInput(LineInput):
 
         self.min_ = min_
         self.max_ = max_
-        self._init_widget()
+        self.setValidator(FloatValidator(bottom=self.min_, top=self.max_, decimals=5))
 
     def set_default_value(self, default_value: typing.Any):
         assert isinstance(default_value, (float, np.float32, torch.FloatTensor, torch.cuda.FloatTensor)),\
@@ -167,10 +170,6 @@ class FloatInput(LineInput):
 
         return np.float32(float(self.text()))
 
-    def _init_widget(self):
-        self.setValidator(FloatValidator(bottom=self.min_, top=self.max_, decimals=5))
-        self.editingFinished.connect(self._handle_change)
-
 
 class IntInput(LineInput):
 
@@ -180,7 +179,7 @@ class IntInput(LineInput):
 
         self.min_ = min_
         self.max_ = max_
-        self._init_widget()
+        self.setValidator(IntValidator(bottom=self.min_, top=self.max_))
 
     def set_default_value(self, default_value: typing.Any):
         assert isinstance(default_value, (int, np.int)), "Incompatible type of default value for FloatInput!"
@@ -193,7 +192,3 @@ class IntInput(LineInput):
             return np.int(0)
 
         return int(self.text())
-
-    def _init_widget(self):
-        self.setValidator(IntValidator(bottom=self.min_, top=self.max_))
-        self.editingFinished.connect(self._handle_change)

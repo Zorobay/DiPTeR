@@ -10,11 +10,11 @@ def test_step():
     edge = tensor(0.5)
     assert f(edge, tensor(0.)) == tensor(0.0), "Value of step for single float is wrong!"
     assert f(edge, edge - tensor(0.001)) == tensor(0.0), "Value of step for float close to edge is wrong!"
-    assert f(edge, edge) == tensor(1.0), "Value of step with x=edge is wrong!"
+    assert f(edge, edge) == tensor(1.0), "Value of step with input=edge is wrong!"
     edge = tensor(100000.0, dtype=torch.float64)
     assert f(edge, 0) == tensor(0.0), "Value of step for large edge is wrong!"
     assert f(edge, edge - 0.001) == tensor(0.0), "Value of step for float close to large edge is wrong!"
-    assert f(edge, edge) == tensor(1.0), "Value of step with x=edge when edge is large is wrong!"
+    assert f(edge, edge) == tensor(1.0), "Value of step with input=edge when edge is large is wrong!"
     edge = tensor(-10)
     assert f(edge, tensor(-11)) == tensor(0.0), "Value of step when edge is negative is wrong!"
     assert f(edge, edge) == tensor(1.0), "Value of step when edge is negative is wrong!"
@@ -64,11 +64,11 @@ def test_smoothstep():
     edge0 = tensor(1.0)
     edge1 = tensor(3.0)
 
-    assert f(edge0, edge1, tensor(0)) == tensor(0), "smoothstep with x=0 returned wrong value"
-    assert f(edge0, edge1, edge0 - tensor(1)) == tensor(0), "smoothstep with x<edge0 did not return 0"
-    assert f(edge0, edge1, edge0) == tensor(0), "smoothstep with x=edge0 did not return 0"
-    assert f(edge0, edge1, edge1) == tensor(1), "smoothstep with x=edge1 did not return 1"
-    assert f(edge0, edge1, edge1 + tensor(1)) == tensor(1), "smoothstep with x>edge1 did not return 1"
+    assert f(edge0, edge1, tensor(0)) == tensor(0), "smoothstep with input=0 returned wrong value"
+    assert f(edge0, edge1, edge0 - tensor(1)) == tensor(0), "smoothstep with input<edge0 did not return 0"
+    assert f(edge0, edge1, edge0) == tensor(0), "smoothstep with input=edge0 did not return 0"
+    assert f(edge0, edge1, edge1) == tensor(1), "smoothstep with input=edge1 did not return 1"
+    assert f(edge0, edge1, edge1 + tensor(1)) == tensor(1), "smoothstep with input>edge1 did not return 1"
     x = edge0 + (edge1 - edge0) / tensor(2)
     assert_allclose(f(edge0, edge1, x), tensor(0.5))
 

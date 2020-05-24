@@ -1,3 +1,4 @@
+import logging
 import re
 import time
 import typing
@@ -24,6 +25,9 @@ REG_FUNCTION = re.compile(r"^\s*(?P<"
                           + FUNC_FUNCTION_NAME + r">[\w_]+)\((?P<"
                           + FUNC_ARGUMENTS + r">[\w\s_,]*)\)",
                           flags=re.UNICODE | re.DOTALL | re.MULTILINE | re.IGNORECASE)
+REG_LINE_COMMENT = re.compile(r"\s*\/\/.*", flags=re.UNICODE | re.DOTALL | re.IGNORECASE)
+
+_logger = logging.getLogger(__name__)
 
 
 def is_empty(s: str):
@@ -63,6 +67,8 @@ class GLSLCode:
     def __init__(self, code: typing.List[str], filename: str, primary_function: str):
         self.code = code
         self._generated_code = []
+        self._node_num = -1
+        self._reset = False
         self.filename = filename
         self.shader_name = self.filename.split(".")[0]
         self.functions = []
@@ -91,6 +97,11 @@ class GLSLCode:
 
         code_iterator = iter(self.code)
         for line_i, line in enumerate(code_iterator):
+
+            if "/*" in line:
+                while "*/" not in line:
+                    line = next(code_iterator)  # Consume lines
+                    line_i += 1
 
             # --- Import Statement ---
             match = REG_GLSL_IMPORT.match(line)
@@ -124,7 +135,7 @@ class GLSLCode:
                 opening_braces = 0
                 closing_braces = 0
 
-                # Opening brace of primary_function might not be on the same line as the primary_function name!
+                # Opening brace of primary_function might not be on the same line as the primary_function title!
                 while not ("{" in line):
                     line = next(code_iterator)
                     func_code.append(line)
@@ -133,6 +144,7 @@ class GLSLCode:
 
                 while opening_braces > closing_braces:
                     line = next(code_iterator)
+                    line_i += 1
                     func_code.append(line)
 
                     if "}" in line:
@@ -146,7 +158,7 @@ class GLSLCode:
 
     def _add_args_to_primary(self):
         for arg_code in self._arguments_to_add_to_primary:
-            self.primary_function.arguments.append(GLSLVariable(arg_code, self.primary_function))
+            self.primary_function.arguments.append(GLSLArgument(arg_code, self.primary_function))
 
     def _set_primary_function(self):
         name = self._primary_func_name
@@ -155,25 +167,40 @@ class GLSLCode:
                 self.primary_function = f
                 return
 
-        raise KeyError("No primary_function with name {} in {}".format(name, self.filename))
+        raise KeyError("No primary_function with title {} in {}".format(name, self.filename))
 
-    def reset(self):
-        """Resets all connections for this code."""
+    def reset(self, node_num: int):
+        """
+        Resets all connections for this code.
+        :param node_num: The number of the node containing the code object.
+        """
+        self._node_num = node_num
         self._generated_code = []
         self.needed_code = set()
         self._uniforms = []
         for func in self.functions:
             func.reset()
 
+        self._reset = True
+
+    def get_node_num(self) -> int:
+        return self._node_num
+
     def get_primary_function(self) -> 'GLSLFunction':
         return self.primary_function
+
+    def get_modified_arg_name(self, arg: str) -> str:
+        arg = self.primary_function.get_argument(arg)
+        if arg:
+            return arg.get_modified_name()
+
+        return None
 
     def connect(self, argument: str, other_code: 'GLSLCode'):
         """
         Connect the argument 'argument' of this other_code's primary_function to the output of the primary_function of the other_code in 'other_code'.
-        :param argument: The name of the argument that is to be replaced by a call to another primary_function.
+        :param argument: The title of the argument that is to be replaced by a call to another primary_function.
         :param other_code: The other_code that will be called and whose return value will replace the argument
-        :return:
         """
         self.needed_code.add(other_code)
         for sub_code in other_code.needed_code:
@@ -185,11 +212,17 @@ class GLSLCode:
         return self._uniforms
 
     def generate_code(self) -> str:
+        if not self._reset:
+            _logger.error("generate_code() called before the code has been reset. Call reset() first.")
+            return ""
+
         # Step 1, copy all lines from the code up until the first function
         self._generated_code = self.code[0:self._functions_start_line].copy()
 
         # Step 2, insert uniforms for all connected nodes for each unconnected argument
-        for prim_func in [c.primary_function for c in self.needed_code]:
+        for needed_code in self.needed_code:
+            needed_code._reset = False
+            prim_func = needed_code.get_primary_function()
             for arg in prim_func.arguments:
                 if not arg.is_connected() and arg.name != "vert_pos":
                     self._generated_code.append(arg.get_uniform_string() + "\n")
@@ -197,27 +230,30 @@ class GLSLCode:
 
         # Step 3, handle imports
         all_imports = [im for n in self.needed_code for im in n.imports]
-        for import_file in self.imports:
+        for import_file in all_imports:
             libcode = generate_comment_line(import_file) + "\n" + get_import_code(import_file)
             self._generated_code.append(libcode + "\n")
 
         # Step 4, import code from connected nodes
         function_calls = []
+        added_function_defs = []
         for needed_code in self.needed_code:
             for needed_func in needed_code.functions:
                 comment = generate_comment_line("{}.{}".format(needed_code.shader_name, needed_func.function_name))
 
-                # Step 2.1, generate calls to connected functions
-                function_calls.extend(needed_func.get_call_strings())
+                if needed_func.modified_function_name not in added_function_defs:  # We don't want to add duplicate function definitions
+                    func_code = "\n" + comment + "\n" + "".join(needed_func.generated_code)
+                    self._generated_code.append(func_code + "\n")
+                    added_function_defs.append(needed_func.modified_function_name)
 
-                func_code = "\n" + comment + "\n" + "".join(needed_func.generated_code)
-                self._generated_code.append(func_code + "\n")
+                # Step 4.1, generate calls to connected functions
+                function_calls.extend(needed_func.get_call_strings())
 
         # Step 5, generate calls to connected functions in own primary function
         self.primary_function.add_function_calls(function_calls)
         primary_code = "".join(self.primary_function.generated_code)
         self._generated_code.append(primary_code)
-
+        self._reset = False
         return "".join(self._generated_code)
 
 
@@ -266,8 +302,8 @@ class GLSLFunction:
         self.generated_code = self._renamed_code.copy()
 
     def _set_modified_filename(self):
-        """Appends the filename to the function name to keep it unique."""
-        if self.function_name == "main":  # We do not modify the name if it is the main function, as it is a reserved word
+        """Appends the filename to the function title to keep it unique."""
+        if self.function_name == "main":  # We do not modify the title if it is the main function, as it is a reserved word
             self.modified_function_name = self.function_name
             return
 
@@ -278,10 +314,10 @@ class GLSLFunction:
         if is_empty(arguments):
             return
 
-        vars_ = arguments.split(",")
+        args = arguments.split(",")
 
-        for var in vars_:
-            self.arguments.append(GLSLVariable(var, self))
+        for arg in args:
+            self.arguments.append(GLSLArgument(arg, self))
 
     def reset(self):
         """Reset this function and all connections to it."""
@@ -290,25 +326,37 @@ class GLSLFunction:
         for arg in self.arguments:
             arg.reset()
 
+    def get_argument(self, name: str) -> 'GLSLArgument':
+        for arg in self.arguments:
+            if arg.name == name:
+                return arg
+
+        return None
+
     def connect(self, argument: str, other_code: GLSLCode):
+        """
+        Connects the output of the primary function of 'other_code' to the input with title 'argument'.
+        :param argument: The title of the input argument of this code.
+        :param other_code: The code whose output is to be input to the argument.
+        """
         func = other_code.get_primary_function()
         for arg in self.arguments:
             if argument == arg.name:
                 arg.connect(func)
                 return
 
-        raise KeyError("No argument with name {} in primary function {}".format(argument, func))
+        raise KeyError("No argument with title {} in primary function {}".format(argument, func))
 
     def _get_call_string(self, argument: str) -> str:
-        call = "{}({})".format(self.modified_function_name, ", ".join([arg.modified_name for arg in self.arguments]))
-        return "\t{type} {var} = {call};".format(type=self.return_type, var=argument, call=call)
+        call = "{}({})".format(self.modified_function_name, ", ".join([arg.get_modified_name() for arg in self.arguments]))
+        return "\t{type} {arg} = {call};".format(type=self.return_type, arg=argument, call=call)
 
     def get_call_strings(self) -> typing.List[str]:
         call_strings = []
         for arg in self.arguments:
             if arg.is_connected():
                 connected_func = arg.connected_to
-                call_string = connected_func._get_call_string(arg.modified_name) + "\n"
+                call_string = connected_func._get_call_string(arg.get_modified_name()) + "\n"
                 call_strings.append(call_string)
 
         return call_strings
@@ -323,7 +371,7 @@ class GLSLFunction:
             self.generated_code.insert(insert_line, calls_code)
 
 
-class GLSLVariable:
+class GLSLArgument:
 
     def __init__(self, code: str, parent_function: GLSLFunction):
         self.code = code.strip()
@@ -337,19 +385,21 @@ class GLSLVariable:
         self._parse()
 
     def __str__(self):
-        return "(GLSLVariable) {} {}".format(self.type, self.name)
+        return "(GLSLArgument) {} {}".format(self.type, self.name)
 
     def _parse(self):
         parts = REG_SPACE.split(self.code)
         self.type = parts[0]
         self.name = parts[1]
-        self.modified_name = self._get_modified_name()
 
-    def _get_modified_name(self) -> str:
+    def get_node_num(self):
+        return self.parent_function.parent_code.get_node_num()
+
+    def get_modified_name(self) -> str:
         if self.name == "vert_pos" or self.parent_function.function_name == "main":
             return self.name
         else:
-            return self.parent_function.modified_function_name + "_" + self.name
+            return "{}_{}_{}".format(self.parent_function.modified_function_name, self.get_node_num(), self.name)
 
     def is_connected(self) -> bool:
         return self._is_connected
@@ -359,9 +409,9 @@ class GLSLVariable:
         self.connected_to = None
 
     def get_uniform_string(self) -> str:
-        return "uniform {} {};".format(self.type, self.modified_name)
+        return "uniform {} {};".format(self.type, self.get_modified_name())
 
     def connect(self, other: GLSLFunction):
-        """Connects this variable to a call to another shaders primary_function."""
+        """Connects this argument to a call to another shaders primary_function."""
         self.connected_to = other
         self._is_connected = True

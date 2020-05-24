@@ -27,7 +27,7 @@ class ShaderTest:
         self.args = self.default_args
 
     def set_arg(self, name: str, val: typing.Any):
-        """Sets a new value to the argument 'name' in both the program and the self.args parameters."""
+        """Sets a new value to the argument 'title' in both the program and the self.call_dict parameters."""
         assert self.args
         for i, info in enumerate(self.shader.get_inputs()):
             arg = info[1]
@@ -39,7 +39,7 @@ class ShaderTest:
         raise AttributeError("The argument {} does not exist in shader {}!".format(name, self.shader_class))
 
     def render_py_torch(self):
-        return render_funcs.render_torch(self.W, self.H, self.shader.shade, *self.args)
+        return render_funcs.render_torch(self.W, self.H, self.shader.render, *self.args)
 
     def render_gl(self):
         return funcs.render_opengl(self.W, self.H, self.program)

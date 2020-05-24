@@ -1,10 +1,10 @@
 import logging
 import time
 
-import numpy as np
+import pyqtgraph as pg
 from PyQt5.QtCore import pyqtSignal, Qt
-from PyQt5.QtGui import QCloseEvent
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QLabel, QPushButton
+from PyQt5.QtGui import QCloseEvent, QFont
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
@@ -12,9 +12,6 @@ from src.gui.node_editor.control_center import ControlCenter
 from src.gui.node_editor.material import Material
 from src.gui.widgets.labelled_input import LabelledInput
 from src.gui.widgets.line_input import IntInput
-from src.misc.render_funcs import render_torch, render_torch_with_callback, render_torch_matrix, render_torch_loop
-from src.shaders.color_shader import ColorShader
-from src.shaders.shader_super import FunctionShader
 
 _logger = logging.getLogger("PythonRenderingWidget")
 
@@ -28,6 +25,10 @@ class PythonRenderingWidget(QWidget):
         self.cc = cc
 
         # Define gui components
+        self._plotWidget = pg.PlotWidget()
+        self._imgItem = pg.ImageItem()
+        self._cant_render_text = pg.TextItem(text="No shader connected to output node.", color="r", anchor=(0.5, 0.5))
+
         self._figure = Figure(figsize=(4, 4))
         self._figure_canvas = FigureCanvas(self._figure)
         self._axis = self._figure.add_subplot(111)
@@ -35,12 +36,12 @@ class PythonRenderingWidget(QWidget):
         self._width_input = IntInput(1, 500)
         self._height_input = IntInput(1, 500)
         self._resize_button = QPushButton("Resize")
-        self._render_progress = QLabel("0/? rows")
 
         # Define widget data
         self._width, self._height = 100, 100
         self._shader = None
         self._material = None
+        self._call_dict = None
 
         self._init_widget()
 
@@ -56,11 +57,17 @@ class PythonRenderingWidget(QWidget):
         settings_layout.addWidget(LabelledInput("Width", self._width_input))
         settings_layout.addWidget(LabelledInput("Height", self._height_input))
         settings_layout.addWidget(self._resize_button)
-        settings_layout.addWidget(LabelledInput("Progress: ", self._render_progress))
         self._layout.addLayout(settings_layout)
 
-        # Setup matplotlib
-        self._layout.addWidget(self._figure_canvas)
+        # Setup pyqtgraph
+        font = QFont()
+        font.setPointSize(20)
+        self._cant_render_text.setFont(font)
+        self._plotWidget.addItem(self._imgItem)
+        self._plotWidget.setYRange(0, self._height)
+        self._plotWidget.setXRange(0, self._width)
+        self._imgItem.setLevels(0, 1.0)
+        self._layout.addWidget(self._plotWidget)
 
         self.cc.active_material_changed.connect(self._material_changed)
         if self.cc.active_material:
@@ -69,26 +76,21 @@ class PythonRenderingWidget(QWidget):
         self.setLayout(self._layout)
 
     def _render(self):
-        shader = self._material.shader
-        params = shader.get_parameters_list(False)
-        _logger.debug("Rendering {}...".format(shader.__class__.__name__))
+        node = self._material.get_material_output_node()
+
         start = time.time()
-        if self._material.shader.get_name() in ["RGB Shader", "HSV Shader", "Brick Shader", "Gradient Shader", "Mix Shader", "Color Shader",
-                                                "Checker Shader"]:
-            Ps = [p.repeat(self._width, self._height, 1) for p in params]
-            img = render_torch_matrix(self._width, self._height, shader.shade_mat, *Ps)
-        else:
-            img = render_torch_loop(self._width, self._height, shader.shade, *params)
+        img, self._call_dict, _, _ = node.render(self._width, self._height, call_dict=self._call_dict)
+
         total_time = time.time() - start
         _logger.debug("Rendering DONE in {:.4f}s.".format(total_time))
 
-        self._axis.imshow(img)
-        self._set_title()
-        self._axis.set_xlabel("x")
-        self._axis.set_ylabel("y")
-        self._axis.invert_yaxis()
-        self._figure_canvas.draw()
-        self._figure_canvas.flush_events()
+        if img is not None:
+            self._plotWidget.removeItem(self._cant_render_text)
+            self._imgItem.setImage(img.numpy(), autoLevels=False, levels=(0, 1.))
+        else:
+            self._plotWidget.removeItem(self._cant_render_text)
+            self._plotWidget.addItem(self._cant_render_text)
+            self._cant_render_text.setPos(self._width / 2, self._height / 2)
 
     def _material_changed(self, mat: Material):
         # Disconnect signals from previous material
@@ -103,9 +105,6 @@ class PythonRenderingWidget(QWidget):
         if self._material.shader:  # Handle the case where the shader is already available
             self._render()
 
-    def _render_cb(self, row: int):
-        self._render_progress.setText("{}/{} rows".format(row+1, self._height))
-
     def _set_title(self):
         shader = self._material.shader
         self._axis.set_title("Python Render ({})".format(shader.__class__.__name__))
@@ -116,9 +115,10 @@ class PythonRenderingWidget(QWidget):
     def _handle_resize(self):
         self._width = self._width_input.get_gl_value()
         self._height = self._height_input.get_gl_value()
+        self._plotWidget.setYRange(0, self._height)
+        self._plotWidget.setXRange(0, self._width)
         self._render()
 
     def closeEvent(self, event: QCloseEvent):
         self.closed.emit()
         super().closeEvent(event)
-

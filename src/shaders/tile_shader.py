@@ -15,8 +15,8 @@ class TileShader(FunctionShader):
         ]
 
     # def shade(self, vert_pos: Tensor) -> Tensor:
-    #     x = vert_pos[0]
-    #     color = torch.stack((x, x, x))
+    #     input = vert_pos[0]
+    #     color = torch.stack((input, input, input))
     #     return color
 
     def shade_mat(self, vert_pos: Tensor, scale: Tensor, shift: Tensor) -> Tensor:

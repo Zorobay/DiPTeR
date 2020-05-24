@@ -80,7 +80,7 @@ class MainWindow(QMainWindow):
 
 
 # Setup global logging settings
-FORMAT = "%(asctime)s.%(msecs)03d [%(levelname)s] %(name)s: %(message)s"
+FORMAT = "%(asctime)s.%(msecs)03d [%(levelname)s] %(title)s: %(message)s"
 logging.basicConfig(level=logging.DEBUG, format=FORMAT, datefmt="%Y-%m-%d %H:%M:%S")
 mpl_logger = logging.getLogger('matplotlib')
 mpl_logger.setLevel(logging.WARNING)

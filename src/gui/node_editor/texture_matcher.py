@@ -1,31 +1,22 @@
 import logging
-import time
 import typing
 
-import numpy as np
-import torch
 from PIL import Image
-from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QThread, Qt
+from PyQt5.QtCore import pyqtSignal, QThread, Qt
 from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QComboBox
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
+from src.gui.node_editor.node import MaterialOutputNode
 from src.gui.rendering.opengl_widget import OpenGLWidget
 from src.gui.widgets.labelled_input import LabelledInput
 from src.gui.widgets.line_input import FloatInput, IntInput
-from src.misc import render_funcs, losses, image_funcs
-from src.shaders.shader_super import FunctionShader
+from src.misc import image_funcs
+from src.optimization import losses
+from src.optimization.gradient_descent import GradientDescent, GradientDescentSettings
 
 _logger = logging.getLogger(__name__)
 
-LOSS_FUNC = "loss_func"
-MAX_ITER = "max_iter"
-EARLY_STOPPING_THRESH = "early_stopping_thresh"
-LEARNING_RATE = "learning_rate"
-DECAY = "decay"
-
-ren_i = 0
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device = "cpu"
 
 CHANNELS = 3
@@ -35,7 +26,7 @@ class SettingsPanel(QWidget):
     match_start = pyqtSignal()
     match_stop = pyqtSignal()
     texture_loaded = pyqtSignal(Image.Image)
-    settings_changed = pyqtSignal(str, dict)  # changed key as well as all settings
+    settings_changed = pyqtSignal(GradientDescentSettings)  # changed key as well as all settings
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -45,16 +36,17 @@ class SettingsPanel(QWidget):
         self._texture_label = QLabel("load texture...")
         self._match_button = QPushButton("Match Texture")
         self._loss_combo_box = QComboBox()
+        self._width_input = IntInput(0, 1000)
+        self._height_input = IntInput(0, 1000)
         self._max_iter_input = IntInput(0, 10000)
         self._early_stopping_loss_thresh = FloatInput(0, 1)
         self._learning_rate = FloatInput(0, 1)
 
         # Define data
-        self._loss_func_map = {"Squared Bin Loss": losses.squared_bin_loss, "MSE Loss": losses.mean_squared_error}
-        self._selected_loss_func = None
+        self._loss_func_map = {"Squared Bin Loss": losses.SquaredBinLoss(), "MSE Loss": losses.MSELoss(reduction='mean')}
         self.loaded_image = None
         self._max_iter = 100
-        self.settings = {}
+        self.settings = GradientDescentSettings()
         self._is_running = False
 
         self._init_widget()
@@ -64,23 +56,37 @@ class SettingsPanel(QWidget):
         self._match_button.clicked.connect(self._toggle_matching)
         self._load_texture_button.clicked.connect(self._load_texture)
 
+        # --- Setup loss function combo box ---
         self._loss_combo_box.addItems(list(self._loss_func_map))
-        self._loss_combo_box.currentTextChanged.connect(self._set_loss_func)
+        self._loss_combo_box.currentIndexChanged.connect(lambda name: self._change_settings(self.settings.set_loss_func, self._loss_func_map[
+            self._loss_combo_box.currentText()]))
         self._loss_combo_box.setCurrentIndex(0)
+        self.settings.set_loss_func(self._loss_func_map[self._loss_combo_box.currentText()])
 
-        self._max_iter_input.input_changed.connect(lambda: self._settings_changed(MAX_ITER, self._max_iter_input.get_gl_value()))
+        # --- Setup render size input ---
+        self._width_input.set_default_value(self.settings.get_render_width())
+        self._height_input.set_default_value(self.settings.get_render_height())
+        self._width_input.input_changed.connect(lambda: self._change_settings(self.settings.set_render_width, self._width_input.get_gl_value()))
+        self._height_input.input_changed.connect(lambda: self._change_settings(self.settings.set_render_height, self._height_input.get_gl_value()))
+
+        # --- Setup max iterations input ---
+        self._max_iter_input.input_changed.connect(lambda: self._change_settings(self.settings.set_max_iter, self._max_iter_input.get_gl_value()))
         self._max_iter_input.set_default_value(100)
 
-        self._early_stopping_loss_thresh.input_changed.connect(lambda: self._settings_changed(EARLY_STOPPING_THRESH,
-                                                                                              self._early_stopping_loss_thresh.get_gl_value()))
+        # --- Setup early stopping loss threshold input ---
+        self._early_stopping_loss_thresh.input_changed.connect(lambda: self._change_settings(self.settings.set_early_stopping_thresh,
+                                                                                             self._early_stopping_loss_thresh.get_gl_value()))
         self._early_stopping_loss_thresh.set_default_value(0.01)
 
-        self._learning_rate.input_changed.connect(lambda: self._settings_changed(LEARNING_RATE, self._learning_rate.get_gl_value()))
+        # --- Setup learning rate input ---
+        self._learning_rate.input_changed.connect(lambda: self._change_settings(self.settings.set_learning_rate, self._learning_rate.get_gl_value()))
         self._learning_rate.set_default_value(0.1)
 
         self._layout.addWidget(self._match_button)
         self._layout.addWidget(self._load_texture_button)
-        self._layout.addWidget(LabelledInput("Loss primary_function", self._loss_combo_box))
+        self._layout.addWidget(LabelledInput("Loss function", self._loss_combo_box))
+        self._layout.addWidget(LabelledInput("Render width", self._width_input))
+        self._layout.addWidget(LabelledInput("Render height", self._height_input))
         self._layout.addWidget(LabelledInput("Max iterations", self._max_iter_input))
         self._layout.addWidget(LabelledInput("Learning Rate", self._learning_rate))
         self._layout.addWidget(LabelledInput("Early stopping loss thresh", self._early_stopping_loss_thresh))
@@ -96,21 +102,16 @@ class SettingsPanel(QWidget):
             self._match_button.setEnabled(True)
             self.texture_loaded.emit(self.loaded_image)
 
-    def _set_loss_func(self, key: str):
-        f = self._loss_func_map[key]
-        self._selected_loss_func = f
-        self._settings_changed(LOSS_FUNC, self._selected_loss_func)
-
     def set_gd_finished(self):
         self._match_button.setText("Match Texture")
 
     def set_gd_finishing(self):
         self._match_button.setText("Stopping...")
 
-    def _settings_changed(self, key: str, new_val: typing.Any):
-        self.settings[key] = new_val
-        _logger.debug("New value for setting {} -> {}.".format(key, new_val))
-        self.settings_changed.emit(key, self.settings)
+    def _change_settings(self, func: typing.Callable, new_val: typing.Any):
+        func(new_val)
+        _logger.debug("New value for setting {} -> {}.".format(func.__name__, new_val))
+        self.settings_changed.emit(self.settings)
 
     def _toggle_matching(self):
         if not self._is_running:
@@ -125,12 +126,11 @@ class SettingsPanel(QWidget):
 
 class TextureMatcher(QWidget):
 
-    def __init__(self, shader: FunctionShader):
+    def __init__(self, mat_output_node: MaterialOutputNode):
         super().__init__(parent=None)
 
         # self._openGL = openGL
-        self._shader = shader.__class__()  # Instantiate a new shader
-        self._shader.set_inputs(shader.get_parameters_list())
+        self._out_node = mat_output_node
 
         # Define components
         self._settings_drawer = QDockWidget(self, Qt.Drawer)
@@ -141,7 +141,7 @@ class TextureMatcher(QWidget):
         self._tex_axis = self._figure.add_subplot(211)
         self._loss_axis = self._figure.add_subplot(212)
         self._layout = QGridLayout()
-        self._program = self._shader.get_program()
+        self._program = self._out_node.get_program(copy=True, set_input=True)
 
         # Define properties
         self._loss_plot_color = (1., 0.6, 0., 1.0)
@@ -160,11 +160,10 @@ class TextureMatcher(QWidget):
         self._settings_panel.texture_loaded.connect(self._set_image_to_match)
         self._settings_panel.match_start.connect(self._run_gradient_descent_torch)
         self._settings_panel.match_stop.connect(self._stop_gradient_descent)
-        # self._settings_panel.settings_changed.connect(self._update_settings)
+        self._settings_panel.setMaximumWidth(250)
 
         # Setup Image axis
         self._tex_axis.set_title("Target Texture")
-        # self._tex_axis.set_axis_off()
 
         # Setup Loss axis
         self._loss_axis.set_title("Loss")
@@ -181,12 +180,11 @@ class TextureMatcher(QWidget):
         self.setLayout(self._layout)
 
     def _set_image_to_match(self, image):
-        self._image_to_match = image.convert("RGB")
-        # We want to display the same image that we are testing the loss against. This image is columns majos (x,y)
+        # We want to display the same image that we are testing the loss against. This image is columns majos (input,y)
         # which is not what matplotlib want's so we have to transpose it back to row major
-        tensor_image = image_funcs.image_to_tensor(image, (100, 100)).transpose(0, 1)
+        self._image_to_match = image_funcs.image_to_tensor(image.convert("RGB"), (200, 200))
 
-        self._tex_axis.imshow(tensor_image, vmin=0, vmax=1)
+        self._tex_axis.imshow(self._image_to_match, vmin=0, vmax=1)
         self._tex_axis.invert_yaxis()
         self._figure_canvas.draw()
 
@@ -194,9 +192,10 @@ class TextureMatcher(QWidget):
         self._openGL.set_program(self._program)
 
     def _run_gradient_descent_torch(self):
-        self.gd = GradientDescent(self._image_to_match, self._shader, self._settings_panel.settings)
+        self.gd = GradientDescent(self._image_to_match, self._out_node, self._settings_panel.settings)
         self.thread = QThread()
-        self.gd.gd_iteration.connect(self._gd_iter_callback)
+        self.gd.iteration_done.connect(self._gd_iter_callback)
+        self.gd.first_render_done.connect(self._set_parameter_values)
         self.gd.moveToThread(self.thread)
         self.thread.started.connect(self.gd.run)
         self.gd.finished.connect(self._finish_gradient_descent)
@@ -226,92 +225,16 @@ class TextureMatcher(QWidget):
         self._figure_canvas.flush_events()
         params = props['params']
 
-        self._shader.set_inputs(params)
+        self._set_parameter_values(props['uniforms'])
         _logger.info("{}. loss: {}, params: {}".format(props['iter'], props['loss'], params))
+
+    def _set_parameter_values(self, uniforms: dict):
+        for uniform, value in uniforms.items():
+            try:
+                self._program[uniform] = value
+            except KeyError as e:
+                _logger.error("Uniform {} does not exist in program!".format(uniform))
+                raise e
 
     def _update_settings(self, key: str, settings: dict):
         self._settings = settings
-
-
-class GradientDescent(QObject):
-    gd_iteration = pyqtSignal(dict)
-    finished = pyqtSignal(list, np.ndarray)
-
-    def __init__(self, image_to_match: Image.Image, shader: FunctionShader, settings: dict, optimizer: torch.optim.Optimizer = torch.optim.Adam):
-        super().__init__()
-        self.image_to_match = image_to_match
-        self.shader = shader
-        self.optimizer = optimizer
-        self.width, self.height = 100, 100
-        self.lr = 0.15
-        self.decay = 0.97
-        self.max_iter = 500
-        self.early_stopping_thresh = 0.01
-        self.truth = None
-        self.f = None
-        self.mse_loss = torch.nn.MSELoss(reduction='mean')
-        self.loss_func = self.mse_loss
-        self._stop = False
-
-        self._read_settings(settings)
-
-    def _read_settings(self, settings: dict):
-        for key, val in settings.items():
-            if key == LOSS_FUNC:
-                self.loss_func = val
-            elif key == MAX_ITER:
-                self.max_iter = val
-            elif key == EARLY_STOPPING_THRESH:
-                self.early_stopping_thresh = val
-            elif key == LEARNING_RATE:
-                self.lr = val
-            elif key == DECAY:
-                self.decay = val
-
-    def stop(self):
-        self._stop = True
-
-    @pyqtSlot(name='run')
-    def run(self):
-        self.truth = image_funcs.image_to_tensor(self.image_to_match, (self.width, self.height))
-        self.f = self.shader.shade
-
-        init_params = self.shader.get_parameters_list(requires_grad=True, randomize=False)
-
-        params, loss_hist = self._run_gd(init_params, lr=self.lr, max_iter=self.max_iter, early_stopping_thresh=self.early_stopping_thresh)
-        self.finished.emit(params, loss_hist)
-
-    def _run_gd(self, init_params: list, lr=0.01, max_iter=150, early_stopping_thresh=0.01) -> typing.Tuple[list, np.ndarray]:
-        P = init_params
-        optimizer = self.optimizer(P, lr=lr)
-        loss_hist = np.empty(max_iter, dtype=np.float32)
-
-        for i in range(max_iter):
-            if self._stop:
-                return P, loss_hist
-
-            optimizer.zero_grad()
-            start = time.time()
-            new_loss = self.render_and_loss(*P)
-            new_loss_np = float(new_loss.detach())
-            loss_hist[i] = new_loss_np
-            props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1], 'learning_rate': lr, 'params': P, 'iter_time': 0.0}
-
-            # We need to break here, otherwise the parameters will change when we call optimizer.step()
-            if new_loss <= early_stopping_thresh:
-                self.gd_iteration.emit(props)
-                break
-
-            new_loss.backward(retain_graph=False, create_graph=False)
-
-            optimizer.step()
-
-            props['iter_time'] = time.time() - start
-            self.gd_iteration.emit(props)
-
-        return P, loss_hist
-
-    def render_and_loss(self, *args):
-        # Ps = [p.repeat(self.width, self.height, 1) for p in args]
-        render = render_funcs.render_torch_loop(self.width, self.height, self.f, *args)
-        return self.loss_func(render, self.truth)

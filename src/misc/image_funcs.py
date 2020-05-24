@@ -22,6 +22,6 @@ def image_to_tensor(image: Image, size: typing.Tuple[int, int] = None) -> torch.
         transforms.ToTensor()
     ])
 
-    tensor = t(image).float().flip(1).transpose(0,-1)
+    tensor = t(image).float().flip(1).transpose(0,-1).transpose(0, 1)
 
     return tensor

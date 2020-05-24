@@ -55,13 +55,13 @@ class ControlCenter(QObject):
 
     def new_material(self, name: str) -> typing.Union[Material, None]:
         """
-        Adds a new Material to the Node Editor and returns it. The name must be unique.
-        :param name: The display name of the Material to be created.
-        :return: the newly created Material or None is the name was not unique.
+        Adds a new Material to the Node Editor and returns it. The title must be unique.
+        :param name: The display title of the Material to be created.
+        :return: the newly created Material or None is the title was not unique.
         """
         for _, m in self._materials.items():
             if m.name == name:
-                _logger.error("Material with name {} already exists! Failed to create new material.".format(m.name))
+                _logger.error("Material with title {} already exists! Failed to create new material.".format(m.name))
                 return None
 
         material = Material(self, name)

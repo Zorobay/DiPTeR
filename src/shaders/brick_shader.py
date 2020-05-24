@@ -4,13 +4,13 @@ from torch import Tensor
 
 import src.shaders.lib.glsl_builtins as gl
 from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB
-from src.shaders.lib.pattern import box
-from src.shaders.shader_super import FunctionShader, TINY_FLOAT
+from src.shaders.lib.pattern import box, tile
+from src.shaders.shader_super import *
 
 
 class BrickShader(FunctionShader):
-    SHADER_FILENAME = "vertex_shader.glsl"
     FRAGMENT_SHADER_FILENAME = "brick_shader.glsl"
+    FRAGMENT_SHADER_FUNCTION = "brick_shade"
 
     def __init__(self):
         super().__init__()
@@ -25,22 +25,12 @@ class BrickShader(FunctionShader):
             ("Mortar Color", "color_mortar", INTERNAL_TYPE_ARRAY_RGB, (0, 1), torch.tensor((0.9, 0.9, 0.9)))
         ]
 
-    def _brickTileTorch(self, tile: Tensor, scale: Tensor, shift: Tensor):
-        tx = tile[0] * scale[0]
-        ty = tile[1] * scale[1]
-        tz = tile[2] * scale[2]
-
-        st: Tensor = gl.step(1.0, torch.fmod(ty, 2.0))
-        tx_shifted = tx + shift * st
-
-        return gl.fract(torch.stack([tx_shifted, ty, tz]))
-
-    def shade_mat(self, vert_pos: Tensor, mortar_scale: Tensor, brick_scale: Tensor, brick_elongate: Tensor, brick_shift: Tensor,
+    def shade_mat(self, mortar_scale: Tensor, brick_scale: Tensor, brick_elongate: Tensor, brick_shift: Tensor,
               color_brick: Tensor, color_mortar: Tensor) -> Tensor:
 
-        scale = torch.stack([torch.div(brick_scale, brick_elongate + TINY_FLOAT), brick_scale, brick_scale])
-        uv3 = self._brickTileTorch(vert_pos, scale, brick_shift)
-        b = box(uv3[0:2], torch.stack((mortar_scale, mortar_scale)))
+        scale = torch.cat([torch.div(brick_scale, brick_elongate + TINY_FLOAT), brick_scale, brick_scale],dim=2)
+        uv3 = tile(Shader.vert_pos, scale, torch.cat((brick_shift, torch.zeros_like(brick_shift)), dim=2))
+        b = box(uv3[:,:,0:2], torch.cat((mortar_scale, mortar_scale), dim=2))
         frag_color = gl.mix(color_mortar, color_brick, b)
         return frag_color
 

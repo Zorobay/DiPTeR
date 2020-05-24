@@ -15,7 +15,7 @@ class RGBShader(FunctionShader):
             ("Blue", "blue", INTERNAL_TYPE_FLOAT, (0, 1), 0.0)
         ]
 
-    def shade_mat(self, vert_pos: Tensor, red: Tensor, green: Tensor, blue: Tensor) -> Tensor:
+    def shade_mat(self, red: Tensor, green: Tensor, blue: Tensor) -> Tensor:
         return torch.cat((red, green, blue), dim=2)
 
     def shade(self, vert_pos: Tensor, red: Tensor, green: Tensor, blue: Tensor) -> Tensor:

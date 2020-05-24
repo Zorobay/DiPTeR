@@ -10,6 +10,7 @@ from glumpy.gloo import Program
 from src.gui.node_editor.control_center import ControlCenter
 from src.gui.node_editor.material import Material
 from src.opengl import object_vertices
+from src.opengl.object_vertices import get_2d_plane
 from src.shaders import OBJECT_MATRIX_NAME, VIEW_MATRIX_NAME, PROJECTION_MATRIX_NAME, UNIFORM_VERTEX_MAXES, UNIFORM_VERTEX_MINS, IN_VERTEX_POS_NAME
 from src.shaders.default_shader import DefaultShader
 
@@ -97,6 +98,7 @@ class OpenGLWidget(QOpenGLWidget):
 
     def set_program(self, program: Program):
         self._program = program
+        self._V, self._I = get_2d_plane()
         self.set_vertices(self._V, self._I)
 
     def _init_camera(self):
@@ -226,8 +228,8 @@ class OpenGLWidget(QOpenGLWidget):
 
             self._last_mouse_x = x
             self._last_mouse_y = y
-            y_angle = x_delta * self._rotate_speed  # A movement in x-dir translates to rotation around y-axis
-            x_angle = y_delta * self._rotate_speed  # A movement in y-dir translates to rotation around x-axis
+            y_angle = x_delta * self._rotate_speed  # A movement in input-dir translates to rotation around y-axis
+            x_angle = y_delta * self._rotate_speed  # A movement in y-dir translates to rotation around input-axis
 
             glm.rotate(self._object_to_world, x_angle, 1, 0, 0)
             glm.rotate(self._object_to_world, y_angle, 0, 1, 0)

@@ -65,10 +65,6 @@ class Socket(QGraphicsWidget):
         return self._id
 
     @property
-    def argument(self):
-        return self._argument
-
-    @property
     def parent_node(self):
         return self._parent_node
 
@@ -78,6 +74,9 @@ class Socket(QGraphicsWidget):
 
     def isConnected(self) -> bool:
         return len(self._connected_edges) > 0
+
+    def get_argument(self) -> str:
+        return self._argument
 
     def get_connected_edges(self) -> typing.Set[Edge]:
         return self._connected_edges

@@ -29,15 +29,18 @@ class Input:
         """Set the default value of this widgets."""
         raise NotImplementedError("Input subclass need to implement this method!")
 
+    def get_internal_type(self) -> str:
+        return self._internal_type
+
 
 class InputModule(QWidget):
-    input_changed = pyqtSignal(str, object, str, object)  # argument variable name, widgets value, internal type, widgets module ID
+    input_changed = pyqtSignal(str, object, str, object)  # argument variable title, widgets value, internal type, widgets module ID
 
     def __init__(self, label: str, internal_type: str, uniform_var: str, input_widget: Input):
         super().__init__()
         self.label = label
         self._internal_type = internal_type
-        self._uniform_var = uniform_var
+        self._argument_var = uniform_var
         self.widget = input_widget
         self._id = uuid.uuid4()
         self._label_widget = QLabel(self.label)
@@ -61,12 +64,11 @@ class InputModule(QWidget):
 
     @pyqtSlot(name="_input_changed")
     def _input_changed(self):
-        self.input_changed.emit(self.argument, self.widget.get_gl_value(), self._internal_type, self.id)
+        self.input_changed.emit(self.get_argument(), self.widget.get_gl_value(), self._internal_type, self.id)
 
-    @property
-    def argument(self) -> str:
-        """The name of the argument variable in the GLSL other_code that this widgets is connected to."""
-        return self._uniform_var
+    def get_argument(self) -> str:
+        """Returns the name of the argument variable in the GLSL code that this widgets is connected to."""
+        return self._argument_var
 
     @property
     def id(self) -> uuid.UUID:
@@ -77,6 +79,9 @@ class InputModule(QWidget):
 
     def set_default_value(self, default_value: typing.Any):
         self.widget.set_default_value(default_value)
+
+    def get_gl_value(self):
+        return self.widget.get_gl_value()
 
 
 class OutputModule(QWidget):
