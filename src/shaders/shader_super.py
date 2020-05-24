@@ -38,7 +38,7 @@ def get_function_arguments(func: typing.Callable):
     return list(inspect.signature(func).parameters.keys())
 
 
-def connect_code(node: 'Node', code: GLSLCode, pc: ParameterCollection):
+def connect_code(node: 'Node', code: GLSLCode):
     """
     Recursively connects the other_code to all other connected other_code in the NodeGraph tracked by 'node'.
     :param node: Node the holds the GLSLCode in 'other_code'
@@ -58,7 +58,7 @@ def connect_code(node: 'Node', code: GLSLCode, pc: ParameterCollection):
             connected_code = connected_node.get_shader().get_code()
 
             # Recurse...
-            connect_code(connected_node, connected_code, pc)
+            connect_code(connected_node, connected_code)
 
             code.connect(socket_arg, connected_code)
 
@@ -89,7 +89,7 @@ class Shader(ABC):
         return self._parsed_code
 
     @classmethod
-    def set_render_size(cls, width:int, height:int):
+    def set_render_size(cls, width: int, height: int):
         cls.width = width
         cls.height = height
         cls.vert_pos = render_funcs.generate_vert_pos(width, height)
@@ -181,7 +181,6 @@ class CompilableShader(Shader, ABC):
         self._vertex_shader = None
         self._fragment_shader = None
         self._glsl_version = "430"
-        self._pc = ParameterCollection()
 
         self._set_program()
 
@@ -209,7 +208,7 @@ class CompilableShader(Shader, ABC):
             return self._fragment_shader
         else:
             output_code = self._parsed_code
-            connect_code(node, output_code, self._pc)
+            connect_code(node, output_code)
             generated_code = output_code.generate_code()
             self._fragment_shader = gloo.FragmentShader(generated_code, version=self._glsl_version)
 
