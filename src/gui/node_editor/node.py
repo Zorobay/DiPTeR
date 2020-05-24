@@ -7,7 +7,7 @@ import torch
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QRectF, pyqtSignal
 from PyQt5.QtGui import QBrush, QFont, QColor, QPalette, QPainter, QPen
-from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsWidget
+from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsWidget, QGraphicsLinearLayout
 from glumpy.gloo import Program
 
 # from src.gui.node_editor.control_center import ControlCenter
@@ -94,6 +94,18 @@ class Node(QGraphicsWidget):
         self._init_title()
         self._init_layout()
 
+    def _init_layout(self):
+        self._master_layout.setContentsMargins(-5, 4, 4, -5)
+        self._master_layout.setRowSpacing(0, self._title_font.pointSize() + 12)  # Add empty space for first row so that title is visible
+        self._master_layout.setHorizontalSpacing(2.0)
+        self._master_layout.setVerticalSpacing(0.0)
+        self._master_layout.setRowAlignment(2, Qt.AlignRight)
+        self._master_layout.setColumnFixedWidth(0, 15)  # Input socket column
+        self._master_layout.setColumnFixedWidth(2, 15)  # Output socket column
+        self._master_layout.setColumnFixedWidth(1, self._width-15-15)
+
+        self.setLayout(self._master_layout)
+
     def __eq__(self, other):
         if isinstance(other, Node):
             return self.id == other.id
@@ -126,14 +138,6 @@ class Node(QGraphicsWidget):
 
     def set_num(self, num: int):
         self._num = num
-
-    def _init_layout(self):
-        self._master_layout.setContentsMargins(-5, 4, 4, 4)
-        self._master_layout.setRowSpacing(0, self._title_font.pointSize() + 12)  # Add empty space for first row so that title is visible
-        self._master_layout.setHorizontalSpacing(2.0)
-        self._master_layout.setVerticalSpacing(0.0)
-
-        self.setLayout(self._master_layout)
 
     def _init_title(self):
         self._title_item.setDefaultTextColor(self._title_color)
