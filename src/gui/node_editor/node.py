@@ -18,10 +18,10 @@ from src.gui.node_editor.socket import Socket
 from src.gui.widgets.array_input import ArrayInput
 from src.gui.widgets.color_input import ColorInput
 from src.gui.widgets.io_module import InputModule, OutputModule
-from src.gui.widgets.line_input import FloatInput
+from src.gui.widgets.line_input import FloatInput, IntInput
 from src.gui.widgets.shader_input import ShaderInput
 from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB, INTERNAL_TYPE_SHADER, \
-    INTERNAL_TYPE_ARRAY_FLOAT
+    INTERNAL_TYPE_ARRAY_FLOAT, INTERNAL_TYPE_INT
 from src.shaders.material_output_shader import MaterialOutputShader
 from src.shaders.shader_super import Shader, CompilableShader
 
@@ -99,7 +99,8 @@ class Node(QGraphicsWidget):
         self._master_layout.setRowSpacing(0, self._title_font.pointSize() + 12)  # Add empty space for first row so that title is visible
         self._master_layout.setHorizontalSpacing(2.0)
         self._master_layout.setVerticalSpacing(0.0)
-        self._master_layout.setRowAlignment(2, Qt.AlignRight)
+        self._master_layout.setColumnAlignment(2, Qt.AlignRight)
+        self._master_layout.setRowAlignment(1, Qt.AlignVCenter)
         self._master_layout.setColumnFixedWidth(0, 15)  # Input socket column
         self._master_layout.setColumnFixedWidth(2, 15)  # Output socket column
         self._master_layout.setColumnFixedWidth(1, self._width-15-15)
@@ -282,6 +283,8 @@ class ShaderNode(Node):
         if internal_type == INTERNAL_TYPE_FLOAT:
             # Create an widgets widget
             input_widget = FloatInput(min_=input_range[0], max_=input_range[1], internal_type=internal_type)
+        elif internal_type == INTERNAL_TYPE_INT:
+            input_widget = IntInput(min_=input_range[0], max_=input_range[1], internal_type=internal_type)
         elif internal_type == INTERNAL_TYPE_ARRAY_RGB:
             input_widget = ColorInput(internal_type)
         elif internal_type == INTERNAL_TYPE_SHADER:
@@ -329,7 +332,8 @@ class ShaderNode(Node):
 
         :param width: width of the image (in pixels) to be rendered.
         :param height: height of the image (in pixels) to be rendered.
-        :param call_dict: A dictionary describing the call stack (as returned by this function). If not supplied, it will be generated and returned.
+        :param call_dict: A dictionary describing the call stack (as returned by this function). If not supplied, it will be generated and
+        returned. Only use if you're changing the values of the Tensors directly. If values is to be taken from the nodes input, leave as None.
         :return: A tuple with a [W,H,3] tensor representing the rendered image, or None if no image could be rendered, a call dictionary, a list of
         parameter Tensors as well as a dictionary of OpenGL uniform values.
         """

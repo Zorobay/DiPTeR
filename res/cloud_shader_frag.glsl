@@ -1,17 +1,12 @@
 #version 430
-
-in vec3 vert_pos;
-
-uniform float scale;
-
-out vec4 frag_color;
-
 #import "noise.glsl"
 
-void main()
+
+vec3 cloud(vec3 frag_pos, float scale, int detail)
 {
-    vec2 uv = vert_pos.xy;
-    float noise = SmoothNoise2D(uv*scale);
-    vec3 color = vec3(noise);
-    frag_color = vec4(color, 1.0);
+    vec2 uv = frag_pos.xy;
+    vec3 color = vec3(0.);
+    color += fractalBrownianMotion(uv * scale, detail);
+
+    return color;
 }

@@ -1,4 +1,4 @@
-//in vec3 vert_pos;
+//in vec3 frag_pos;
 
 //uniform float h;
 //uniform float s;
@@ -6,7 +6,7 @@
 
 //out vec4 frag_color;
 
-vec3 hsv(vec3 vert_pos, float h, float s, float v) {
+vec3 hsv(vec3 frag_pos, float h, float s, float v) {
     vec3 c = vec3(h,s,v);
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
     vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);

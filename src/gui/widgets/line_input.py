@@ -182,6 +182,8 @@ class IntInput(LineInput):
         self.setValidator(IntValidator(bottom=self.min_, top=self.max_))
 
     def set_default_value(self, default_value: typing.Any):
+        if isinstance(default_value, (float, np.float)):
+            default_value = int(default_value)
         assert isinstance(default_value, (int, np.int)), "Incompatible type of default value for FloatInput!"
 
         self.setText(str(default_value))

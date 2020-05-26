@@ -7,10 +7,13 @@ uniform vec3 maxes;
 uniform vec3 mins;
 
 in vec3 in_vert_pos;
-out vec3 vert_pos;
+out vec3 frag_pos;
 
 void main() {
     // Normalize vertex positions to [0,1]
-    vert_pos = (in_vert_pos - mins)/(maxes-mins);
-    gl_Position = view_to_projection * world_to_view * object_to_world * vec4(in_vert_pos, 1.0);
+    frag_pos = (in_vert_pos - mins)/(maxes-mins);
+
+    // Output NDC
+    vec3 ndc = 2. * frag_pos -1.;
+    gl_Position = view_to_projection * world_to_view * object_to_world * vec4(ndc, 1.0);
 }

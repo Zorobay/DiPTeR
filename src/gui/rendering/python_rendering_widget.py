@@ -41,7 +41,6 @@ class PythonRenderingWidget(QWidget):
         self._width, self._height = 100, 100
         self._shader = None
         self._material = None
-        self._call_dict = None
 
         self._init_widget()
 
@@ -79,7 +78,7 @@ class PythonRenderingWidget(QWidget):
         node = self._material.get_material_output_node()
 
         start = time.time()
-        img, self._call_dict, _, _ = node.render(self._width, self._height, call_dict=self._call_dict)
+        img, _, _, _ = node.render(self._width, self._height, call_dict=None)
 
         total_time = time.time() - start
         _logger.debug("Rendering DONE in {:.4f}s.".format(total_time))

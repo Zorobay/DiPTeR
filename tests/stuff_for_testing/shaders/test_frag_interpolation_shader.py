@@ -14,10 +14,10 @@ class TestFragInterpolationShader(FunctionShader):
     def get_inputs(self) -> typing.List[typing.Tuple[str, str, str, typing.Tuple[float, float], typing.Any]]:
         return []
 
-    def shade(self, vert_pos: ndarray, *args) -> ndarray:
+    def shade(self, frag_pos: ndarray, *args) -> ndarray:
         frag_color = None
 
         return frag_color
 
-    def shade(self, vert_pos, *args):
-        return vert_pos
+    def shade(self, frag_pos, *args):
+        return frag_pos

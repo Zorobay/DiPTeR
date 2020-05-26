@@ -66,7 +66,7 @@ def connect_code(node: 'Node', code: GLSLCode):
 class Shader(ABC):
     FRAGMENT_SHADER_FUNCTION = None
     FRAGMENT_SHADER_FILENAME = None
-    vert_pos = None
+    frag_pos = None
     width = 100
     height = 100
 
@@ -92,7 +92,7 @@ class Shader(ABC):
     def set_render_size(cls, width: int, height: int):
         cls.width = width
         cls.height = height
-        cls.vert_pos = render_funcs.generate_vert_pos(width, height)
+        cls.frag_pos = render_funcs.generate_vert_pos(width, height)
 
     @abstractmethod
     def get_inputs(self) -> typing.List[typing.Tuple[str, str, str, typing.Tuple[float, float], Tensor]]:
@@ -110,9 +110,6 @@ class Shader(ABC):
         return [
             ("Color", INTERNAL_TYPE_ARRAY_RGB)
         ]
-
-    def shade(self, vert_pos: Tensor, *args) -> Tensor:
-        pass
 
     @abstractmethod
     def shade_mat(self, **args) -> Tensor:
@@ -135,18 +132,13 @@ class FunctionShader(Shader, ABC):
         func = self._parsed_code.get_primary_function()
 
         py_args = [inp[1] for inp in self.get_inputs()]
-        shade_args = get_function_arguments(self.shade)
         shade_mat_args = get_function_arguments(self.shade_mat)
         glsl_args = func.arguments
 
-        # First, check that vert_pos is the first argument of the functions
+        # First, check that frag_pos is the first argument of the functions
         assert glsl_args[0].type == "vec3", "Type of glsl shade primary_function's first argument should be vec3, not {}".format(glsl_args[0].type)
-        assert glsl_args[0].name == shade_args[0], \
-            "Name of first argument of shader functions (both in python and GLSL) should be vert_pos, not {}".format(glsl_args[0].name)
 
-        for py_arg, shade_arg, shade_mat_arg, glsl_arg in zip(py_args, shade_args[1:], shade_mat_args, glsl_args[1:]):
-            assert py_arg == shade_arg, "Name of Python input argument and argument to Python shade function do not coincide: {} != {}" \
-                .format(py_arg, shade_arg)
+        for py_arg, shade_mat_arg, glsl_arg in zip(py_args, shade_mat_args, glsl_args[1:]):
             assert py_arg == shade_mat_arg, "Name of Python input argument and argument to Python matrix shade function do not coincide: {} != {}" \
                 .format(py_arg, shade_mat_arg)
             assert py_arg == glsl_arg.name, "Name of Python input argument and argument to GLSL shade function do not coincide: {} != {}" \

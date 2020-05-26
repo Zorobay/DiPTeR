@@ -1,6 +1,6 @@
 #version 430
 
-in vec3 vert_pos;
+in vec3 frag_pos;
 
 uniform vec3 shader;
 

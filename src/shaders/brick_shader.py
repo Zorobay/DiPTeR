@@ -29,16 +29,16 @@ class BrickShader(FunctionShader):
               color_brick: Tensor, color_mortar: Tensor) -> Tensor:
 
         scale = torch.cat([torch.div(brick_scale, brick_elongate + TINY_FLOAT), brick_scale, brick_scale],dim=2)
-        uv3 = tile(Shader.vert_pos, scale, torch.cat((brick_shift, torch.zeros_like(brick_shift)), dim=2))
+        uv3 = tile(Shader.frag_pos, scale, torch.cat((brick_shift, torch.zeros_like(brick_shift)), dim=2))
         b = box(uv3[:,:,0:2], torch.cat((mortar_scale, mortar_scale), dim=2))
         frag_color = gl.mix(color_mortar, color_brick, b)
         return frag_color
 
-    def shade(self, vert_pos: Tensor, mortar_scale: Tensor, brick_scale: Tensor, brick_elongate: Tensor, brick_shift: Tensor,
+    def shade(self, frag_pos: Tensor, mortar_scale: Tensor, brick_scale: Tensor, brick_elongate: Tensor, brick_shift: Tensor,
               color_brick: Tensor, color_mortar: Tensor) -> Tensor:
 
         scale = torch.stack([torch.div(brick_scale, brick_elongate + TINY_FLOAT), brick_scale, brick_scale])
-        uv3 = self._brickTileTorch(vert_pos, scale, brick_shift)
+        uv3 = self._brickTileTorch(frag_pos, scale, brick_shift)
         b = box(uv3[0:2], torch.stack((mortar_scale, mortar_scale)))
         frag_color = gl.mix(color_mortar, color_brick, b)
         return frag_color

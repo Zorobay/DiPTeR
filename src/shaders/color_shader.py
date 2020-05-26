@@ -13,5 +13,5 @@ class ColorShader(FunctionShader):
             ("Color", "color", src.opengl.internal_types.INTERNAL_TYPE_ARRAY_RGB, (0, 1), torch.tensor((1., 1., 1.)))
         ]
 
-    def shade(self, vert_pos: Tensor, color: Tensor) -> Tensor:
+    def shade(self, frag_pos: Tensor, color: Tensor) -> Tensor:
         return color

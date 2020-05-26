@@ -18,5 +18,5 @@ class RGBShader(FunctionShader):
     def shade_mat(self, red: Tensor, green: Tensor, blue: Tensor) -> Tensor:
         return torch.cat((red, green, blue), dim=2)
 
-    def shade(self, vert_pos: Tensor, red: Tensor, green: Tensor, blue: Tensor) -> Tensor:
+    def shade(self, frag_pos: Tensor, red: Tensor, green: Tensor, blue: Tensor) -> Tensor:
         return torch.stack((red, green, blue))

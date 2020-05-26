@@ -14,10 +14,10 @@ class TileShader(FunctionShader):
             ("Shift", "shift", INTERNAL_TYPE_ARRAY_FLOAT, (0, 1), torch.tensor((0., 0.)))
         ]
 
-    # def shade(self, vert_pos: Tensor) -> Tensor:
-    #     input = vert_pos[0]
+    # def shade(self, frag_pos: Tensor) -> Tensor:
+    #     input = frag_pos[0]
     #     color = torch.stack((input, input, input))
     #     return color
 
-    def shade_mat(self, vert_pos: Tensor, scale: Tensor, shift: Tensor) -> Tensor:
-        return pattern.tile(vert_pos, scale, shift)
+    def shade_mat(self, frag_pos: Tensor, scale: Tensor, shift: Tensor) -> Tensor:
+        return pattern.tile(frag_pos, scale, shift)

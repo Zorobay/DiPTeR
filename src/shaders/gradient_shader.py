@@ -12,16 +12,16 @@ class GradientShader(FunctionShader):
         return [
         ]
 
-    # def shade(self, vert_pos: Tensor) -> Tensor:
-    #     input = vert_pos[0]
+    # def shade(self, frag_pos: Tensor) -> Tensor:
+    #     input = frag_pos[0]
     #     color = torch.stack((input, input, input))
     #     return color
 
     def shade_mat(self) -> Tensor:
-        vert_pos = Shader.vert_pos
-        return vert_pos[:, :, 0].unsqueeze(-1).repeat(1, 1, 3)
+        frag_pos = Shader.frag_pos
+        return frag_pos[:, :, 0].unsqueeze(-1).repeat(1, 1, 3)
 
-    def shade(self, vert_pos: Tensor) -> Tensor:
-        x = vert_pos[:, :, 1]
+    def shade(self, frag_pos: Tensor) -> Tensor:
+        x = frag_pos[:, :, 1]
         color = x.unsqueeze(-1).repeat(1, 1, 3)
         return color

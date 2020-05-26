@@ -9,3 +9,4 @@ UNIFORM_VERTEX_MINS = "mins"
 
 # Constant for variable title of widgets vertices to GLSL shader
 IN_VERTEX_POS_NAME = "in_vert_pos"
+

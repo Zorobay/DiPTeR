@@ -1,6 +1,6 @@
 #version 430
 
-in vec3 vert_pos;
+in vec3 frag_pos;
 
 uniform vec3 color1;
 uniform vec3 color2;
@@ -9,7 +9,7 @@ uniform float scale;
 out vec4 frag_color;
 
 void main() {
-    vec3 p = vert_pos * scale;
+    vec3 p = frag_pos * scale;
     vec3 p_int = abs(floor(p));
 
     bool check = ((mod(p_int.x, 2) == mod(p_int.y, 2)) == bool(mod(p_int.z, 2)));

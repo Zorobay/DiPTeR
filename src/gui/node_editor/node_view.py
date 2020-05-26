@@ -11,18 +11,22 @@ from src.gui.node_editor.material import Material
 from src.misc import string_funcs, array_funcs
 from src.shaders.brick_shader import BrickShader
 from src.shaders.checker_shader import CheckerShader
+from src.shaders.cloud_shader import CloudShader
 from src.shaders.color_shader import ColorShader
+from src.shaders.frag_coord_shader import FragmentCoordinatesShader
+from src.shaders.gradient_shader import GradientShader
 from src.shaders.hsv_shader import HSVShader
 from src.shaders.mix_shader import MixShader
 from src.shaders.rgb_shader import RGBShader
 from src.shaders.shader_super import FunctionShader
-from src.shaders.cloud_shader import CloudShader
-from src.shaders.gradient_shader import GradientShader
 from src.shaders.tile_shader import TileShader
+from src.shaders.vector_math_shader import VectorMathShader
 from tests.stuff_for_testing.shaders.test_box_shader import TestBoxShader
 
-SHADERS_TO_CONTEXT_MENU = [TileShader, GradientShader,CloudShader,CheckerShader, HSVShader, ColorShader, RGBShader, BrickShader, TestBoxShader,
-                           MixShader]
+SHADERS_TO_CONTEXT_MENU = [TileShader, GradientShader, CloudShader, CheckerShader, HSVShader, ColorShader, RGBShader, BrickShader, MixShader]
+
+SHADERS_MISC_MENU = [FragmentCoordinatesShader, TestBoxShader]
+SHADERS_MATH_MENU = [VectorMathShader]
 
 
 class NodeView(QGraphicsView):
@@ -157,14 +161,25 @@ class AddNodeMenu(QMenu):
     def __init__(self, *args):
         super().__init__(*args)
 
+        self._misc_menu = self.addMenu("Misc")
+        self._math_menu = self.addMenu("Math")
         self._action_shader_map = []
         self._add_shader_actions()
 
     def _add_shader_actions(self):
         for shader in SHADERS_TO_CONTEXT_MENU:
-            words = string_funcs.split_on_upper_case(shader.__name__)
-            action = self.addAction(" ".join(words))
-            self._action_shader_map.append((action, shader))
+            self._add_shader(shader, self)
+
+        for shader in SHADERS_MISC_MENU:
+            self._add_shader(shader, self._misc_menu)
+
+        for shader in SHADERS_MATH_MENU:
+            self._add_shader(shader, self._math_menu)
+
+    def _add_shader(self, shader, menu: QMenu):
+        words = string_funcs.split_on_upper_case(shader.__name__)
+        action = menu.addAction(" ".join(words))
+        self._action_shader_map.append((action, shader))
 
     def execute(self, *args) -> typing.Type[FunctionShader]:
         action = self.exec_(*args)

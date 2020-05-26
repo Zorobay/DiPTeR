@@ -21,8 +21,8 @@ class CheckerShader(FunctionShader):
             ("Scale", "scale", INTERNAL_TYPE_FLOAT, (0, 100), 10.0)
         ]
 
-    def shade_mat(self, vert_pos: Tensor, color1: Tensor, color2: Tensor, scale: Tensor) -> Tensor:
-        p = vert_pos * scale
+    def shade_mat(self, frag_pos: Tensor, color1: Tensor, color2: Tensor, scale: Tensor) -> Tensor:
+        p = frag_pos * scale
 
         p_int = torch.abs(torch.floor(p))
 
@@ -32,8 +32,8 @@ class CheckerShader(FunctionShader):
         else:
             return color2
 
-    def shade(self, vert_pos: Tensor, color1: Tensor, color2: Tensor, scale: Tensor) -> Tensor:
-        p = vert_pos * scale
+    def shade(self, frag_pos: Tensor, color1: Tensor, color2: Tensor, scale: Tensor) -> Tensor:
+        p = frag_pos * scale
 
         p_int = torch.abs(torch.floor(p))
 

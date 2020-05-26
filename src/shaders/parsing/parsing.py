@@ -224,7 +224,7 @@ class GLSLCode:
             needed_code._reset = False
             prim_func = needed_code.get_primary_function()
             for arg in prim_func.arguments:
-                if not arg.is_connected() and arg.name != "vert_pos":
+                if not arg.is_connected() and arg.name != "frag_pos":
                     self._generated_code.append(arg.get_uniform_string() + "\n")
                     self._uniforms.append((arg.type, arg.modified_name))
 
@@ -396,7 +396,7 @@ class GLSLArgument:
         return self.parent_function.parent_code.get_node_num()
 
     def get_modified_name(self) -> str:
-        if self.name == "vert_pos" or self.parent_function.function_name == "main":
+        if self.name == "frag_pos" or self.parent_function.function_name == "main":
             return self.name
         else:
             return "{}_{}_{}".format(self.parent_function.modified_function_name, self.get_node_num(), self.name)
