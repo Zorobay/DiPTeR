@@ -2,7 +2,13 @@ import abc
 
 import torch
 from torch import Tensor
-from torch.nn import Module
+from torch.nn import Module, MSELoss
+from torchvision import models, transforms as T
+
+#from src.gui.widgets.loading_widget import LoadingModal
+
+mse_loss = MSELoss(reduction="mean")
+sse_loss = MSELoss(reduction="sum")
 
 
 class Loss(Module):
@@ -10,39 +16,106 @@ class Loss(Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, input: Tensor, target: Tensor):
-        assert target.shape == input.shape
-        assert target.shape[2] == 3 and input.shape[2] == 3, "Images need to be on the format [W,H,3]"
-        return self._loss(target, input)
+    def forward(self, x: Tensor, target: Tensor):
+        assert target.shape == x.shape
+        assert target.shape[2] == 3 and x.shape[2] == 3, "Images need to be on the format [W,H,3]"
+        return self._loss(x, target)
 
     @abc.abstractmethod
-    def _loss(self, truth: Tensor, x: Tensor):
+    def _loss(self, x: Tensor, target: Tensor):
         pass
+
+
+class NeuralLoss(Loss):
+
+    def __init__(self, layers: list = None, layer_weights: list = None):
+        super().__init__()
+        if layers is None:
+            layers = [2, 4]
+        if layer_weights is None:
+            layer_weights = [1e-1, 1e-2]
+
+        self._layer_indices = layers
+        self._layer_weights = torch.tensor(layer_weights)
+
+        self.vgg = models.vgg19(pretrained=True, progress=True)
+        self.modulelist = list(self.vgg.features.modules())
+
+        for i, mod in enumerate(self.modulelist):
+            if hasattr(mod, "inplace"):
+                mod.inplace = False
+
+            if isinstance(mod, torch.nn.MaxPool2d):
+                self.modulelist[i] = torch.nn.AvgPool2d(kernel_size=mod.kernel_size, stride=mod.stride, padding=mod.padding, ceil_mode=mod.ceil_mode)
+
+        self._norm_mean = torch.tensor([0.485, 0.456, 0.406], dtype=torch.float32)
+        self._norm_std = torch.tensor([0.229, 0.224, 0.225], dtype=torch.float32)
+        self._normalize = T.Compose([
+            T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+
+    def __str__(self):
+        layers = "\n\t".join([self.modulelist[i + 1].__str__() for i in self._layer_indices])
+        return "Neural Loss (\n\tlayers:\n {}, \n\tweights: {}\n)".format(layers, self._layer_weights)
+
+    # def _normalize(self, x: Tensor):
+    #     return (x - self._norm_mean) / self._norm_std
+
+    def _preprocess(self, x: Tensor):
+        # Swap axes to get image on CxHxW form, which is required for Models in PyTorch, then Normalize to comply with VGG19 and add batch dimension
+        return self._normalize(x.permute(2,1,0)).unsqueeze(0)
+
+    def _gram_matrix(self, activation: Tensor, N: int, M: int):
+        feature_map = activation.view(N, M)
+        G = torch.mm(feature_map, feature_map.t())
+        return G
+
+    def _loss(self, x: Tensor, target: Tensor):
+        assert x.shape == target.shape
+        assert list(x.shape) == [224, 224, 3]
+
+        x_ = self._preprocess(x)
+        target_ = self._preprocess(target)
+        E = []
+
+        for i, layer in enumerate(self.modulelist[1:]):
+            x_ = layer(x_)
+            target_ = layer(target_)
+            if i > self._layer_indices[-1]:
+                break
+            if i in self._layer_indices:
+                N = x_.shape[1]
+                M = x_.shape[2] * x_.shape[3]
+                G1 = self._gram_matrix(x_, N, M)
+                G2 = self._gram_matrix(target_, N, M)
+
+                E.append(sse_loss(G1, G2) * (1 / (4. * (N**2) * (M**2))))
+
+        L_tot = torch.sum(torch.stack(E) * self._layer_weights)
+        return L_tot
 
 
 class MSELoss(Loss):
 
     def __init__(self, reduction: str = 'mean'):
         super().__init__()
-        self._mse = torch.nn.MSELoss(reduction=reduction)
 
-    def _loss(self, input: Tensor, target: Tensor):
-        return self._mse(input, target)
+    def _loss(self, x: Tensor, target: Tensor):
+        return mse_loss(x, target)
 
 
 class SquaredBinLoss(Loss):
 
     def __init__(self):
         super().__init__()
-        self._mse = torch.nn.MSELoss(reduction='mean')
 
-    def _loss(self, input: Tensor, target: Tensor):
+    def _loss(self, x: Tensor, target: Tensor):
         size = 10
-        input_bins = torch.stack(torch.stack(input.split(size, dim=1)).split(size, dim=-1))
+        input_bins = torch.stack(torch.stack(target.split(size, dim=1)).split(size, dim=-1))
         target_bins = torch.stack(torch.stack(target.split(size, dim=1)).split(size, dim=-1))
         input_means = torch.mean(input_bins, dim=(2, 3, 4))
         target_mean = torch.mean(target_bins, dim=(2, 3, 4))
-        return self._mse(input_means, target_mean)
+        return mse_loss(input_means, target_mean)
 
 
 class VerticalBinLoss(Loss):
@@ -50,13 +123,12 @@ class VerticalBinLoss(Loss):
     def __init__(self, bin_size: int = 20):
         super().__init__()
         self.bin_size = bin_size
-        self.mse_loss = torch.nn.MSELoss(reduction="mean")
 
-    def _loss(self, input: Tensor, target: Tensor):
+    def _loss(self, x: Tensor, target: Tensor):
         assert target.shape[2] % self.bin_size == 0, "The number of columns in the image can not be evenly divided into bins of size {}!".format(
             self.bin_size)
         bins_truth = torch.stack(target.split(self.bin_size, dim=-1))
-        bins_x = torch.stack(input.split(self.bin_size, dim=-1))
+        bins_x = torch.stack(target.split(self.bin_size, dim=-1))
         std_truth, mean_truth = torch.std_mean(bins_truth, dim=(1, 2, 3))
         std_x, mean_x = torch.std_mean(bins_x, dim=(1, 2, 3))
-        return self.mse_loss(mean_x, mean_truth)
+        return mse_loss(mean_x, mean_truth)
