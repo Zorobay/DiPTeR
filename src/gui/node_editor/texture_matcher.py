@@ -8,12 +8,15 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 from src.gui.node_editor.node import MaterialOutputNode
+from src.gui.rendering.image_plotter import ImagePlotter
 from src.gui.rendering.opengl_widget import OpenGLWidget
 from src.gui.widgets.labelled_input import LabelledInput
 from src.gui.widgets.line_input import FloatInput, IntInput
 from src.misc import image_funcs
 from src.optimization import losses
 from src.optimization.gradient_descent import GradientDescent, GradientDescentSettings
+from src.shaders.default_shader import DefaultShader
+import pyqtgraph as pg
 
 _logger = logging.getLogger(__name__)
 
@@ -43,7 +46,8 @@ class SettingsPanel(QWidget):
         self._learning_rate = FloatInput(0, 1)
 
         # Define data
-        self._loss_func_map = {"Squared Bin Loss": losses.SquaredBinLoss(), "MSE Loss": losses.MSELoss(reduction='mean')}
+        self._loss_func_map = {"Squared Bin Loss": losses.SquaredBinLoss(), "MSE Loss": losses.MSELoss(reduction='mean'), "Neural Loss":
+            losses.NeuralLoss()}
         self.loaded_image = None
         self._max_iter = 100
         self.settings = GradientDescentSettings()
@@ -58,8 +62,7 @@ class SettingsPanel(QWidget):
 
         # --- Setup loss function combo box ---
         self._loss_combo_box.addItems(list(self._loss_func_map))
-        self._loss_combo_box.currentIndexChanged.connect(lambda name: self._change_settings(self.settings.set_loss_func, self._loss_func_map[
-            self._loss_combo_box.currentText()]))
+        self._loss_combo_box.currentIndexChanged.connect(self._set_loss_func)
         self._loss_combo_box.setCurrentIndex(0)
         self.settings.set_loss_func(self._loss_func_map[self._loss_combo_box.currentText()])
 
@@ -102,6 +105,15 @@ class SettingsPanel(QWidget):
             self._match_button.setEnabled(True)
             self.texture_loaded.emit(self.loaded_image)
 
+    def _set_loss_func(self, index: int):
+        loss_func = self._loss_func_map[self._loss_combo_box.currentText()]
+
+        if isinstance(loss_func, losses.NeuralLoss):
+            self._width_input.set_default_value(224)
+            self._height_input.set_default_value(224)
+
+        self._change_settings(self.settings.set_loss_func, loss_func)
+
     def set_gd_finished(self):
         self._match_button.setText("Match Texture")
 
@@ -136,19 +148,26 @@ class TextureMatcher(QWidget):
         self._settings_drawer = QDockWidget(self, Qt.Drawer)
         self._settings_panel = SettingsPanel(self)
         self._openGL = OpenGLWidget(400, 400, None, OpenGLWidget.TEXTURE_RENDER_MODE)
+        self._image_plotter = ImagePlotter("Render")
+        self._target_plotter = ImagePlotter("Target")
+        self._loss_plotter = pg.plot(title="Loss")
         self._figure = Figure(figsize=(4, 4), tight_layout=True)
         self._figure_canvas = FigureCanvas(self._figure)
         self._tex_axis = self._figure.add_subplot(211)
         self._loss_axis = self._figure.add_subplot(212)
         self._layout = QGridLayout()
-        self._program = self._out_node.get_program(copy=True, set_input=True)
+        self._shader = DefaultShader()
+
+        self._program = self._shader.get_program()
+        #self._program = (copy=True, set_input=False)
 
         # Define properties
         self._loss_plot_color = (1., 0.6, 0., 1.0)
         self._loss_plot_style = 'default'
 
         # Define data
-        self._image_to_match = None
+        self._target_image = None
+        self._target_matrix = None
         self._settings = {}
         self.thread = None
         self.gd = None
@@ -170,29 +189,38 @@ class TextureMatcher(QWidget):
         self._loss_axis.set_ylabel("Loss")
         self._loss_axis.set_xlabel("Iteration")
 
-        # Setup openGL renderer
+        # Setup plots
         self._openGL.init_done.connect(self._set_gl_program)
+        self._image_plotter.hide_axes()
+        self._image_plotter.set_user_input(False)
+        self._target_plotter.hide_axes()
+        self._target_plotter.set_user_input(False)
 
         self._layout.addWidget(self._openGL, 0, 0)
-        self._layout.addWidget(self._figure_canvas, 0, 1)
-        self._layout.addWidget(self._settings_panel, 0, 2)
+        self._layout.addWidget(self._image_plotter, 0, 1)
+        self._layout.addWidget(self._target_plotter, 0, 2)
+        self._layout.addWidget(self._loss_plotter, 1, 0, 1, 3)
+        #self._layout.addWidget(self._figure_canvas, 0, 1)
+        self._layout.addWidget(self._settings_panel, 0, 4)
 
         self.setLayout(self._layout)
 
     def _set_image_to_match(self, image):
         # We want to display the same image that we are testing the loss against. This image is columns majos (input,y)
         # which is not what matplotlib want's so we have to transpose it back to row major
-        self._image_to_match = image_funcs.image_to_tensor(image.convert("RGB"), (200, 200))
+        self._target_image = image.convert("RGB")
+        self._target_matrix = image_funcs.image_to_tensor(self._target_image)
 
-        self._tex_axis.imshow(self._image_to_match, vmin=0, vmax=1)
-        self._tex_axis.invert_yaxis()
-        self._figure_canvas.draw()
+        self._target_plotter.set_image(self._target_matrix)
+        #self._tex_axis.imshow(self._target_image)
+        #self._tex_axis.invert_yaxis()
+        #self._figure_canvas.draw()
 
     def _set_gl_program(self):
         self._openGL.set_program(self._program)
 
     def _run_gradient_descent_torch(self):
-        self.gd = GradientDescent(self._image_to_match, self._out_node, self._settings_panel.settings)
+        self.gd = GradientDescent(self._target_image, self._out_node, self._settings_panel.settings)
         self.thread = QThread()
         self.gd.iteration_done.connect(self._gd_iter_callback)
         self.gd.first_render_done.connect(self._set_parameter_values)
@@ -224,15 +252,18 @@ class TextureMatcher(QWidget):
         self._figure_canvas.draw()
         self._figure_canvas.flush_events()
         params = props['params']
+        uniform_names = props['uniforms']
+        render = props['render']
+        self._image_plotter.set_image(render)
 
-        self._set_parameter_values(props['uniforms'])
+        #self._set_parameter_values(params, uniform_names)
         _logger.info("{}. loss: {}, params: {}".format(props['iter'], props['loss'], params))
 
-    def _set_parameter_values(self, uniforms: dict):
-        for uniform, value in uniforms.items():
+    def _set_parameter_values(self, params: list, uniforms: list):
+        for uniform, param in zip(uniforms, params):
             try:
-                self._program[uniform] = value
-            except KeyError as e:
+                self._program[uniform] = param.detach().numpy()
+            except IndexError as e:
                 _logger.error("Uniform {} does not exist in program!".format(uniform))
                 raise e
 

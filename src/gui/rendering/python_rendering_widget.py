@@ -10,6 +10,7 @@ from matplotlib.figure import Figure
 
 from src.gui.node_editor.control_center import ControlCenter
 from src.gui.node_editor.material import Material
+from src.gui.rendering.image_plotter import ImagePlotter
 from src.gui.widgets.labelled_input import LabelledInput
 from src.gui.widgets.line_input import IntInput
 
@@ -25,13 +26,7 @@ class PythonRenderingWidget(QWidget):
         self.cc = cc
 
         # Define gui components
-        self._plotWidget = pg.PlotWidget()
-        self._imgItem = pg.ImageItem()
-        self._cant_render_text = pg.TextItem(text="No shader connected to output node.", color="r", anchor=(0.5, 0.5))
-
-        self._figure = Figure(figsize=(4, 4))
-        self._figure_canvas = FigureCanvas(self._figure)
-        self._axis = self._figure.add_subplot(111)
+        self._image_plot = ImagePlotter()
         self._layout = QVBoxLayout()
         self._width_input = IntInput(1, 500)
         self._height_input = IntInput(1, 500)
@@ -58,15 +53,8 @@ class PythonRenderingWidget(QWidget):
         settings_layout.addWidget(self._resize_button)
         self._layout.addLayout(settings_layout)
 
-        # Setup pyqtgraph
-        font = QFont()
-        font.setPointSize(20)
-        self._cant_render_text.setFont(font)
-        self._plotWidget.addItem(self._imgItem)
-        self._plotWidget.setYRange(0, self._height)
-        self._plotWidget.setXRange(0, self._width)
-        self._imgItem.setLevels(0, 1.0)
-        self._layout.addWidget(self._plotWidget)
+        # Add plotting widget
+        self._layout.addWidget(self._image_plot)
 
         self.cc.active_material_changed.connect(self._material_changed)
         if self.cc.active_material:
@@ -83,13 +71,7 @@ class PythonRenderingWidget(QWidget):
         total_time = time.time() - start
         _logger.debug("Rendering DONE in {:.4f}s.".format(total_time))
 
-        if img is not None:
-            self._plotWidget.removeItem(self._cant_render_text)
-            self._imgItem.setImage(img.numpy(), autoLevels=False, levels=(0, 1.))
-        else:
-            self._plotWidget.removeItem(self._cant_render_text)
-            self._plotWidget.addItem(self._cant_render_text)
-            self._cant_render_text.setPos(self._width / 2, self._height / 2)
+        self._image_plot.set_image(img)
 
     def _material_changed(self, mat: Material):
         # Disconnect signals from previous material
@@ -114,8 +96,8 @@ class PythonRenderingWidget(QWidget):
     def _handle_resize(self):
         self._width = self._width_input.get_gl_value()
         self._height = self._height_input.get_gl_value()
-        self._plotWidget.setYRange(0, self._height)
-        self._plotWidget.setXRange(0, self._width)
+        self._image_plot.set_x_range(0, self._width)
+        self._image_plot.set_y_range(0, self._height)
         self._render()
 
     def closeEvent(self, event: QCloseEvent):
