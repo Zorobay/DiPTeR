@@ -4,8 +4,7 @@ import typing
 from PIL import Image
 from PyQt5.QtCore import pyqtSignal, QThread, Qt
 from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QComboBox
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
+import numpy as np
 
 from src.gui.node_editor.node import MaterialOutputNode
 from src.gui.rendering.image_plotter import ImagePlotter
@@ -150,11 +149,7 @@ class TextureMatcher(QWidget):
         self._openGL = OpenGLWidget(400, 400, None, OpenGLWidget.TEXTURE_RENDER_MODE)
         self._image_plotter = ImagePlotter("Render")
         self._target_plotter = ImagePlotter("Target")
-        self._loss_plotter = pg.plot(title="Loss")
-        self._figure = Figure(figsize=(4, 4), tight_layout=True)
-        self._figure_canvas = FigureCanvas(self._figure)
-        self._tex_axis = self._figure.add_subplot(211)
-        self._loss_axis = self._figure.add_subplot(212)
+        self._loss_plotter = pg.PlotWidget(title="Loss")
         self._layout = QGridLayout()
         self._shader = DefaultShader()
 
@@ -181,14 +176,6 @@ class TextureMatcher(QWidget):
         self._settings_panel.match_stop.connect(self._stop_gradient_descent)
         self._settings_panel.setMaximumWidth(250)
 
-        # Setup Image axis
-        self._tex_axis.set_title("Target Texture")
-
-        # Setup Loss axis
-        self._loss_axis.set_title("Loss")
-        self._loss_axis.set_ylabel("Loss")
-        self._loss_axis.set_xlabel("Iteration")
-
         # Setup plots
         self._openGL.init_done.connect(self._set_gl_program)
         self._image_plotter.hide_axes()
@@ -200,7 +187,6 @@ class TextureMatcher(QWidget):
         self._layout.addWidget(self._image_plotter, 0, 1)
         self._layout.addWidget(self._target_plotter, 0, 2)
         self._layout.addWidget(self._loss_plotter, 1, 0, 1, 3)
-        #self._layout.addWidget(self._figure_canvas, 0, 1)
         self._layout.addWidget(self._settings_panel, 0, 4)
 
         self.setLayout(self._layout)
@@ -212,9 +198,6 @@ class TextureMatcher(QWidget):
         self._target_matrix = image_funcs.image_to_tensor(self._target_image)
 
         self._target_plotter.set_image(self._target_matrix)
-        #self._tex_axis.imshow(self._target_image)
-        #self._tex_axis.invert_yaxis()
-        #self._figure_canvas.draw()
 
     def _set_gl_program(self):
         self._openGL.set_program(self._program)
@@ -243,18 +226,16 @@ class TextureMatcher(QWidget):
         _logger.info("Gradient Descent Thread Stopped.")
 
     def _gd_iter_callback(self, props):
-        if not self.ren_i % 1 == 0:
-            self.ren_i += 1
-            return
-        self.ren_i += 1
-        self._loss_axis.plot(props['loss_hist'], '.-', color=self._loss_plot_color, label="Loss")
-        self._loss_axis.set_xlabel("Iteration ({:.3f}s/iter)".format(props['iter_time']))
-        self._figure_canvas.draw()
-        self._figure_canvas.flush_events()
+        loss_hist = props['loss_hist']
+        iter = props['iter']
         params = props['params']
+
         uniform_names = props['uniforms']
         render = props['render']
         self._image_plotter.set_image(render)
+
+        x = np.linspace(0, iter, num=iter+1, endpoint=True)
+        self._loss_plotter.plot(x, loss_hist, symbol='o')
 
         #self._set_parameter_values(params, uniform_names)
         _logger.info("{}. loss: {}, params: {}".format(props['iter'], props['loss'], params))

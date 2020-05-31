@@ -8,6 +8,7 @@ from torch.optim.optimizer import Optimizer
 
 from src.gui.node_editor.node import MaterialOutputNode
 from src.optimization.losses import Loss
+from src.misc import image_funcs
 
 
 class GradientDescentSettings:
@@ -90,11 +91,12 @@ class GradientDescent(QObject):
 
     @pyqtSlot(name='run')
     def run(self):
+        self.target = image_funcs.image_to_tensor(self.target, (self.settings.get_render_width(), self.settings.get_render_height()))
         params, loss_hist = self._run_gd(lr=self.lr, max_iter=self.max_iter, early_stopping_thresh=self.early_stopping_thresh)
         self.finished.emit(params, loss_hist)
 
     def _run_gd(self, lr=0.01, max_iter=150, early_stopping_thresh=0.01) -> typing.Tuple[list, np.ndarray]:
-        _, call_dict, params, _ = self.out_node.render(self.width, self.height)
+        _, call_dict, params, uniform_names = self.out_node.render(self.width, self.height)
 
         for p in params:
             p.requires_grad = True
@@ -106,23 +108,24 @@ class GradientDescent(QObject):
             if self._stop:
                 return params, loss_hist
 
-            optimizer.zero_grad()
-            start = time.time()
-            render, _, _, uniforms_dict = self.out_node.render(self.width, self.height, call_dict)
-            loss = self.loss_func(render, self.target)
-            new_loss_np = float(loss.detach())
-            loss_hist[i] = new_loss_np
-            props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1], 'learning_rate': lr, 'params': params,
-                     'uniforms': uniforms_dict, 'iter_time': 0.0}
+            with torch.autograd.set_detect_anomaly(True):
+                optimizer.zero_grad()
+                start = time.time()
+                render, _, _, _ = self.out_node.render(self.width, self.height, call_dict)
+                loss = self.loss_func(render, self.target)
+                new_loss_np = float(loss.detach())
+                loss_hist[i] = new_loss_np
+                props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1], 'learning_rate': lr, 'params': params,
+                         'uniforms': uniform_names, 'iter_time': 0.0, 'render': render}
 
-            # We need to break here, otherwise the parameters will change when we call optimizer.step()
-            if loss <= early_stopping_thresh:
-                self.iteration_done.emit(props)
-                break
+                # We need to break here, otherwise the parameters will change when we call optimizer.step()
+                if loss <= early_stopping_thresh:
+                    self.iteration_done.emit(props)
+                    break
 
-            loss.backward(retain_graph=False, create_graph=False)
+                loss.backward(retain_graph=False, create_graph=False)
 
-            optimizer.step()
+                optimizer.step()
 
             props['iter_time'] = time.time() - start
             self.iteration_done.emit(props)
