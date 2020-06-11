@@ -133,7 +133,9 @@ class Node(QGraphicsWidget):
     def id(self):
         return self._id
 
-    def get_num(self) -> int:
+    def
+        -
+        -(self) -> int:
         """Returns the number that is assigned to this node. This number is unique among nodes with the same shader type."""
         return self._num
 
@@ -335,23 +337,23 @@ class ShaderNode(Node):
         :param call_dict: A dictionary describing the call stack (as returned by this function). If not supplied, it will be generated and
         returned. Only use if you're changing the values of the Tensors directly. If values is to be taken from the nodes input, leave as None.
         :return: A tuple with a [W,H,3] tensor representing the rendered image, or None if no image could be rendered, a call dictionary, a list of
-        parameter Tensors as well as a dictionary of OpenGL uniform values.
+        parameter Tensors as well as a list of uniform names that correspond to the tensors in the previous list.
         """
         Shader.set_render_size(width, height)
         args_list = []
+        uniform_list = []
         if call_dict is None:
             call_dict = dict()
-            self._build_call_dict(call_dict, args_list)
+            self._build_call_dict(call_dict, args_list, uniform_list=uniform_list)
 
         # Evaluate call dict
         args_dict = dict()
-        uniform_dict = dict()
-        self._eval_dict(args_dict, call_dict, uniform_dict)
+        self._eval_dict(args_dict, call_dict)
         img = self._shade(args_dict)
 
-        return img, call_dict, args_list, uniform_dict
+        return img, call_dict, args_list, uniform_list
 
-    def _build_call_dict(self, call_dict: dict, args_list: list):
+    def _build_call_dict(self, call_dict: dict, args_list: list, uniform_list: list):
         shader_inputs = self.get_shader().get_inputs()
         assert len(shader_inputs) == len(self._socket_modules)
 
@@ -368,12 +370,13 @@ class ShaderNode(Node):
                 type_ = TYPE_FUNC
                 args = {}
                 value = node._shade
-                node._build_call_dict(args, args_list)
+                node._build_call_dict(args, args_list, uniform_list)
             else:
                 value = torch.tensor(mod.get_gl_value())
                 if len(value.shape) == 0:
                     value = value.unsqueeze(0)  # Ensure that we never get zero dimensional tensors
                 args_list.append(value)
+                uniform_list.append(mod_arg)
                 args = {}
                 # value = value.repeat(width, height, 1)  # Turn it into a matrix argument
 
@@ -384,18 +387,16 @@ class ShaderNode(Node):
                 MODIFIED_ARG: mod_arg
             }
 
-    def _eval_dict(self, args, call_dict, uniform_dict):
+    def _eval_dict(self, args, call_dict):
         for arg, d in call_dict.items():
             type_ = d[TYPE]
-            mod_arg = d[MODIFIED_ARG]
             if type_ == TYPE_FUNC:
                 func = d[VALUE]
                 func_args = {}
-                self._eval_dict(func_args, d[ARGS], uniform_dict)
+                self._eval_dict(func_args, d[ARGS])
                 args[arg] = func(func_args)
             if type_ == TYPE_VALUE:
                 args[arg] = d[VALUE]
-                uniform_dict[mod_arg] = d[VALUE].detach().numpy()
 
     def _shade(self, args: dict):
         width, height = Shader.width, Shader.height
