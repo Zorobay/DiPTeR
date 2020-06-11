@@ -4,7 +4,7 @@ import time
 import typing
 from pathlib import Path
 
-GLSL_IMPORT_DIR = "res/lib/"
+GLSL_IMPORT_DIR = "res/shaders/lib/"
 GLSL_LIB_PATH = Path.cwd() / GLSL_IMPORT_DIR
 
 # constants for group names

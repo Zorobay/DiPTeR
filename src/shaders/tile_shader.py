@@ -4,6 +4,7 @@ from src.shaders.shader_super import *
 
 class TileShader(FunctionShader):
     FRAGMENT_SHADER_FILENAME = "tile_shader_frag.glsl"
+    FRAGMENT_SHADER_FUNCTION = "tile_shade"
 
     def __init__(self):
         super().__init__()

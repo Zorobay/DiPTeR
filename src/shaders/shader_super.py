@@ -20,9 +20,12 @@ _logger = logging.getLogger(__name__)
 # Define useful constants for numerical manipulation
 TINY_FLOAT = torch.finfo(torch.float32).eps
 
+# GLSL Shaders Directory
+GLSL_SHADERS_DIR = Path(__file__) / ".." / ".." / ".." / "res" / "shaders"
+
 
 def read_glsl_source_file(filename) -> typing.List[str]:
-    filepath = Path.cwd() / "res" / filename
+    filepath = GLSL_SHADERS_DIR / filename
     try:
         with open(filepath, "r") as v:
             return v.readlines()
@@ -76,6 +79,9 @@ class Shader(ABC):
 
         self._parse()
 
+    def get_size(self):
+        print("{}: {}".format(self.__class__, Shader.width))
+
     def _parse(self):
         assert self.__class__.FRAGMENT_SHADER_FILENAME, "Name of GLSL fragment shader need to be set by subclass to FRAGMENT_SHADER_FILENAME " \
                                                         "constant."
@@ -90,9 +96,9 @@ class Shader(ABC):
 
     @classmethod
     def set_render_size(cls, width: int, height: int):
-        cls.width = width
-        cls.height = height
-        cls.frag_pos = render_funcs.generate_vert_pos(width, height)
+        Shader.width = width
+        Shader.height = height
+        Shader.frag_pos = render_funcs.generate_frag_pos(width, height)
 
     @abstractmethod
     def get_inputs(self) -> typing.List[typing.Tuple[str, str, str, typing.Tuple[float, float], Tensor]]:
@@ -114,6 +120,10 @@ class Shader(ABC):
     @abstractmethod
     def shade_mat(self, **args) -> Tensor:
         pass
+
+    def get_name(self) -> str:
+        """Returns the formatted title of this class"""
+        return " ".join(string_funcs.split_on_upper_case(type(self).__name__))
 
 
 class FunctionShader(Shader, ABC):
@@ -151,10 +161,6 @@ class FunctionShader(Shader, ABC):
     def get_code(self) -> GLSLCode:
         return self._parsed_code
 
-    def get_name(self) -> str:
-        """Returns the formatted title of this class"""
-        return " ".join(string_funcs.split_on_upper_case(type(self).__name__))
-
     def get_parameters_dict(self) -> typing.Dict[str, typing.Any]:
         params = {}
         for _, arg, _, _, _ in self.get_inputs():
@@ -191,23 +197,15 @@ class CompilableShader(Shader, ABC):
         """
         assert self.__class__.FRAGMENT_SHADER_FILENAME, "Name of GLSL fragment shader need to be set by subclass"
 
-        start_time = time.time()
-
         if not node:
             fragment_code = read_glsl_source_file(self.FRAGMENT_SHADER_FILENAME)
             fragment_code = preprocess_imports(fragment_code)
-            self._fragment_shader = gloo.FragmentShader(fragment_code, version=self._glsl_version)
-            return self._fragment_shader
+            return gloo.FragmentShader(fragment_code, version=self._glsl_version)
         else:
             output_code = self._parsed_code
             connect_code(node, output_code)
             generated_code = output_code.generate_code()
-            self._fragment_shader = gloo.FragmentShader(generated_code, version=self._glsl_version)
-
-        compile_time = time.time() - start_time
-        _logger.debug("Recompiled {} in {:.6f}ms".format(node.get_title(), compile_time * 1000))
-
-        return self._fragment_shader
+            return gloo.FragmentShader(generated_code, version=self._glsl_version)
 
     def set_input_by_uniform(self, uniform: str, value: typing.Any):
         """
@@ -264,11 +262,13 @@ class CompilableShader(Shader, ABC):
         :param node: The Node object that contains this Shader.
         :return: a tuple with the compiled VertexShader, FragmentShader and Program
         """
-        print("Compile called!")
+        start = time.time()
         vertex_shader = self.compile_vertex_shader()
         fragment_shader = self.compile_fragment_shader(node)
-
         program = gloo.Program(vertex_shader, fragment_shader, count=0, version=self._glsl_version)
+        compile_time = time.time() - start
+
+        _logger.debug("Compiled {} in {:.6f}ms".format(self.get_name(), compile_time * 1000))
 
         return vertex_shader, fragment_shader, program
 
