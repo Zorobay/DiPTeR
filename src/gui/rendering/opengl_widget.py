@@ -10,7 +10,7 @@ from glumpy.gloo import Program
 from src.gui.node_editor.control_center import ControlCenter
 from src.gui.node_editor.material import Material
 from src.opengl import object_vertices
-from src.opengl.object_vertices import get_2d_plane
+from src.opengl.object_vertices import get_2d_plane, VERTEX_COORD_MAXES, VERTEX_COORD_MINS
 from src.shaders import OBJECT_MATRIX_NAME, VIEW_MATRIX_NAME, PROJECTION_MATRIX_NAME, UNIFORM_VERTEX_MAXES, UNIFORM_VERTEX_MINS, IN_VERTEX_POS_NAME
 from src.shaders.default_shader import DefaultShader
 
@@ -98,7 +98,9 @@ class OpenGLWidget(QOpenGLWidget):
 
     def set_program(self, program: Program):
         self._program = program
-        self._V, self._I = get_2d_plane()
+        self._program["maxes"] = VERTEX_COORD_MAXES
+        self._program["mins"] = VERTEX_COORD_MINS
+
         self.set_vertices(self._V, self._I)
 
     def _init_camera(self):
@@ -107,11 +109,11 @@ class OpenGLWidget(QOpenGLWidget):
 
     def _init_default_shader(self):
         self._shader = DefaultShader()
-        self._program = self._shader.get_program()
-        self._default_program = self._program
+        program = self._shader.get_program()
 
-        V, I = object_vertices.get_2d_plane()
-        self.set_vertices(V, I)
+        self._V, self._I = object_vertices.get_2d_plane()
+        self.set_program(program)
+        self._default_program = self._program
 
         _logger.info("Done initializing default shader.")
 
@@ -141,10 +143,6 @@ class OpenGLWidget(QOpenGLWidget):
         """
         self._I = I.view(gloo.IndexBuffer)
         self._V = V.view(gloo.VertexBuffer)
-
-        # Find extremes of vertices
-        self._mins = V[IN_VERTEX_POS_NAME].min(axis=0)
-        self._maxes = V[IN_VERTEX_POS_NAME].max(axis=0)
 
         if self._program is not None:
             self._program.bind(self._V)

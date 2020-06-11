@@ -133,9 +133,7 @@ class Node(QGraphicsWidget):
     def id(self):
         return self._id
 
-    def
-        -
-        -(self) -> int:
+    def get_num(self) -> int:
         """Returns the number that is assigned to this node. This number is unique among nodes with the same shader type."""
         return self._num
 

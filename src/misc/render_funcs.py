@@ -59,7 +59,7 @@ def render_torch_loop(width: int, height: int, f: typing.Callable, *args):
     return img
 
 
-def generate_vert_pos(width: int, height: int) -> torch.Tensor:
+def generate_frag_pos(width: int, height: int) -> torch.Tensor:
     x_pos, y_pos = torch.meshgrid((get_coordinates(width, height)))
     frag_pos = torch.stack([x_pos, y_pos, torch.zeros_like(x_pos)], dim=2)
     return frag_pos
