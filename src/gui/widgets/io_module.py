@@ -11,8 +11,8 @@ class Input:
     # To be called by subclasses when widgets changes!
     input_changed = pyqtSignal()
 
-    def __init__(self, internal_type: str):
-        self._internal_type = internal_type
+    def __init__(self, dtype: str):
+        self._dtype = dtype
 
     @abstractmethod
     def get_value(self) -> typing.Any:
@@ -30,17 +30,15 @@ class Input:
         raise NotImplementedError("Input subclass need to implement this method!")
 
     def get_internal_type(self) -> str:
-        return self._internal_type
+        return self._dtype
 
 
-class InputModule(QWidget):
-    input_changed = pyqtSignal(str, object, str, object)  # argument variable title, widgets value, internal type, widgets module ID
+class SocketModule(QWidget):
+    input_changed = pyqtSignal()
 
-    def __init__(self, label: str, internal_type: str, uniform_var: str, input_widget: Input):
+    def __init__(self, label: str, input_widget: Input):
         super().__init__()
         self.label = label
-        self._internal_type = internal_type
-        self._argument_var = uniform_var
         self.widget = input_widget
         self._id = uuid.uuid4()
         self._label_widget = QLabel(self.label)
@@ -64,11 +62,7 @@ class InputModule(QWidget):
 
     @pyqtSlot(name="_input_changed")
     def _input_changed(self):
-        self.input_changed.emit(self.get_argument(), self.widget.get_gl_value(), self._internal_type, self.id)
-
-    def get_argument(self) -> str:
-        """Returns the name of the argument variable in the GLSL code that this widgets is connected to."""
-        return self._argument_var
+        self.input_changed.emit()
 
     @property
     def id(self) -> uuid.UUID:

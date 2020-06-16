@@ -7,8 +7,8 @@ from src.gui.widgets.io_module import Input
 
 class ShaderInput(QWidget, Input):
 
-    def __init__(self, internal_type):
-        super().__init__(internal_type=internal_type)
+    def __init__(self, dtype):
+        super().__init__(dtype=dtype)
 
         self.setFixedSize(0, 0)
         self.setVisible(False)

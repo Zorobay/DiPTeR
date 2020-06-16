@@ -1,9 +1,8 @@
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtWidgets import QWidget, QPushButton, QComboBox, QHBoxLayout, QInputDialog
 
-from src.gui.node_editor.control_center import Material, ControlCenter
+from src.gui.node_editor.control_center import ControlCenter
 from src.gui.node_editor.material import Material
-from src.shaders.material_output_shader import MaterialOutputShader
 
 
 class MaterialSelector(QWidget):

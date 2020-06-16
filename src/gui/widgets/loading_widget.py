@@ -2,7 +2,7 @@ from pathlib import Path
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QMovie
-from PyQt5.QtWidgets import QLabel, QDialog, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 GIF_DIR = Path.cwd() / "res" / "gif"
 

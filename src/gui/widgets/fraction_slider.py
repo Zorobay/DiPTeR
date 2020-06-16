@@ -1,5 +1,6 @@
-from PyQt5.QtWidgets import QSlider
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QSlider
+
 
 class QFractionSlider(QSlider):
 
