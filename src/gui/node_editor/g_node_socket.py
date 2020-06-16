@@ -11,7 +11,7 @@ from src.gui.node_editor.edge import Edge
 _logger = logging.getLogger(__name__)
 
 
-class Socket(QGraphicsWidget):
+class GNodeSocket(QGraphicsWidget):
     edge_started = pyqtSignal(Edge)
     edge_released = pyqtSignal(Edge)
     connection_changed = pyqtSignal(object, Edge)  # Socket, Edge
@@ -52,7 +52,7 @@ class Socket(QGraphicsWidget):
         self.setAcceptHoverEvents(True)
 
     def __eq__(self, other):
-        if isinstance(other, Socket):
+        if isinstance(other, GNodeSocket):
             return other.id == self.id
 
         return False
@@ -81,7 +81,7 @@ class Socket(QGraphicsWidget):
     def get_connected_edges(self) -> typing.Set[Edge]:
         return self._connected_edges
 
-    def get_connected_sockets(self) -> typing.Set['Socket']:
+    def get_connected_sockets(self) -> typing.Set['GNodeSocket']:
         return self._connected_sockets
 
     def get_connected_nodes(self) -> typing.List['Node']:
@@ -114,7 +114,7 @@ class Socket(QGraphicsWidget):
             self._connected_sockets.add(edge.out_socket)
 
         # Only emit change event for input sockets, as nothing really changed for the output socket (at least not for the node as a whole)
-        if self.socket_type == Socket.SOCKET_INPUT:
+        if self.socket_type == GNodeSocket.SOCKET_INPUT:
             self.connection_changed.emit(self, edge)
 
     def remove_connected_edge(self, edge: Edge):

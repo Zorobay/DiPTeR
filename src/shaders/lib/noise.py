@@ -32,9 +32,11 @@ def smoothNoise2D(p: Tensor) -> Tensor:
 
 def fractalBrownianMotion(p: Tensor, detail: Tensor) -> Tensor:
     """
+    Adds octaves of smooth noise to create "fractal brownian motion" or "fractal noise".
+
     :param p: 2D Tensor of coordinates
-    :param detail: Integer tensor
-    :return: A random 1D Tensor created by fractalBrownianMotion noise
+    :param detail: Integer 2D tensor dictating the number of octaves to add
+    :return: A pseudo-random 2D noise Tensor
     """
     w, h = p.shape[0], p.shape[1]
 

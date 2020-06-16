@@ -1,15 +1,11 @@
-import typing
-
-from torch import Tensor
-
-from src.shaders.shader_super import CompilableShader
+from src.shaders.shader_super import *
 
 
 class DefaultShader(CompilableShader):
 
     FRAGMENT_SHADER_FILENAME = "default_shader_frag.glsl"
 
-    def get_inputs(self) -> typing.List[typing.Tuple[str, str, str, typing.Tuple[float, float], typing.Any]]:
+    def get_inputs(self) -> typing.List[typing.Tuple[str, str, DataType, typing.Tuple[float, float], typing.Any]]:
         return []
 
     def shade_mat(self, frag_pos: Tensor) -> Tensor:

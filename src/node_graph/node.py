@@ -3,7 +3,7 @@ import typing
 import uuid
 
 import torch
-from src.graph.nodesocket import NodeSocket, SocketType
+from src.graph.node_socket import NodeSocket, SocketType
 from src.shaders.brick_shader import BrickShader
 from src.shaders.frag_coord_shader import FragmentCoordinatesShader
 from src.shaders.hsv_shader import HSVShader

@@ -1,10 +1,10 @@
 import typing
 
 import torch
+from node_graph.internal_types import DataType
 from torch import Tensor
 
 import src.shaders.lib.glsl_builtins as gl
-from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB
 from src.shaders.shader_super import FunctionShader
 
 
@@ -14,11 +14,11 @@ class CheckerShader(FunctionShader):
     def __init__(self):
         super().__init__()
 
-    def get_inputs(self) -> typing.List[typing.Tuple[str, str, str, typing.Tuple[float, float], float]]:
+    def get_inputs(self) -> typing.List[typing.Tuple[str, str, DataType, typing.Tuple[float, float], float]]:
         return [
-            ("Color1", "color1", INTERNAL_TYPE_ARRAY_RGB, (0, 1), torch.ones(3)),
-            ("Color2", "color2", INTERNAL_TYPE_ARRAY_RGB, (0, 1), torch.zeros(3)),
-            ("Scale", "scale", INTERNAL_TYPE_FLOAT, (0, 100), 10.0)
+            ("Color1", "color1", DataType.INTERNAL_TYPE_ARRAY_RGB, (0, 1), torch.ones(3)),
+            ("Color2", "color2", DataType.INTERNAL_TYPE_ARRAY_RGB, (0, 1), torch.zeros(3)),
+            ("Scale", "scale", DataType.INTERNAL_TYPE_FLOAT, (0, 100), 10.0)
         ]
 
     def shade_mat(self, frag_pos: Tensor, color1: Tensor, color2: Tensor, scale: Tensor) -> Tensor:

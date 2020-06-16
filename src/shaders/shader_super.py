@@ -8,11 +8,11 @@ from pathlib import Path
 import numpy as np
 import torch
 from glumpy import gloo
+from node_graph.internal_types import DataType
 from torch import Tensor
 
-from src.gui.node_editor.socket import Socket
+from src.gui.node_editor.g_node_socket import GNodeSocket
 from src.misc import string_funcs, render_funcs
-from src.opengl.internal_types import *
 from src.shaders.parsing.parsing import GLSLCode, preprocess_imports
 
 _logger = logging.getLogger(__name__)
@@ -49,9 +49,9 @@ def connect_code(node: 'Node', code: GLSLCode):
     """
     code.reset(node.get_num())
     for _, socket in node.get_in_sockets().items():
-        assert socket.socket_type == Socket.SOCKET_INPUT
+        assert socket.type() == GNodeSocket.SOCKET_INPUT
 
-        socket_arg = socket.get_argument()
+        socket_arg = socket.label()
 
         connected_nodes = socket.get_connected_nodes()
         assert len(connected_nodes) <= 1
@@ -101,20 +101,20 @@ class Shader(ABC):
         Shader.frag_pos = render_funcs.generate_frag_pos(width, height)
 
     @abstractmethod
-    def get_inputs(self) -> typing.List[typing.Tuple[str, str, str, typing.Tuple[float, float], Tensor]]:
+    def get_inputs(self) -> typing.List[typing.Tuple[str, str, DataType, typing.Tuple[float, float], Tensor]]:
         """Returns a list of tuples with information about the widgets parameters of this shader.
 
             :return: a tuple on the form (formatted title, argument title, internal type, (min value, max value), default value)
         """
 
     # TODO make abstract (for now this is true for all shaders
-    def get_outputs(self) -> typing.List[typing.Tuple[str, str]]:
+    def get_outputs(self) -> typing.List[typing.Tuple[str, DataType]]:
         """Returns a list of tuples with information about the output parameters of this shader.
 
             :return: a tuple on the form (formatted title, internal type)
         """
         return [
-            ("Color", INTERNAL_TYPE_ARRAY_RGB)
+            ("Color", DataType.DataType.INTERNAL_TYPE_ARRAY_RGB)
         ]
 
     @abstractmethod
@@ -191,7 +191,7 @@ class CompilableShader(Shader, ABC):
         """
         Constructs the fragment shader other_code from this shader and (optionally) all connected shaders and compiles it.
 
-        :param node: The Node object that represents this shader in the node graph. If this is not provided, this function will only compile the
+        :param node: The Node object that represents this shader in the node node_graph. If this is not provided, this function will only compile the
         code belonging to this shader.
         :return: the compiled FragmentShader
         """

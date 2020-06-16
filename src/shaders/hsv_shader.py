@@ -9,11 +9,11 @@ class HSVShader(FunctionShader):
     def __init__(self):
         super().__init__()
 
-    def get_inputs(self) -> typing.List[typing.Tuple[str, str, str, typing.Tuple[float, float], typing.Any]]:
+    def get_inputs(self) -> typing.List[typing.Tuple[str, str, DataType, typing.Tuple[float, float], typing.Any]]:
         return [
-            ("Hue", "h", INTERNAL_TYPE_FLOAT, (0, 1), 1.0),
-            ("Saturation", "s", INTERNAL_TYPE_FLOAT, (0, 1), 1.0),
-            ("Value", "v", INTERNAL_TYPE_FLOAT, (0, 1), 1.0)
+            ("Hue", "h", DataType.INTERNAL_TYPE_FLOAT, (0, 1), 1.0),
+            ("Saturation", "s", DataType.INTERNAL_TYPE_FLOAT, (0, 1), 1.0),
+            ("Value", "v", DataType.INTERNAL_TYPE_FLOAT, (0, 1), 1.0)
         ]
 
     def shade_mat(self, h: Tensor, s: Tensor, v: Tensor) -> Tensor:

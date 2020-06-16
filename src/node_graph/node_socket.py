@@ -1,9 +1,10 @@
-import logging
-import uuid
-import typing
 import enum
+import logging
+import typing
+import uuid
 
-from graph.edge import Edge
+from node_graph.edge import Edge
+from opengl.internal_types import InternalType
 
 _logger = logging.getLogger(__name__)
 
@@ -17,10 +18,11 @@ class NodeSocket:
     INPUT: SocketType = SocketType.INPUT
     OUTPUT: SocketType = SocketType.OUTPUT
 
-    def __init__(self, parent_node: 'Node', socket_type: SocketType, label: str = ""):
+    def __init__(self, parent_node: 'Node', socket_type: SocketType, dtype: InternalType = None, label: str = ""):
         assert isinstance(socket_type, SocketType), "socket_type must be of enum type SocketType!"
         self._parent_node = parent_node
         self._type = socket_type
+        self._dtype = dtype
         self._label = label
         self._id = uuid.uuid4()
         self._value = None
@@ -93,6 +95,14 @@ class NodeSocket:
             nodes.append(socket.get_parent_node())
 
         return nodes
+
+    def get_connected_sockets(self) -> set:
+        """
+        Returns each NodeSocket that this NodeSocket is connected to.
+        :return: A list of NodeSockets connected to this NodeSocket.
+        """
+
+        return self._connected_sockets.copy()
 
     def set_value(self, value: typing.Any):
         self._value = value
