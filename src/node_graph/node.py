@@ -98,6 +98,16 @@ class Node(GraphElement):
         """Returns a list of NodeSockets that are outputs to this Node."""
         return self._out_sockets.copy()
 
+    def set_value(self, index: int, value: typing.Any):
+        """
+        Set the value of an input socket. If this socket is connected, does nothing.
+        :param index: Index of the socket
+        :param value: The new value of the socket.
+        """
+        socket = self.get_input_socket(index)
+        if socket:
+            socket.set_value(value)
+
     def num_output_sockets(self) -> int:
         """Returns the number of output NodeSockets of this Node"""
         return len(self._out_sockets)
