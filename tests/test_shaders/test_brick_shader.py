@@ -3,7 +3,7 @@ import logging
 import numpy as np
 import torch
 
-from src.misc.render_funcs import render_torch
+from src.misc.render_funcs import render_iter
 from src.opengl.object_vertices import get_2d_plane
 from src.shaders.brick_shader import BrickShader
 from tests.stuff_for_testing import funcs

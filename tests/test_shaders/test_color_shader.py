@@ -2,7 +2,7 @@ import logging
 
 import torch
 import numpy as np
-from src.misc.render_funcs import render_torch
+from src.misc.render_funcs import render_iter
 from src.shaders.color_shader import ColorShader
 from tests.stuff_for_testing import funcs
 from tests.stuff_for_testing.funcs import render_opengl, assert_abs_mean_diff
@@ -25,7 +25,7 @@ class TestColorShader:
         self.args = []
 
     def render_both(self):
-        python_render = render_torch(self.W, self.H, self.shader.shade, *self.default_args)
+        python_render = render_iter(self.W, self.H, self.shader.shade, *self.default_args)
         opengl_render = render_opengl(self.W, self.H, self.program)
         return python_render, opengl_render
 
@@ -46,7 +46,7 @@ class TestColorShader:
 
         def cb(gl):
             params.append(self.args)
-            py = np.flip(render_torch(self.W, self.H, self.shader.shade, *self.args), axis=0)
+            py = np.flip(render_iter(self.W, self.H, self.shader.shade, *self.args), axis=0)
             pys.append(py)
             gls.append(gl)
 

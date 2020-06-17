@@ -8,37 +8,22 @@ import torch
 from PIL import Image, ImageChops
 from PyQt5.QtWidgets import QApplication
 from glumpy.gloo import Program
+from node_graph.data_type import DataType
 
-from src.opengl.internal_types import INTERNAL_TYPE_FLOAT, INTERNAL_TYPE_ARRAY_RGB
 from src.shaders.shader_super import FunctionShader
 from tests.stuff_for_testing.opengl_test_renderer import OpenGLTestRenderer
 
 _logger = logging.getLogger(__name__)
 
 
-def randomize_inputs(inputs: typing.List[typing.Any]) -> typing.List[typing.Any]:
-    output = []
-    for _, _, internal_type, ran, default in inputs:
-        output.append(randomize_input(internal_type, ran, default))
-
-    return output
-
-
-def randomize_input(internal_type, range, default):
-    if INTERNAL_TYPE_ARRAY_RGB in internal_type:
-        return np.random.random(default.shape)
-    elif internal_type == INTERNAL_TYPE_FLOAT:
-        return np.random.uniform(range[0], range[1])
-
-
 def randomize_inputs_torch(args, shader: FunctionShader, alpha_one=True) -> typing.List[torch.Tensor]:
     out = []
     for (i, arg), info in zip(enumerate(args), shader.get_inputs()):
         ran = info[3]
-        typ = info[2]
+        dtype = info[2]
         shape = arg.shape
         val = torch.from_numpy(np.random.uniform(ran[0], ran[1], shape)).float()
-        if typ == INTERNAL_TYPE_ARRAY_RGB and alpha_one:
+        if dtype == DataType.Vec3_RGB and alpha_one:
             val[-1] = 1.
 
         out.append(val)

@@ -39,7 +39,7 @@ class ShaderTest:
         raise AttributeError("The argument {} does not exist in shader {}!".format(name, self.shader_class))
 
     def render_py_torch(self):
-        return render_funcs.render_torch(self.W, self.H, self.shader.render, *self.args)
+        return render_funcs.render_iter(self.W, self.H, self.shader.render, *self.args)
 
     def render_gl(self):
         return funcs.render_opengl(self.W, self.H, self.program)
