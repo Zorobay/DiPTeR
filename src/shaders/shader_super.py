@@ -9,12 +9,9 @@ import numpy as np
 import torch
 from glumpy import gloo
 from node_graph.data_type import DataType
-from node_graph.node_socket import SocketType
-from torch import Tensor
-
-from src.gui.node_editor.g_node_socket import GNodeSocket
 from src.misc import string_funcs, render_funcs
 from src.shaders.parsing.parsing import GLSLCode, preprocess_imports
+from torch import Tensor
 
 _logger = logging.getLogger(__name__)
 
