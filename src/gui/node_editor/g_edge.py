@@ -3,8 +3,10 @@ import uuid
 from PyQt5.QtCore import QPoint, QRectF, Qt, QPointF
 from PyQt5.QtGui import QColor, QPainter, QPen
 from PyQt5.QtWidgets import QGraphicsWidget, QGraphicsLineItem, QGraphicsItem
+from node_graph.edge import Edge
 
-class Edge(QGraphicsLineItem):
+
+class GEdge(QGraphicsLineItem):
 
     def __init__(self, start_pos):
         super().__init__()

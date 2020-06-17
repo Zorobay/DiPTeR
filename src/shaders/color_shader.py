@@ -3,6 +3,7 @@ from src.shaders.shader_super import *
 
 class ColorShader(FunctionShader):
     FRAGMENT_SHADER_FILENAME = "color_shader_frag.glsl"
+    FRAGMENT_SHADER_FUNCTION = "shade_color"
 
     def __init__(self):
         super().__init__()
@@ -12,5 +13,5 @@ class ColorShader(FunctionShader):
             ("Color", "color", DataType.Vec3_RGB, (0, 1), torch.tensor((1., 1., 1.)))
         ]
 
-    def shade(self, frag_pos: Tensor, color: Tensor) -> Tensor:
+    def shade_mat(self, color: Tensor) -> Tensor:
         return color
