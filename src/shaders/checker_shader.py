@@ -16,9 +16,9 @@ class CheckerShader(FunctionShader):
 
     def get_inputs(self) -> typing.List[typing.Tuple[str, str, DataType, typing.Tuple[float, float], float]]:
         return [
-            ("Color1", "color1", DataType.INTERNAL_TYPE_ARRAY_RGB, (0, 1), torch.ones(3)),
-            ("Color2", "color2", DataType.INTERNAL_TYPE_ARRAY_RGB, (0, 1), torch.zeros(3)),
-            ("Scale", "scale", DataType.INTERNAL_TYPE_FLOAT, (0, 100), 10.0)
+            ("Color1", "color1", DataType.Vec3_RGB, (0, 1), torch.ones(3)),
+            ("Color2", "color2", DataType.Vec3_RGB, (0, 1), torch.zeros(3)),
+            ("Scale", "scale", DataType.Float, (0, 100), 10.0)
         ]
 
     def shade_mat(self, frag_pos: Tensor, color1: Tensor, color2: Tensor, scale: Tensor) -> Tensor:

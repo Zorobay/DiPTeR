@@ -11,8 +11,8 @@ class TileShader(FunctionShader):
 
     def get_inputs(self) -> typing.List[typing.Tuple[str, str, DataType, typing.Tuple[float, float], typing.Any]]:
         return [
-            ("Scale", "scale", DataType.INTERNAL_TYPE_ARRAY_FLOAT, (0, 100), torch.tensor((1., 1., 1.))),
-            ("Shift", "shift", DataType.INTERNAL_TYPE_ARRAY_FLOAT, (0, 1), torch.tensor((0., 0.)))
+            ("Scale", "scale", DataType.Vec3_Float, (0, 100), torch.tensor((1., 1., 1.))),
+            ("Shift", "shift", DataType.Vec3_Float, (0, 1), torch.tensor((0., 0.)))
         ]
 
     # def shade(self, frag_pos: Tensor) -> Tensor:

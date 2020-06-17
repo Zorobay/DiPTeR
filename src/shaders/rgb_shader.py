@@ -10,9 +10,9 @@ class RGBShader(FunctionShader):
 
     def get_inputs(self) -> typing.List[typing.Tuple[str, str, DataType, typing.Tuple[float, float], typing.Any]]:
         return [
-            ("Red", "red", DataType.INTERNAL_TYPE_FLOAT, (0, 1), 0.0),
-            ("Green", "green", DataType.INTERNAL_TYPE_FLOAT, (0, 1), 0.0),
-            ("Blue", "blue", DataType.INTERNAL_TYPE_FLOAT, (0, 1), 0.0)
+            ("Red", "red", DataType.Float, (0, 1), 0.0),
+            ("Green", "green", DataType.Float, (0, 1), 0.0),
+            ("Blue", "blue", DataType.Float, (0, 1), 0.0)
         ]
 
     def shade_mat(self, red: Tensor, green: Tensor, blue: Tensor) -> Tensor:

@@ -48,7 +48,7 @@ def connect_code(node: 'Node', code: GLSLCode):
     :param code: The parsed shader code that is held by the Node 'node'
     """
     code.reset(node.get_num())
-    for _, socket in node.get_in_sockets().items():
+    for socket in node.get_in_sockets():
         assert socket.type() == GNodeSocket.SOCKET_INPUT
 
         socket_arg = socket.label()
@@ -114,7 +114,7 @@ class Shader(ABC):
             :return: a tuple on the form (formatted title, internal type)
         """
         return [
-            ("Color", DataType.DataType.INTERNAL_TYPE_ARRAY_RGB)
+            ("Color", DataType.Vec3_RGB)
         ]
 
     @abstractmethod

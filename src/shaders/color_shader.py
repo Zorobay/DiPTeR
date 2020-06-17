@@ -9,7 +9,7 @@ class ColorShader(FunctionShader):
 
     def get_inputs(self) -> typing.List[typing.Tuple[str, str, DataType, typing.Tuple[float, float], typing.Any]]:
         return [
-            ("Color", "color", DataType.INTERNAL_TYPE_ARRAY_RGB, (0, 1), torch.tensor((1., 1., 1.)))
+            ("Color", "color", DataType.Vec3_RGB, (0, 1), torch.tensor((1., 1., 1.)))
         ]
 
     def shade(self, frag_pos: Tensor, color: Tensor) -> Tensor:

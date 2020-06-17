@@ -6,7 +6,7 @@ class MaterialOutputShader(CompilableShader):
 
     def get_inputs(self) -> typing.List[typing.Tuple[str, str, DataType, typing.Tuple[float, float], typing.Any]]:
         return [
-            ("Shader", "shader", DataType.INTERNAL_TYPE_SHADER, (0, 1), torch.tensor((1.0, 1.0, 1.0)))
+            ("Shader", "shader", DataType.Shader, (0, 1), torch.tensor((1.0, 1.0, 1.0)))
         ]
 
     def get_outputs(self) -> typing.List[typing.Tuple[str, str]]:

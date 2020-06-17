@@ -16,12 +16,12 @@ class BrickShader(FunctionShader):
 
     def get_inputs(self) -> typing.List[typing.Tuple[str, str, DataType, typing.Tuple[float, float], float]]:
         return [
-            ("Mortar Scale", "mortar_scale", DataType.INTERNAL_TYPE_FLOAT, (0.0, 1.0), 0.85),
-            ("Brick Scale", "brick_scale", DataType.INTERNAL_TYPE_FLOAT, (0.0, 100.0), 10.0),
-            ("Brick Elongate", "brick_elongate", DataType.INTERNAL_TYPE_FLOAT, (0.0, 100.0), 2.0),
-            ("Brick Shift", "brick_shift", DataType.INTERNAL_TYPE_FLOAT, (0., 1.), 0.5),
-            ("Brick Color", "color_brick", DataType.INTERNAL_TYPE_ARRAY_RGB, (0, 1), torch.tensor((0.69, 0.25, 0.255))),
-            ("Mortar Color", "color_mortar", DataType.INTERNAL_TYPE_ARRAY_RGB, (0, 1), torch.tensor((0.9, 0.9, 0.9)))
+            ("Mortar Scale", "mortar_scale", DataType.Float, (0.0, 1.0), 0.85),
+            ("Brick Scale", "brick_scale", DataType.Float, (0.0, 100.0), 10.0),
+            ("Brick Elongate", "brick_elongate", DataType.Float, (0.0, 100.0), 2.0),
+            ("Brick Shift", "brick_shift", DataType.Float, (0., 1.), 0.5),
+            ("Brick Color", "color_brick", DataType.Vec3_RGB, (0, 1), torch.tensor((0.69, 0.25, 0.255))),
+            ("Mortar Color", "color_mortar", DataType.Vec3_RGB, (0, 1), torch.tensor((0.9, 0.9, 0.9)))
         ]
 
     def shade_mat(self, mortar_scale: Tensor, brick_scale: Tensor, brick_elongate: Tensor, brick_shift: Tensor,
