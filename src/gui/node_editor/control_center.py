@@ -65,11 +65,8 @@ class ControlCenter(QObject):
                 return None
 
         material = Material(self, name)
-        self._materials[material.id] = material
-        _logger.debug("New material {} ({}) added.".format(material.name, material.id))
-
-        # Add material output node to material
-        #material.add_node(MaterialOutputShader)
+        self._materials[material.id()] = material
+        _logger.debug("New material {} ({}) added.".format(material.name, material.id()))
 
         return material
 
@@ -82,7 +79,7 @@ class ControlCenter(QObject):
             if id_ == material_id:
                 self._active_material = m
                 self.active_material_changed.emit(m)
-                _logger.debug("Set new active material {} ({}).".format(m.name, m.id))
+                _logger.debug("Set new active material {} ({}).".format(m.name, m.id()))
                 return True
 
         _logger.error("Id <{}> does not match any material. New active material not set.".format(material_id))

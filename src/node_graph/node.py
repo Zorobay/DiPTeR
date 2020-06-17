@@ -4,6 +4,7 @@ import uuid
 
 import torch
 from node_graph.data_type import DataType
+from node_graph.graph_element import GraphElement
 from src.node_graph.node_socket import NodeSocket, SocketType
 from src.shaders.shader_super import Shader
 from torch import Tensor
@@ -18,14 +19,15 @@ NAME_ARG = "arg"
 NAME_MODIFIED_ARG = "mod_arg"
 
 
-class Node:
+class Node(GraphElement):
 
-    def __init__(self, label: str = ""):
+    def __init__(self, label: str = "", container=None):
         """
         Create a new node with inputs and outputs.
 
         :param label: an optional node label
         """
+        super().__init__(container)
         self._id = uuid.uuid4()
         self._in_sockets = list()
         self._out_sockets = list()
@@ -112,20 +114,8 @@ class Node:
     def set_label(self, label: str):
         self._label = label
 
-    def id(self) -> uuid.UUID:
-        return self._id
-
     def label(self) -> str:
         return self._label
-
-    def __eq__(self, other):
-        if isinstance(other, Node):
-            return other.id() == self.id()
-
-        return False
-
-    def __hash__(self):
-        return self._id.__hash__()
 
     def __str__(self):
         cls = self.__class__
@@ -134,10 +124,10 @@ class Node:
 
 class ShaderNode(Node):
 
-    def __init__(self, shader: Shader, label: str = "", set_default_inputs: bool = False):
-        super().__init__(label)
+    def __init__(self, shader: Shader, set_default_inputs: bool = False, **kwargs):
+        super().__init__(**kwargs)
 
-        if not label:
+        if not kwargs['label']:
             self.set_label(shader.__class__)
 
         self._shader = shader

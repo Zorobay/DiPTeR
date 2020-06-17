@@ -39,7 +39,7 @@ class MaterialSelector(QWidget):
 
     def add_material(self, name: str):
         mat = self.cc.new_material(name)
-        self._material_ids.append(mat.id)
+        self._material_ids.append(mat.id())
         self._material_combo_box.addItem(name)
         self._material_combo_box.size()
         self._material_combo_box.setCurrentIndex(self._material_combo_box.count()-1)

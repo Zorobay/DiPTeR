@@ -9,6 +9,7 @@ import numpy as np
 import torch
 from glumpy import gloo
 from node_graph.data_type import DataType
+from node_graph.node_socket import SocketType
 from torch import Tensor
 
 from src.gui.node_editor.g_node_socket import GNodeSocket
@@ -41,7 +42,7 @@ def get_function_arguments(func: typing.Callable):
     return list(inspect.signature(func).parameters.keys())
 
 
-def connect_code(node: 'Node', code: GLSLCode):
+def connect_code(node: 'GShaderNode', code: GLSLCode):
     """
     Recursively connects the other_code to all other connected other_code in the NodeGraph tracked by 'node'.
     :param node: Node the holds the GLSLCode in 'other_code'
@@ -49,7 +50,7 @@ def connect_code(node: 'Node', code: GLSLCode):
     """
     code.reset(node.get_num())
     for socket in node.get_in_sockets():
-        assert socket.type() == GNodeSocket.INPUT
+        assert socket.type() == socket.INPUT
 
         socket_arg = socket.label()
 
@@ -187,7 +188,7 @@ class CompilableShader(Shader, ABC):
         vertex_code = preprocess_imports(read_glsl_source_file(self.VERTEX_SHADER_FILENAME))
         return gloo.VertexShader(vertex_code, version=self._glsl_version)
 
-    def compile_fragment_shader(self, node: 'Node') -> gloo.FragmentShader:
+    def compile_fragment_shader(self, node: 'GShaderNode') -> gloo.FragmentShader:
         """
         Constructs the fragment shader other_code from this shader and (optionally) all connected shaders and compiles it.
 
@@ -254,12 +255,12 @@ class CompilableShader(Shader, ABC):
 
         return params
 
-    def compile(self, node: 'Node' = None) -> typing.Tuple[gloo.VertexShader, gloo.FragmentShader, gloo.Program]:
+    def compile(self, node: 'GShaderNode' = None) -> typing.Tuple[gloo.VertexShader, gloo.FragmentShader, gloo.Program]:
         """
         Compiles the full program with vertex and fragment shader and returns a tuple with the VertexShader, FragmentShader and compiled
         Program. Does **not** save the new shader program internally.
 
-        :param node: The Node object that contains this Shader.
+        :param node: The GShaderNode object that contains this Shader.
         :return: a tuple with the compiled VertexShader, FragmentShader and Program
         """
         start = time.time()

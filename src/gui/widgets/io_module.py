@@ -38,10 +38,10 @@ class SocketModule(QWidget):
 
     def __init__(self, label: str, input_widget: Input):
         super().__init__()
-        self.label = label
+        self._label = label
         self.widget = input_widget
         self._id = uuid.uuid4()
-        self._label_widget = QLabel(self.label)
+        self._label_widget = QLabel(self._label)
 
         self._layout = QHBoxLayout()
         self._palette = QPalette()
@@ -64,9 +64,11 @@ class SocketModule(QWidget):
     def _input_changed(self):
         self.input_changed.emit()
 
-    @property
     def id(self) -> uuid.UUID:
         return self._id
+
+    def label(self) -> str:
+        return self._label
 
     def set_label_palette(self, palette: QPalette):
         self._label_widget.setPalette(palette)
@@ -82,8 +84,8 @@ class OutputModule(QWidget):
 
     def __init__(self, label: str):
         super().__init__()
-        self.label = label
-        self._label_widget = QLabel(self.label)
+        self._label = label
+        self._label_widget = QLabel(self._label)
 
         self._layout = QVBoxLayout()
         self._palette = QPalette()
@@ -98,6 +100,9 @@ class OutputModule(QWidget):
         self._layout.addWidget(self._label_widget)
 
         self.setLayout(self._layout)
+
+    def label(self) -> str:
+        return self._label
 
     def set_label_palette(self, palette: QPalette):
         self._label_widget.setPalette(palette)

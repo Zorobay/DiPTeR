@@ -1,12 +1,14 @@
 import uuid
 
+from node_graph.graph_element import GraphElement
 
-class Edge:
 
-    def __init__(self, source: 'Socket', destination: 'Socket'):
+class Edge(GraphElement):
+
+    def __init__(self, source: 'Socket', destination: 'Socket', container=None):
+        super().__init__(container)
         self._src_socket = source
         self._dest_socket = destination
-        self._id = uuid.uuid4()
 
     def get_source(self) -> 'Socket':
         """

@@ -5,6 +5,7 @@ import uuid
 
 from node_graph.edge import Edge
 from node_graph.data_type import DataType
+from node_graph.graph_element import GraphElement
 
 _logger = logging.getLogger(__name__)
 
@@ -14,11 +15,12 @@ class SocketType(enum.IntEnum):
     OUTPUT = 1
 
 
-class NodeSocket:
+class NodeSocket(GraphElement):
     INPUT: SocketType = SocketType.INPUT
     OUTPUT: SocketType = SocketType.OUTPUT
 
-    def __init__(self, parent_node: 'Node', socket_type: SocketType, dtype: DataType = None, label: str = ""):
+    def __init__(self, parent_node: 'Node', socket_type: SocketType, dtype: DataType = None, label: str = "", container=None):
+        super().__init__(container)
         assert isinstance(socket_type, SocketType), "socket_type must be of enum type SocketType!"
         self._parent_g_node = parent_node
         self._type = socket_type
@@ -106,9 +108,6 @@ class NodeSocket:
 
     def set_value(self, value: typing.Any):
         self._value = value
-
-    def id(self) -> uuid.UUID:
-        return self._id
 
     def value(self) -> typing.Any:
         return self._value

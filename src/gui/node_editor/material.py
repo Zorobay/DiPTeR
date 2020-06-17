@@ -50,7 +50,6 @@ class Material(QObject):
     def name(self):
         return self._name
 
-    @property
     def id(self):
         return self._id
 
@@ -171,7 +170,7 @@ class Material(QObject):
         items = edge.collidingItems(Qt.IntersectsItemShape)
 
         source_node = self._nodes[node_id]
-        connected_socket = edge.out_socket if edge.out_socket else edge.in_socket
+        connected_socket = edge.get_source_socket() if edge.get_source_socket() else edge.get_destination_socket()
         connected_socket_type = connected_socket.type()
 
         for item in items:
@@ -181,15 +180,15 @@ class Material(QObject):
                     and not source_node.has_socket(item):
 
                 if item.type() == GNodeSocket.INPUT:
-                    edge.in_socket = item
+                    edge.set_destination_socket(item)
                 else:
-                    edge.out_socket = item
+                    edge.set_source_socket(item)
 
                 # Connect edge to socket where edge was released. Connection of socket to starting node is done in the Socket class.
-                item.add_connected_edge(edge)
+                edge.connect_sockets()
                 _logger.info("Connected source node {} and node {} with edge".format(source_node.label(), item.parent_node().label()))
                 return
 
         # Edge did not intersect with another valid socket, so it will be removed
-        _logger.info("Discarded edge started from node {}".format(source_node.label()))
+        _logger.debug("Discarded edge started from node {}".format(source_node.label()))
         self.node_scene.removeItem(edge)
