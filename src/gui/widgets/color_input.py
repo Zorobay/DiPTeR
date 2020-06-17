@@ -4,7 +4,7 @@ import numpy as np
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QColor, QPalette
 from PyQt5.QtWidgets import QPushButton, QColorDialog
-from node_graph.internal_types import DataType
+from node_graph.data_type import DataType
 
 from src.gui.widgets.io_module import Input
 

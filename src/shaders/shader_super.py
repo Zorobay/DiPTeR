@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from glumpy import gloo
-from node_graph.internal_types import DataType
+from node_graph.data_type import DataType
 from torch import Tensor
 
 from src.gui.node_editor.g_node_socket import GNodeSocket
@@ -49,7 +49,7 @@ def connect_code(node: 'Node', code: GLSLCode):
     """
     code.reset(node.get_num())
     for socket in node.get_in_sockets():
-        assert socket.type() == GNodeSocket.SOCKET_INPUT
+        assert socket.type() == GNodeSocket.INPUT
 
         socket_arg = socket.label()
 
@@ -238,9 +238,9 @@ class CompilableShader(Shader, ABC):
 
         params = []
 
-        for _, arg, internal_type, ran, _ in self.get_inputs():
+        for _, arg, dtype, ran, _ in self.get_inputs():
             val = self._program[arg]
-            if "array" not in internal_type:
+            if "vec" not in dtype:
                 val = np.array(val[0])  # Uniforms are stored in array even if they're single floats
 
             if randomize:

@@ -5,10 +5,10 @@ import uuid
 from PyQt5.QtCore import QObject, pyqtSignal, Qt
 from glumpy.gloo import Program
 
-from src.gui.node_editor.edge import Edge
-from src.gui.node_editor.node import ShaderNode, MaterialOutputNode
+from src.gui.node_editor.g_edge import GEdge
+from src.gui.node_editor.g_node_widget import ShaderNode, MaterialOutputNode, GShaderNode
 from src.gui.node_editor.node_scene import NodeScene
-from src.gui.node_editor.socket import Socket
+from src.gui.node_editor.g_node_socket import GNodeSocket
 from src.shaders.shader_super import FunctionShader, CompilableShader
 
 _logger = logging.getLogger(__name__)
@@ -58,16 +58,16 @@ class Material(QObject):
         if not isinstance(shader, FunctionShader):
             shader = shader()  # Instantiate the shader if only a type was given
 
-        node = ShaderNode(self.node_scene, shader.get_name(), shader)
+        node = GShaderNode(self.node_scene, label=shader.get_name(), shader=shader)
         self._add_node(node)
-        _logger.debug("Added new node {} to material {}.".format(node.get_title(), self.name))
+        _logger.debug("Added new node {} to material {}.".format(node.label(), self.name))
 
     def _add_node(self, node: 'Node'):
         self._assign_node_number(node)
         node.edge_started.connect(self._spawn_edge)
         node.edge_ended.connect(self._end_edge)
         node.input_changed.connect(lambda _: self.changed.emit())
-        self._nodes[node.id] = node
+        self._nodes[node.id()] = node
         self.node_scene.addItem(node)
 
         self.changed.emit()
@@ -85,7 +85,7 @@ class Material(QObject):
         self.program_ready.emit(self.program)
         self.shader_ready.emit(self.shader)
 
-        _logger.debug("Added default Material Output Node {} to material {}.".format(node.get_title(), self.name))
+        _logger.debug("Added default Material Output Node {} to material {}.".format(node.label(), self.name))
 
     def get_material_output_node(self) -> MaterialOutputNode:
         return self._mat_output_node
@@ -140,7 +140,7 @@ class Material(QObject):
 
             self.node_scene.removeItem(node)
 
-            _logger.info("Deleted node {} from material {}".format(node.get_title(), self.name))
+            _logger.info("Deleted node {} from material {}".format(node.label(), self.name))
             self.changed.emit()
             return True
         except KeyError:
@@ -149,7 +149,7 @@ class Material(QObject):
     def get_nodes(self) -> typing.Dict[uuid.UUID, ShaderNode]:
         return self._nodes
 
-    def remove_edge(self, edge: Edge):
+    def remove_edge(self, edge: GEdge):
         self.node_scene.removeItem(edge)
         self._is_drawing_edge = False
 
@@ -161,35 +161,35 @@ class Material(QObject):
     def shader(self):
         return self._shader
 
-    def _spawn_edge(self, node_id: uuid.UUID, edge: Edge):
+    def _spawn_edge(self, node_id: uuid.UUID, edge: GEdge):
         self.node_scene.addItem(edge)
         self.edge_spawned.emit(edge)
 
         # _logger.debug("Added new Edge ({}) at pos ({}) -> ({}) to material {}.".format(edge.id, edge.out_pos, edge.in_pos, self.title))
 
-    def _end_edge(self, node_id: uuid.UUID, edge: Edge):
+    def _end_edge(self, node_id: uuid.UUID, edge: GEdge):
         items = edge.collidingItems(Qt.IntersectsItemShape)
 
         source_node = self._nodes[node_id]
         connected_socket = edge.out_socket if edge.out_socket else edge.in_socket
-        connected_socket_type = connected_socket.socket_type
+        connected_socket_type = connected_socket.type()
 
         for item in items:
-            if isinstance(item, Socket) \
+            if isinstance(item, GNodeSocket) \
                     and item != connected_socket \
-                    and item.socket_type != connected_socket_type \
+                    and item.type() != connected_socket_type \
                     and not source_node.has_socket(item):
 
-                if item.socket_type == Socket.SOCKET_INPUT:
+                if item.type() == GNodeSocket.INPUT:
                     edge.in_socket = item
                 else:
                     edge.out_socket = item
 
                 # Connect edge to socket where edge was released. Connection of socket to starting node is done in the Socket class.
                 item.add_connected_edge(edge)
-                _logger.info("Connected source node {} and node {} with edge".format(source_node.get_title(), item.parent_node.get_title()))
+                _logger.info("Connected source node {} and node {} with edge".format(source_node.label(), item.parent_node().label()))
                 return
 
         # Edge did not intersect with another valid socket, so it will be removed
-        _logger.info("Discarded edge started from node {}".format(source_node.get_title()))
+        _logger.info("Discarded edge started from node {}".format(source_node.label()))
         self.node_scene.removeItem(edge)

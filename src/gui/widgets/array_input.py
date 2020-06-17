@@ -2,7 +2,7 @@ import typing
 import numpy as np
 
 from PyQt5.QtWidgets import QVBoxLayout, QWidget
-from node_graph.internal_types import DataType
+from node_graph.data_type import DataType
 
 from src.gui.widgets.io_module import Input
 from src.gui.widgets.line_input import FloatInput
@@ -11,7 +11,7 @@ from src.gui.widgets.line_input import FloatInput
 class ArrayInput(QWidget, Input):
 
     def __init__(self, size: int, min_:float, max_:float, dtype: DataType):
-        super(Input, self).__init__(internal_type=dtype)
+        super(Input, self).__init__(dtype=dtype)
 
         self._size = size
         self._min = min_

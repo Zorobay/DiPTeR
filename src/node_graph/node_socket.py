@@ -4,12 +4,12 @@ import typing
 import uuid
 
 from node_graph.edge import Edge
-from opengl.internal_types import InternalType
+from node_graph.data_type import DataType
 
 _logger = logging.getLogger(__name__)
 
 
-class SocketType(enum.Enum):
+class SocketType(enum.IntEnum):
     INPUT = 0
     OUTPUT = 1
 
@@ -18,9 +18,9 @@ class NodeSocket:
     INPUT: SocketType = SocketType.INPUT
     OUTPUT: SocketType = SocketType.OUTPUT
 
-    def __init__(self, parent_node: 'Node', socket_type: SocketType, dtype: InternalType = None, label: str = ""):
+    def __init__(self, parent_node: 'Node', socket_type: SocketType, dtype: DataType = None, label: str = ""):
         assert isinstance(socket_type, SocketType), "socket_type must be of enum type SocketType!"
-        self._parent_node = parent_node
+        self._parent_g_node = parent_node
         self._type = socket_type
         self._dtype = dtype
         self._label = label
@@ -82,7 +82,7 @@ class NodeSocket:
             raise RuntimeError("Sockets are indicated as connected but could not find their connecting Edge. The Node Graph is corrupt!")
 
     def get_parent_node(self) -> 'Node':
-        return self._parent_node
+        return self._parent_g_node
 
     def get_connected_nodes(self) -> typing.List['Node']:
         """
@@ -121,7 +121,11 @@ class NodeSocket:
         return self._connected
 
     def type(self) -> SocketType:
+        """Returns the type of this NodeSocket indicating whether it accepts input or returns output."""
         return self._type
+
+    def dtype(self) -> DataType:
+        return self._dtype
 
     def _find_connecting_edge(self, other_socket: 'NodeSocket') -> typing.Union[None, Edge]:
         for edge in self._connected_edges:

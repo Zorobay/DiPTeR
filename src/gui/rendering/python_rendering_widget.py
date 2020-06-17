@@ -13,6 +13,7 @@ from src.gui.node_editor.material import Material
 from src.gui.rendering.image_plotter import ImagePlotter
 from src.gui.widgets.labelled_input import LabelledInput
 from src.gui.widgets.line_input import IntInput
+import numpy as np
 
 _logger = logging.getLogger("PythonRenderingWidget")
 
@@ -36,6 +37,7 @@ class PythonRenderingWidget(QWidget):
         self._width, self._height = 100, 100
         self._shader = None
         self._material = None
+        self._call = None
 
         self._init_widget()
 
@@ -64,9 +66,17 @@ class PythonRenderingWidget(QWidget):
 
     def _render(self):
         node = self._material.get_material_output_node()
+        times_no_dict = []
+        for i in range(1000):
+            start = time.time()
+            img, self._call, _, _ = node.render(self._width, self._height, call_dict=self._call)
+            end = time.time()
+            times_no_dict.append(end-start)
+            print(i)
 
-        start = time.time()
-        img, _, _, _ = node.render(self._width, self._height, call_dict=None)
+        print("Mean Time: {:.5f}s".format(np.mean(times_no_dict)))
+        print("STD Time: {:.5f}s".format(np.std(times_no_dict)))
+        print("Mean Best 10: {:.5f}s".format(np.mean(sorted(times_no_dict)[0:10])))
 
         total_time = time.time() - start
         _logger.debug("Rendering DONE in {:.4f}s.".format(total_time))

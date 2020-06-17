@@ -6,7 +6,7 @@ from PyQt5.QtCore import pyqtSignal, QThread, Qt
 from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QComboBox
 import numpy as np
 
-from src.gui.node_editor.node import MaterialOutputNode
+from src.gui.node_editor.g_node_widget import MaterialOutputNode
 from src.gui.rendering.image_plotter import ImagePlotter
 from src.gui.rendering.opengl_widget import OpenGLWidget
 from src.gui.widgets.labelled_input import LabelledInput

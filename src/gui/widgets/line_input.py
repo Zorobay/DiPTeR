@@ -5,7 +5,7 @@ from abc import abstractmethod
 import numpy as np
 from PyQt5.QtGui import QValidator, QDoubleValidator, QIntValidator
 from PyQt5.QtWidgets import QLineEdit
-from node_graph.internal_types import DataType
+from node_graph.data_type import DataType
 
 from src.gui.widgets.io_module import Input
 
@@ -151,7 +151,7 @@ class FloatInput(LineInput):
 
     def __init__(self, min_: float, max_: float, dtype=DataType.Float):
         assert min_ <= max_, "Minimum value must be less than or equal to maximum value!"
-        super().__init__(internal_type=dtype)
+        super().__init__(dtype=dtype)
 
         self.min_ = min_
         self.max_ = max_
@@ -175,7 +175,7 @@ class IntInput(LineInput):
 
     def __init__(self, min_: int, max_: int, dtype=DataType.Int):
         assert min_ <= max_, "Minimum value must be less than or equal to maximum value!"
-        super().__init__(internal_type=dtype)
+        super().__init__(dtype=dtype)
 
         self.min_ = min_
         self.max_ = max_

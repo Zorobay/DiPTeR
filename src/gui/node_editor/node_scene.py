@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt, QPointF
 from PyQt5.QtGui import QBrush, QColor
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsSceneMouseEvent
 
-from src.gui.node_editor.edge import Edge
+from src.gui.node_editor.g_edge import GEdge
 
 _logger = logging.getLogger(__name__)
 

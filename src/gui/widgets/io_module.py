@@ -29,7 +29,7 @@ class Input:
         """Set the default value of this widgets."""
         raise NotImplementedError("Input subclass need to implement this method!")
 
-    def get_internal_type(self) -> str:
+    def get_dtype(self) -> str:
         return self._dtype
 
 

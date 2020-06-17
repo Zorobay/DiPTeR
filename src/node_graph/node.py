@@ -3,10 +3,8 @@ import typing
 import uuid
 
 import torch
-from src.graph.node_socket import NodeSocket, SocketType
-from src.shaders.brick_shader import BrickShader
-from src.shaders.frag_coord_shader import FragmentCoordinatesShader
-from src.shaders.hsv_shader import HSVShader
+from node_graph.data_type import DataType
+from src.node_graph.node_socket import NodeSocket, SocketType
 from src.shaders.shader_super import Shader
 from torch import Tensor
 
@@ -33,12 +31,12 @@ class Node:
         self._out_sockets = list()
         self._label = label
 
-    def add_socket(self, type_: SocketType, label: str = "") -> NodeSocket:
+    def add_socket(self, type_: SocketType, label: str = "", dtype: DataType=None) -> NodeSocket:
         """
         Adds an input socket to this Node
         :return: the created Socket
         """
-        socket = NodeSocket(self, type_, label)
+        socket = NodeSocket(self, type_, dtype=dtype, label=label)
 
         if type_ == NodeSocket.INPUT:
             self._in_sockets.append(socket)
@@ -74,6 +72,14 @@ class Node:
 
         return None
 
+    def get_input_sockets(self) -> typing.List[NodeSocket]:
+        """Returns a list with all NodeSockets that are inputs to this Node."""
+        return self._in_sockets.copy()
+
+    def num_input_sockets(self) -> int:
+        """Returns the number of input NodeSockets of this Node"""
+        return len(self._in_sockets)
+
     def get_output_socket(self, index: int) -> typing.Union[NodeSocket, None]:
         """
         Finds an output socket by index and returns it.
@@ -85,6 +91,23 @@ class Node:
             return self._out_sockets[index]
 
         return None
+
+    def get_output_sockets(self) -> typing.List[NodeSocket]:
+        """Returns a list of NodeSockets that are outputs to this Node."""
+        return self._out_sockets.copy()
+
+    def num_output_sockets(self) -> int:
+        """Returns the number of output NodeSockets of this Node"""
+        return len(self._out_sockets)
+
+    def has_socket(self, socket: NodeSocket) -> bool:
+        """Returns a boolean indicating whether the input NodeSocket 'socket' belongs to this Node."""
+        if socket in self._out_sockets:
+            return True
+        elif socket in self._in_sockets:
+            return True
+
+        return False
 
     def set_label(self, label: str):
         self._label = label
@@ -125,11 +148,11 @@ class ShaderNode(Node):
             self.set_default_inputs()
 
     def _init(self):
-        for _, label, _, _, _ in self._shader.get_inputs():
-            self.add_socket(NodeSocket.INPUT, label)
+        for _, label, dtype, _, _ in self._shader.get_inputs():
+            self.add_socket(NodeSocket.INPUT, label=label, dtype=dtype)
 
-        for label, _ in self._shader.get_outputs():
-            self.add_socket(NodeSocket.OUTPUT, label)
+        for label, dtype in self._shader.get_outputs():
+            self.add_socket(NodeSocket.OUTPUT, label=label, dtype=dtype)
 
     def get_shader(self) -> Shader:
         return self._shader

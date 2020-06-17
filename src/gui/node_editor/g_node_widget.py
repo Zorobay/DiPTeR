@@ -1,0 +1,540 @@
+import abc
+import typing
+import uuid
+
+import numpy as np
+import torch
+from PyQt5 import QtCore
+from PyQt5.QtCore import Qt, QRectF, pyqtSignal
+from PyQt5.QtGui import QBrush, QFont, QColor, QPalette, QPainter, QPen
+from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsWidget, QGraphicsLinearLayout
+from glumpy.gloo import Program
+
+from node_graph.node import Node, ShaderNode
+from node_graph.node_socket import NodeSocket
+from src.gui.node_editor.g_edge import GEdge
+from src.gui.node_editor.layouts import GraphicsGridLayout
+from src.gui.node_editor.node_scene import NodeScene
+from src.gui.node_editor.g_node_socket import GNodeSocket
+from src.gui.widgets.array_input import ArrayInput
+from src.gui.widgets.color_input import ColorInput
+from src.gui.widgets.io_module import SocketModule, OutputModule
+from src.gui.widgets.line_input import FloatInput, IntInput
+from src.gui.widgets.shader_input import ShaderInput
+from src.shaders.material_output_shader import MaterialOutputShader, DataType
+from src.shaders.shader_super import Shader, CompilableShader
+
+TYPE_VALUE = "type_value"
+TYPE_FUNC = "type_func"
+TYPE = "type"
+VALUE = "value"
+ARGS = "args"
+MODIFIED_ARG = "mod_arg"
+NAME_ARG = "arg"
+NAME_MODIFIED_ARG = "mod_arg"
+
+
+def set_program_uniforms_from_node(program: Program, node: 'GShaderNode'):
+    inputs = node.get_input(exclude_connected=True)
+
+    for arg, mod_arg, value in inputs:
+        program[mod_arg] = value
+
+
+class GShaderNode(QGraphicsWidget):
+    """This abstract class defines the look and feel of a Node. Specialized classes can subclass this instead of the Node class.
+    """
+    edge_started = pyqtSignal(uuid.UUID, GEdge)
+    edge_ended = pyqtSignal(uuid.UUID, GEdge)
+    connection_changed = pyqtSignal(GNodeSocket, GEdge, object)  # Node
+    input_changed = pyqtSignal(object)  # Node
+
+    @abc.abstractmethod
+    def __init__(self, node_scene: NodeScene, shader: Shader, label: str = "", parent=None):
+        super(QGraphicsWidget, self).__init__(parent)
+
+        self._shader = shader
+        self._node = ShaderNode(shader=shader, label=label, set_default_inputs=True)
+        self.node_scene = node_scene
+        self._num = -1
+
+        self._in_socket_modules = []
+        self._out_socket_modules = []
+        self._socket_connections = {}
+
+        # define Node properties
+        self._selected = False
+        self._deletable = True
+        self._input_index = 2
+        self._width = 250
+        self._height = 50
+        self._rounding = 5
+        self._padding = 8
+        self._bg_color = QColor(80, 80, 100, 200)
+        self._title_color = Qt.white
+        self._title_font = QFont("Corbel", 11)
+        self._title_font.setBold(True)
+        self._title_item = QGraphicsTextItem(self)
+
+        # Define layout
+        self._master_layout = GraphicsGridLayout()
+
+        # Define widgets properties
+        self._input_label_font = QFont("Corbel", 8)
+        self._input_label_palette = QPalette()
+        self._input_label_palette.setColor(QPalette.Background, QColor(0, 0, 0, 0))
+        self._input_label_palette.setColor(QPalette.Foreground, self._title_color)
+
+        # Set flags to enable the widget to be moved and selected
+        self.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setCacheMode(QGraphicsItem.DeviceCoordinateCache)
+
+        self._init_title()
+        self._init_layout()
+        self._init_sockets()
+
+    def _init_layout(self):
+        self._master_layout.setContentsMargins(-5, 4, 4, -5)
+        self._master_layout.setRowSpacing(0, self._title_font.pointSize() + 12)  # Add empty space for first row so that title is visible
+        self._master_layout.setHorizontalSpacing(2.0)
+        self._master_layout.setVerticalSpacing(0.0)
+        self._master_layout.setColumnAlignment(2, Qt.AlignRight)
+        self._master_layout.setRowAlignment(1, Qt.AlignVCenter)
+        self._master_layout.setColumnFixedWidth(0, 15)  # Input socket column
+        self._master_layout.setColumnFixedWidth(2, 15)  # Output socket column
+        self._master_layout.setColumnFixedWidth(1, self._width-15-15)
+
+        self.setLayout(self._master_layout)
+
+    def _init_sockets(self):
+        shader = self._node.get_shader()
+        for i in range(self._node.num_input_sockets()):
+            shader_input = shader.get_inputs()[i]
+            label = shader_input[0]
+            ran = shader_input[3]
+            socket = self._node.get_input_socket(i)
+            self._add_input_module(input_label=label, node_socket=socket, input_range=ran)
+
+        for i in range(self._node.num_output_sockets()):
+            shader_output = shader.get_outputs()[i]
+            label = shader_output[0]
+            socket = self._node.get_output_socket(i)
+            self._add_output_module(output_label=label, node_socket=socket)
+
+    def _notify_change(self):
+        """Event is called when any of this node's widget's inputs are changed"""
+        self.input_changed.emit(self)
+
+    def delete(self):
+        # TODO Implement!
+        pass
+
+    def id(self) -> uuid.UUID:
+        return self._node.id()
+
+    def label(self) -> str:
+        return self._node.label()
+
+    def set_label(self, label: str):
+        self._node.set_label(label)
+        self._title_item.setPlainText(self.label())
+
+    def get_num(self) -> int:
+        """Returns the number that is assigned to this node. This number is unique among nodes with the same shader type."""
+        return self._num
+
+    def set_num(self, num: int):
+        self._num = num
+
+    def _init_title(self):
+        self._title_item.setDefaultTextColor(self._title_color)
+        self._title_item.setFont(self._title_font)
+        self._title_item.setPos(self._padding, 0)
+        self._title_item.setTextWidth(self._width - self._padding)
+        self.set_label(self.label())
+
+    def is_deletable(self) -> bool:
+        return self._deletable
+
+    def set_deletable(self, value: bool):
+        self._deletable = value
+
+    def get_ancestor_nodes(self, add_self: bool = False) -> typing.Set['GShaderNode']:
+        """
+        Returns a list of all connected ancestors of this node.
+        :param add_self: if True, adds this node to the set of returned nodes.
+        :return: a Set of nodes that are ancestors of this node.
+        """
+        out = set()
+        if add_self:
+            out.add(self)
+
+        for (socket, _) in self._in_socket_modules:
+            if socket.is_connected():
+                for node in [s.get_parent_node() for s in socket.get_connected_sockets()]:
+                    out.update(node.get_ancestor_nodes(add_self=True))
+
+        return out
+
+    def get_backend_node(self) -> ShaderNode:
+        return self._node
+
+    def get_shader(self) -> Shader:
+        return self._shader
+
+    def has_socket(self, socket: GNodeSocket) -> bool:
+        return self._node.has_socket(socket.get_backend_socket())
+
+    def get_in_sockets(self) -> typing.List[NodeSocket]:
+        return self._node.get_input_sockets()
+
+    def get_out_sockets(self) -> typing.List[NodeSocket]:
+        return self._node.get_output_sockets()
+
+    def _create_g_socket(self, socket: NodeSocket) -> GNodeSocket:
+        socket = GNodeSocket(self, socket)
+        socket.edge_started.connect(self._spawn_edge)
+        socket.edge_released.connect(self._release_edge)
+        socket.connection_changed.connect(self._handle_socket_connection)
+
+        return socket
+
+    def _add_input_module(self, input_label: str, node_socket: NodeSocket, input_range: (float, float) = (0, 1)):
+        socket = self._create_g_socket(node_socket)
+        dtype = node_socket.dtype()
+
+        if dtype == DataType.Float:
+            # Create an widgets widget
+            input_widget = FloatInput(min_=input_range[0], max_=input_range[1], dtype=dtype)
+        elif dtype == DataType.Int:
+            input_widget = IntInput(min_=input_range[0], max_=input_range[1], dtype=dtype)
+        elif dtype == DataType.Vec3_RGB:
+            input_widget = ColorInput(dtype)
+        elif dtype == DataType.Shader:
+            input_widget = ShaderInput(dtype)
+        elif dtype == DataType.Vec3_Float:
+            size = 3
+            input_widget = ArrayInput(size, min_=input_range[0], max_=input_range[1], dtype=dtype)
+
+        else:
+            raise TypeError("Data Type {} is not yet supported!".format(dtype))
+
+        # Create a module and add to this node
+        module = SocketModule(input_label, input_widget)
+        module.input_changed.connect(self._notify_change)
+        module.set_label_palette(self._input_label_palette)
+        module.set_default_value(socket.value())
+        self._in_socket_modules.append((socket, module))
+
+        module_item = self.node_scene.addWidget(module)
+        self._master_layout.addItem(socket, self._input_index, 0)
+        self._master_layout.addItem(module_item, self._input_index, 1)
+        self._master_layout.setRowAlignment(self._input_index, Qt.AlignBottom)
+        self._input_index += 1
+        self._height = self._input_index * 40
+
+    def _add_output_module(self, output_label: str, node_socket: NodeSocket):
+        socket = self._create_g_socket(node_socket)
+        module = OutputModule(output_label)
+        module.set_label_palette(self._input_label_palette)
+        module_item = self.node_scene.addWidget(module)
+        self._out_socket_modules.append((socket, module))
+
+        self._master_layout.addItem(module_item, 1, 1)
+        self._master_layout.addItem(socket, 1, 2)
+
+    def _handle_socket_connection(self, socket: GNodeSocket, edge: GEdge):
+        self.connection_changed.emit(socket, edge, self)
+
+    def _spawn_edge(self, edge):
+        self.edge_started.emit(self.id(), edge)
+
+    def _release_edge(self, edge):
+        self.edge_ended.emit(self.id(), edge)
+
+    def boundingRect(self) -> QtCore.QRectF:
+        return QRectF(0, 0, self._width, self._height).normalized()
+
+    def paint(self, painter: QPainter, option, widget=None):
+        if self.isSelected():
+            painter.setPen(QPen(Qt.black))  # Disables the border
+        else:
+            painter.setPen(Qt.NoPen)
+
+        painter.setBrush(QBrush(self._bg_color))
+        painter.drawRoundedRect(0, 0, self._width, self._height, self._rounding, 1)
+
+    def __str__(self):
+        return self._node.__str__()
+
+    def __hash__(self):
+        return self._node.__hash__()
+
+    def __eq__(self, other):
+        return self._node.__eq__(other)
+
+# class ShaderNode(GShaderNode):
+#     input_changed = pyqtSignal(object)  # Node
+#
+#     def __init__(self, node_scene: NodeScene, label: str, shader: Shader, parent=None):
+#         super().__init__(node_scene, label, parent)
+#
+#         # define data properties
+#         self._socket_modules = []  # Tracks which module belongs to which socket
+#         self._shader = shader
+#
+#         # Initialize the widget
+#         self._init_widget()
+#         self.set_label(self._title)
+#
+#     def _init_widget(self):
+#         for nf, nu, t, ra, de in self._shader.get_inputs():
+#             self._add_input_module(nf, nu, t, ra, de)
+#
+#         for nf, t in self._shader.get_outputs():
+#             self._add_output_module(nf, t)
+#
+#     def _notify_change(self):
+#         """Event is called when any of this node's widget's inputs are changed"""
+#         self.input_changed.emit(self)
+#
+#     def label(self):
+#         return super().label() + " ({})".format(self.get_num())
+#
+#     def set_num(self, num: int):
+#         super().set_num(num)
+#         self.set_label(self._title)  # Update title text (calls subclass' get_title())
+#
+#     def get_shader(self) -> Shader:
+#         return self._shader
+#
+#     def get_input(self, exclude_connected: True) -> typing.List[typing.Tuple[str, str, typing.Any]]:
+#         """Returns a list of argument names, its modified name as well as the the value in the node input for that argument.
+#
+#         Note that is the shader held by this node has not been recompiled, the modified name of the argument is undefined."""
+#         out = []
+#         for socket, mod in self._socket_modules:
+#             if not exclude_connected or not socket.isConnected():
+#                 value = mod.get_gl_value()
+#                 argument: str = mod.label()
+#                 modified_name = self.get_shader().get_parsed_code().primary_function.get_argument(argument).get_modified_name()
+#
+#                 out.append((argument, modified_name, value))
+#
+#         return out
+#
+#     def _add_input_module(self, input_label: str, uniform_var: str, internal_type: str, input_range: (float, float) = (0, 1),
+#                           default_value: typing.Any = None):
+#         socket = self.create_input_socket(uniform_var)
+#
+#         if internal_type == INTERNAL_TYPE_FLOAT:
+#             # Create an widgets widget
+#             input_widget = FloatInput(min_=input_range[0], max_=input_range[1], dtype=internal_type)
+#         elif internal_type == INTERNAL_TYPE_INT:
+#             input_widget = IntInput(min_=input_range[0], max_=input_range[1], dtype=internal_type)
+#         elif internal_type == INTERNAL_TYPE_ARRAY_RGB:
+#             input_widget = ColorInput(internal_type)
+#         elif internal_type == INTERNAL_TYPE_SHADER:
+#             input_widget = ShaderInput(internal_type)
+#         elif internal_type == INTERNAL_TYPE_ARRAY_FLOAT:
+#             if isinstance(default_value, np.ndarray):
+#                 size = default_value.size
+#             elif isinstance(default_value, torch.Tensor):
+#                 size = default_value.numel()
+#             else:
+#                 raise TypeError("Type of default value needs to be numpy array or torch Tensor!")
+#             input_widget = ArrayInput(size, min_=input_range[0], max_=input_range[1], dtype=internal_type)
+#
+#         else:
+#             raise TypeError("Internal type {} is not yet supported!".format(internal_type))
+#
+#         # Create an widgets module and add to this node
+#         module = SocketModule(input_label, internal_type, input_widget)
+#         module.input_changed.connect(self._notify_change)
+#         module.set_label_palette(self._input_label_palette)
+#         module.set_default_value(default_value)
+#         self._socket_modules.append((socket, module))
+#
+#         module_item = self.node_scene.addWidget(module)
+#         self._master_layout.addItem(socket, self._input_index, 0)
+#         self._master_layout.addItem(module_item, self._input_index, 1)
+#         self._master_layout.setRowAlignment(self._input_index, Qt.AlignBottom)
+#         self._input_index += 1
+#         self._height = self._input_index * 40
+#
+#     def _add_output_module(self, output_label: str, internal_type: str):
+#         socket = self.create_output_socket()
+#         output_module = OutputModule(output_label)
+#         output_module.set_label_palette(self._input_label_palette)
+#         module_item = self.node_scene.addWidget(output_module)
+#
+#         self._master_layout.addItem(module_item, 1, 1)
+#         self._master_layout.addItem(socket, 1, 2)
+#
+#     def render(self, width: int, height: int, call_dict: dict = None) -> typing.Tuple[torch.Tensor, dict, list, dict]:
+#         """
+#         Renders an image from the connected nodes. A dictionary describing the call stack can be provided with parameter 'call_dict'. If only
+#         rendering, it is not needed. However, if gradient is needed, this needs to be provided from a previous call in order to use the same input
+#         Tensors.
+#
+#         :param width: width of the image (in pixels) to be rendered.
+#         :param height: height of the image (in pixels) to be rendered.
+#         :param call_dict: A dictionary describing the call stack (as returned by this function). If not supplied, it will be generated and
+#         returned. Only use if you're changing the values of the Tensors directly. If values is to be taken from the nodes input, leave as None.
+#         :return: A tuple with a [W,H,3] tensor representing the rendered image, or None if no image could be rendered, a call dictionary, a list of
+#         parameter Tensors as well as a list of uniform names that correspond to the tensors in the previous list.
+#         """
+#         Shader.set_render_size(width, height)
+#         args_list = []
+#         uniform_list = []
+#         if call_dict is None:
+#             call_dict = dict()
+#             self._build_call_dict(call_dict, args_list, uniform_list=uniform_list)
+#
+#         # Evaluate call dict
+#         args_dict = dict()
+#         self._eval_dict(args_dict, call_dict)
+#         img = self._shade(args_dict)
+#
+#         return img, call_dict, args_list, uniform_list
+#
+#     def _build_call_dict(self, call_dict: dict, args_list: list, uniform_list: list):
+#         shader_inputs = self.get_shader().get_inputs()
+#         assert len(shader_inputs) == len(self._socket_modules)
+#
+#         for i, (socket, mod) in enumerate(self._socket_modules):
+#             arg = socket.label()
+#             mod_arg = self.get_shader().get_parsed_code().get_modified_arg_name(arg)
+#             type_ = TYPE_VALUE
+#
+#             assert shader_inputs[i][1] == arg  # Assert that we're working with the same argument
+#             if socket.isConnected():
+#                 nodes = socket.get_connected_nodes()
+#                 assert len(nodes) == 1  # It should be an input node, so it should only be able to have 1 connected node
+#                 node = nodes[0]
+#                 type_ = TYPE_FUNC
+#                 args = {}
+#                 value = node._shade
+#                 node._build_call_dict(args, args_list, uniform_list)
+#             else:
+#                 value = torch.tensor(mod.get_gl_value())
+#                 if len(value.shape) == 0:
+#                     value = value.unsqueeze(0)  # Ensure that we never get zero dimensional tensors
+#                 args_list.append(value)
+#                 uniform_list.append(mod_arg)
+#                 args = {}
+#                 # value = value.repeat(width, height, 1)  # Turn it into a matrix argument
+#
+#             call_dict[arg] = {
+#                 TYPE: type_,
+#                 VALUE: value,
+#                 ARGS: args,
+#                 MODIFIED_ARG: mod_arg
+#             }
+#
+#     def _eval_dict(self, args, call_dict):
+#         for arg, d in call_dict.items():
+#             type_ = d[TYPE]
+#             if type_ == TYPE_FUNC:
+#                 func = d[VALUE]
+#                 func_args = {}
+#                 self._eval_dict(func_args, d[ARGS])
+#                 args[arg] = func(func_args)
+#             if type_ == TYPE_VALUE:
+#                 args[arg] = d[VALUE]
+#
+#     def _shade(self, args: dict):
+#         width, height = Shader.width, Shader.height
+#         mat_args = dict()
+#         for key, arg in args.items():
+#             if len(arg.shape) == 3 and arg.shape[0] == width and arg.shape[1] == height:
+#                 mat_args[key] = arg
+#             else:
+#                 mat_args[key] = arg.repeat(width, height, 1)
+#
+#         return self.get_shader().shade_mat(**mat_args)
+
+
+class MaterialOutputNode(GShaderNode):
+    graph_changed = pyqtSignal()
+
+    def __init__(self, node_scene: NodeScene):
+        super().__init__(node_scene, shader=MaterialOutputShader(), label="Material Output Node")
+
+        # define data properties
+        self._deletable = False
+        self._program = self._shader.get_program()
+        self._io_mapping = {}  # node.id() -> (uniform name, modified uniform name)
+        self._connected_node = None
+
+    def _handle_socket_connection(self, socket: GNodeSocket, edge: GEdge):
+        # Start tracking the connected node, so that each time it gets connected, the Material Output Node is notified
+        if edge.out_socket == socket:
+            other_socket = edge.in_socket
+        else:
+            other_socket = edge.out_socket
+
+        other_node = other_socket.parent_node()
+        self._connected_node = other_node
+        self._handle_graph_change()
+
+    def _handle_graph_change(self, *args):
+        connected_nodes = self._connected_node.get_ancestor_nodes(add_self=True)
+
+        for n in connected_nodes:
+            n.connection_changed.connect(self._handle_graph_change)
+            n.input_changed.connect(self._handle_input_changed)
+
+        self._recompile()  # Compile and get new program
+        self._create_io_mapping(connected_nodes)  # needs to be called after the code has been compiled.
+        for node in connected_nodes:
+            self._handle_input_changed(node)  # send current input from not node_graph to program
+        self.graph_changed.emit()  # Notify the material that the node_graph has changed and there's a new program ready
+
+    def _recompile(self):
+        self.get_shader().recompile(self)
+        self._program = self.get_shader().get_program()
+
+    def _create_io_mapping(self, nodes: typing.List[ShaderNode]):
+        """Creates a mapping that tracks nodes and their modified argument names."""
+        for node in nodes:
+            node_id = node.id()
+            if node_id not in self._io_mapping:
+                self._io_mapping[node_id] = {}
+
+            node_inputs = node.get_input(exclude_connected=True)
+
+            for arg, mod_arg, _ in node_inputs:
+                self._io_mapping[node_id][arg] = mod_arg
+
+    def _handle_input_changed(self, node: ShaderNode):
+        set_program_uniforms_from_node(self._program, node)
+
+    def get_shader(self) -> CompilableShader:
+        return self._shader
+
+    def get_program(self, copy=True, set_input=True) -> Program:
+        """
+        Gets the full compiled Program of the node tree.
+        :param copy: If True, recompiles the shader and returns a copy of the Program or else returns the instance held by this Node.
+        :param set_input: If True, will set the appropriate input to the program from all connected nodes. Only applicable is copy=True.
+        :return: a gloo.Program instance.
+        """
+        if copy:
+            _, _, program = self.get_shader().compile(self)
+            if set_input:
+                connected_nodes = self._connected_node.get_ancestor_nodes(add_self=True)
+                for node in connected_nodes:
+                    set_program_uniforms_from_node(program, node)
+
+            return program
+        else:
+            return self._program
+
+    def render(self, width, height, call_dict: dict = None) -> typing.Tuple[torch.Tensor, dict, list, dict]:
+        for _, socket in self._node.get_input_sockets().items():
+            if socket.is_connected():
+                return super().render(width, height, call_dict)
+
+        return None, call_dict, [], {}  # The input is not getting fed a shader, and we can't render anything

@@ -6,7 +6,7 @@ from PyQt5.QtGui import QWheelEvent, QMouseEvent
 from PyQt5.QtWidgets import QGraphicsView, QMenu, QGraphicsSceneMouseEvent, QMessageBox
 
 from src.gui.node_editor.control_center import ControlCenter
-from src.gui.node_editor.edge import Edge
+from src.gui.node_editor.g_edge import GEdge
 from src.gui.node_editor.material import Material
 from src.misc import string_funcs, array_funcs
 from src.shaders.brick_shader import BrickShader
@@ -66,14 +66,14 @@ class NodeView(QGraphicsView):
                 msg.setIcon(QMessageBox.Information)
                 msg.exec_()
 
-    def draw_edge(self, edge: Edge):
+    def draw_edge(self, edge: GEdge):
         scene = self.cc.active_scene
         if scene:
             scene.addItem(edge)
             self._current_edge = edge
             self.is_drawing_edge = True
 
-    def cancel_edge(self, edge: Edge):
+    def cancel_edge(self, edge: GEdge):
         scene = self.cc.active_scene
         if edge == self._current_edge and scene:
             scene.removeItem(edge)

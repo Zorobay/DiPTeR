@@ -6,7 +6,7 @@ import torch
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from torch.optim.optimizer import Optimizer
 
-from src.gui.node_editor.node import MaterialOutputNode
+from src.gui.node_editor.g_node_widget import MaterialOutputNode
 from src.optimization.losses import Loss
 from src.misc import image_funcs
 

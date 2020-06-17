@@ -1,7 +1,7 @@
 import typing
 
 import torch
-from node_graph.internal_types import DataType
+from node_graph.data_type import DataType
 from torch import Tensor
 
 import src.shaders.lib.glsl_builtins as gl

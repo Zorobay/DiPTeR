@@ -4,7 +4,7 @@ import uuid
 
 from PyQt5.QtCore import QObject, pyqtSignal
 
-from src.gui.node_editor.edge import Edge
+from src.gui.node_editor.g_edge import GEdge
 from src.gui.node_editor.material import Material
 from src.gui.node_editor.node_scene import NodeScene
 from src.shaders.material_output_shader import MaterialOutputShader
@@ -15,7 +15,7 @@ _logger = logging.getLogger(__name__)
 
 class ControlCenter(QObject):
     active_material_changed = pyqtSignal(Material)
-    edge_spawned = pyqtSignal(Edge)
+    edge_spawned = pyqtSignal(GEdge)
 
     def __init__(self):
         super().__init__()
