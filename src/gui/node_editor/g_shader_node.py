@@ -242,7 +242,7 @@ class GShaderNode(QGraphicsWidget):
             raise TypeError("Data Type {} is not yet supported!".format(dtype))
 
         # Create a module and add to this node
-        module = SocketModule(input_label, input_widget)
+        module = SocketModule(socket, input_label, input_widget)
         module.input_changed.connect(self._notify_change)
         module.set_label_palette(self._input_label_palette)
         module.set_default_value(socket.value())
@@ -286,14 +286,18 @@ class GShaderNode(QGraphicsWidget):
         painter.setBrush(QBrush(self._bg_color))
         painter.drawRoundedRect(0, 0, self._width, self._height, self._rounding, 1)
 
-    def render(self, width: int, height: int) -> typing.Tuple[torch.Tensor, list]:
+    def render(self, width: int, height: int, retain_graph=False) -> typing.Tuple[torch.Tensor, list]:
         """
         Renders an image from this node graph.
+
         :param width: pixel width of rendered image
         :param height: pixel height of rendered image
+        :param retain_graph: If True, updated socket values will not be fetched, instead, saved tensor values will be used. If using
+            backpropagation that updates the returned tensor parameters in-place, set this to True, otherwise set to False so that parameter values
+            are fetched from input Sockets.
         :return: a Tensor containing the rendered image and a list of parameter Tensors (one for each unconnected graph input)
         """
-        return self._node.render(width, height)
+        return self._node.render(width, height, retain_graph=retain_graph)
 
     def __str__(self):
         cls = self.__class__
@@ -379,9 +383,9 @@ class GMaterialOutputNode(GShaderNode):
         else:
             return self._program
 
-    def render(self, width, height) -> typing.Tuple[torch.Tensor, list]:
+    def render(self, width, height, retain_graph=False) -> typing.Tuple[torch.Tensor, list]:
         for socket in self.get_in_sockets():
             if socket.is_connected():
-                return super().render(width, height)
+                return super().render(width, height, retain_graph=retain_graph)
 
         return None, list() # The input is not getting fed a shader, and we can't render anything

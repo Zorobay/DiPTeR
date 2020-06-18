@@ -67,7 +67,7 @@ class GradientDescentSettings:
 class GradientDescent(QObject):
     first_render_done = pyqtSignal(dict)  # parameter values dict
     iteration_done = pyqtSignal(dict)
-    finished = pyqtSignal(list, np.ndarray)
+    finished = pyqtSignal(dict, np.ndarray)
 
     def __init__(self, image_to_match: torch.Tensor, out_node: GMaterialOutputNode, settings: GradientDescentSettings,
                  optimizer: Optimizer = torch.optim.Adam):
@@ -95,26 +95,27 @@ class GradientDescent(QObject):
         self.finished.emit(params, loss_hist)
 
     def _run_gd(self, lr=0.01, max_iter=150, early_stopping_thresh=0.01) -> typing.Tuple[list, np.ndarray]:
-        _, params = self.out_node.render(self.width, self.height)
+        _, args_dict = self.out_node.render(self.width, self.height, retain_graph=True)
+        args_list = [args_dict[k] for k in args_dict]
 
-        for p in params:
+        for p in args_list:
             p.requires_grad = True
 
-        optimizer = self.optimizer(params, lr=lr)
+        optimizer = self.optimizer(args_list, lr=lr)
         loss_hist = np.empty(max_iter, dtype=np.float32)
 
         for i in range(max_iter):
             if self._stop:
-                return params, loss_hist
+                return args_dict, loss_hist
 
             with torch.autograd.set_detect_anomaly(True):
                 optimizer.zero_grad()
                 start = time.time()
-                render, _ = self.out_node.render(self.width, self.height)
+                render, _ = self.out_node.render(self.width, self.height, retain_graph=True)
                 loss = self.loss_func(render, self.target)
                 new_loss_np = float(loss.detach())
                 loss_hist[i] = new_loss_np
-                props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1], 'learning_rate': lr, 'params': params,
+                props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1], 'learning_rate': lr, 'params': args_dict,
                          'iter_time': 0.0, 'render': render}
 
                 # We need to break here, otherwise the parameters will change when we call optimizer.step()
@@ -129,4 +130,4 @@ class GradientDescent(QObject):
             props['iter_time'] = time.time() - start
             self.iteration_done.emit(props)
 
-        return params, loss_hist
+        return args_dict, loss_hist
