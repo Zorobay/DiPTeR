@@ -1,4 +1,3 @@
-import time
 import typing
 import uuid
 
@@ -33,7 +32,7 @@ class Node(GraphElement):
         self._out_sockets = list()
         self._label = label
 
-    def add_socket(self, type_: SocketType, label: str = "", dtype: DataType=None) -> NodeSocket:
+    def add_socket(self, type_: SocketType, label: str = "", dtype: DataType = None) -> NodeSocket:
         """
         Adds an input socket to this Node
         :return: the created Socket
@@ -134,13 +133,20 @@ class Node(GraphElement):
 
 class ShaderNode(Node):
 
-    def __init__(self, shader: Shader, set_default_inputs: bool = False, **kwargs):
+    def __init__(self, shader: Shader, set_default_inputs: bool = True, **kwargs):
+        """
+        Creates a new ShaderNode that can render an image. A shader must be supplied.
+        :param shader: The Shader class for this node.
+        :param set_default_inputs: If True, will set the values of input sockets to the defaults specified in the Shader class.
+        :param kwargs:
+        """
         super().__init__(**kwargs)
 
-        if not kwargs['label']:
+        if "label" not in kwargs:
             self.set_label(shader.__class__)
 
         self._shader = shader
+        self._render_arguments = dict()
 
         self._init()
 
@@ -164,35 +170,48 @@ class ShaderNode(Node):
         for i, (_, label, _, _, default) in enumerate(self._shader.get_inputs()):
             self._in_sockets[i].set_value(default)
 
-    def render(self, width: int, height: int) -> typing.Tuple[Tensor, list]:
+    def render(self, width: int, height: int, retain_graph: bool = False) -> typing.Tuple[Tensor, list]:
         """
         Renders an image from this node graph.
+
         :param width: pixel width of rendered image
         :param height: pixel height of rendered image
-        :return: a Tensor containing the rendered image and a list of parameter Tensors (one for each unconnected graph input)
+        :param retain_graph: If True, updated socket values will not be fetched, instead, saved tensor values will be used. If using
+            backpropagation that updates the returned tensor parameters in-place, set this to True, otherwise set to False so that parameter values
+            are fetched from input Sockets.
+        :return: a Tensor containing the rendered image and a dictionary of modified argument names mapped to parameter Tensors (one for each
+            unconnected graph input)
         """
         Shader.set_render_size(width, height)
         shader_inputs = self.get_shader().get_inputs()
         assert len(shader_inputs) == len(self._in_sockets)
 
-        args_list = []
+        complete_args_dict = {}
         arguments = {}
 
         for i, socket in enumerate(self._in_sockets):
             arg = socket.label()
+            mod_arg = self.get_shader().get_parsed_code().get_modified_arg_name(arg)
             if socket.is_connected():
                 nodes = socket.get_connected_nodes()
                 assert len(nodes) == 1  # It should be an input node, so it should only be able to have 1 connected node
-                t, al = nodes[0].render(width, height)
-                args_list.extend(al)
+                t, ad = nodes[0].render(width, height, retain_graph=retain_graph)
+                complete_args_dict.update(ad)
             else:
-                value = socket.value()
-                t = torch.tensor(value, dtype=torch.float32).unsqueeze(0)
-                args_list.append(t)
+                if arg in self._render_arguments and retain_graph:  # Argument is already fetched, get saved reference
+                    t = self._render_arguments[arg]
+                else:
+                    value = socket.value()
+                    if isinstance(value, torch.Tensor):
+                        t = value.clone().detach()
+                    else:
+                        t = torch.tensor(value, dtype=torch.float32).unsqueeze(0)
+                    self._render_arguments[arg] = t
+                complete_args_dict[mod_arg] = t
 
             arguments[arg] = t
 
-        return self._shade(arguments), args_list
+        return self._shade(arguments), complete_args_dict
 
     def _shade(self, args: dict):
         width, height = Shader.width, Shader.height

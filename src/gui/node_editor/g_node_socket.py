@@ -57,6 +57,9 @@ class GNodeSocket(QGraphicsWidget):
     def value(self):
         return self._socket.value()
 
+    def set_value(self, value: typing.Any):
+        self._socket.set_value(value)
+
     def parent_node(self) -> 'GShaderNode':
         return self._parent_g_node
 

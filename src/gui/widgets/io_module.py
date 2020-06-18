@@ -5,6 +5,7 @@ from abc import abstractmethod
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt
 from PyQt5.QtGui import QPalette, QColor
 from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout, QSizePolicy, QVBoxLayout
+from gui.node_editor.g_node_socket import GNodeSocket
 
 
 class Input:
@@ -36,8 +37,9 @@ class Input:
 class SocketModule(QWidget):
     input_changed = pyqtSignal()
 
-    def __init__(self, label: str, input_widget: Input):
+    def __init__(self, socket: GNodeSocket, label: str, input_widget: Input):
         super().__init__()
+        self._socket = socket
         self._label = label
         self.widget = input_widget
         self._id = uuid.uuid4()
@@ -62,6 +64,7 @@ class SocketModule(QWidget):
 
     @pyqtSlot(name="_input_changed")
     def _input_changed(self):
+        self._socket.set_value(self.widget.get_gl_value())
         self.input_changed.emit()
 
     def id(self) -> uuid.UUID:
