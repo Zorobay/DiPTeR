@@ -204,7 +204,7 @@ class TextureMatcher(QWidget):
 
         self.setLayout(self._layout)
 
-    def _set_image_to_match(self, image):
+    def _set_image_to_match(self, image: Image):
         # We want to display the same image that we are testing the loss against. This image is columns majos (input,y)
         # which is not what matplotlib want's so we have to transpose it back to row major
         self._target_image = image.convert("RGB")
