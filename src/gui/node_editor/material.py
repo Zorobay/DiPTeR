@@ -6,7 +6,7 @@ from PyQt5.QtCore import QObject, pyqtSignal, Qt
 from glumpy.gloo import Program
 
 from src.gui.node_editor.g_edge import GEdge
-from src.gui.node_editor.g_node_widget import ShaderNode, MaterialOutputNode, GShaderNode
+from src.gui.node_editor.g_shader_node import ShaderNode, GMaterialOutputNode, GShaderNode
 from src.gui.node_editor.node_scene import NodeScene
 from src.gui.node_editor.g_node_socket import GNodeSocket
 from src.shaders.shader_super import FunctionShader, CompilableShader
@@ -72,7 +72,7 @@ class Material(QObject):
         self.changed.emit()
 
     def _add_material_output_node(self):
-        node = MaterialOutputNode(self.node_scene)
+        node = GMaterialOutputNode(self.node_scene)
         self._add_node(node)
 
         node.graph_changed.connect(self._handle_graph_change)
@@ -86,7 +86,7 @@ class Material(QObject):
 
         _logger.debug("Added default Material Output Node {} to material {}.".format(node.label(), self.name))
 
-    def get_material_output_node(self) -> MaterialOutputNode:
+    def get_material_output_node(self) -> GMaterialOutputNode:
         return self._mat_output_node
 
     def _handle_graph_change(self):

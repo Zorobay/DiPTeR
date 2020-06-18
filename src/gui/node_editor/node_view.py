@@ -108,7 +108,7 @@ class NodeView(QGraphicsView):
 
                 for id_ in nodes:
                     n = nodes[id_]
-                    if n.isSelected() and n.isDeletable():
+                    if n.isSelected() and n.is_deletable():
                         delete.append(id_)
 
                 for id_ in delete:

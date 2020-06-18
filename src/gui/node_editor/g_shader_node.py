@@ -2,21 +2,19 @@ import abc
 import typing
 import uuid
 
-import numpy as np
 import torch
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QRectF, pyqtSignal
 from PyQt5.QtGui import QBrush, QFont, QColor, QPalette, QPainter, QPen
-from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsWidget, QGraphicsLinearLayout
+from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsWidget
 from glumpy.gloo import Program
 from node_graph.edge import Edge
-
-from node_graph.node import Node, ShaderNode
+from node_graph.node import ShaderNode
 from node_graph.node_socket import NodeSocket
 from src.gui.node_editor.g_edge import GEdge
+from src.gui.node_editor.g_node_socket import GNodeSocket
 from src.gui.node_editor.layouts import GraphicsGridLayout
 from src.gui.node_editor.node_scene import NodeScene
-from src.gui.node_editor.g_node_socket import GNodeSocket
 from src.gui.widgets.array_input import ArrayInput
 from src.gui.widgets.color_input import ColorInput
 from src.gui.widgets.io_module import SocketModule, OutputModule
@@ -104,7 +102,7 @@ class GShaderNode(QGraphicsWidget):
         self._master_layout.setRowAlignment(1, Qt.AlignVCenter)
         self._master_layout.setColumnFixedWidth(0, 15)  # Input socket column
         self._master_layout.setColumnFixedWidth(2, 15)  # Output socket column
-        self._master_layout.setColumnFixedWidth(1, self._width-15-15)
+        self._master_layout.setColumnFixedWidth(1, self._width - 15 - 15)
 
         self.setLayout(self._master_layout)
 
@@ -288,6 +286,15 @@ class GShaderNode(QGraphicsWidget):
         painter.setBrush(QBrush(self._bg_color))
         painter.drawRoundedRect(0, 0, self._width, self._height, self._rounding, 1)
 
+    def render(self, width: int, height: int) -> typing.Tuple[torch.Tensor, list]:
+        """
+        Renders an image from this node graph.
+        :param width: pixel width of rendered image
+        :param height: pixel height of rendered image
+        :return: a Tensor containing the rendered image and a list of parameter Tensors (one for each unconnected graph input)
+        """
+        return self._node.render(width, height)
+
     def __str__(self):
         cls = self.__class__
         return "{} '{}({})'".format(cls, self._label, self.get_num())
@@ -301,58 +308,8 @@ class GShaderNode(QGraphicsWidget):
 
         return False
 
-# class ShaderNode(GShaderNode):
-#     input_changed = pyqtSignal(object)  # Node
-#
-#     def __init__(self, node_scene: NodeScene, label: str, shader: Shader, parent=None):
-#         super().__init__(node_scene, label, parent)
-#
-#         # define data properties
-#         self._socket_modules = []  # Tracks which module belongs to which socket
-#         self._shader = shader
-#
-#         # Initialize the widget
-#         self._init_widget()
-#         self.set_label(self._title)
-#
-#     def _init_widget(self):
-#         for nf, nu, t, ra, de in self._shader.get_inputs():
-#             self._add_input_module(nf, nu, t, ra, de)
-#
-#         for nf, t in self._shader.get_outputs():
-#             self._add_output_module(nf, t)
-#
-#     def _notify_change(self):
-#         """Event is called when any of this node's widget's inputs are changed"""
-#         self.input_changed.emit(self)
-#
-#     def label(self):
-#         return super().label() + " ({})".format(self.get_num())
-#
-#     def set_num(self, num: int):
-#         super().set_num(num)
-#         self.set_label(self._title)  # Update title text (calls subclass' get_title())
-#
-#     def get_shader(self) -> Shader:
-#         return self._shader
-#
-#     def get_input(self, exclude_connected: True) -> typing.List[typing.Tuple[str, str, typing.Any]]:
-#         """Returns a list of argument names, its modified name as well as the the value in the node input for that argument.
-#
-#         Note that is the shader held by this node has not been recompiled, the modified name of the argument is undefined."""
-#         out = []
-#         for socket, mod in self._socket_modules:
-#             if not exclude_connected or not socket.isConnected():
-#                 value = mod.get_gl_value()
-#                 argument: str = mod.label()
-#                 modified_name = self.get_shader().get_parsed_code().primary_function.get_argument(argument).get_modified_name()
-#
-#                 out.append((argument, modified_name, value))
-#
-#         return out
 
-
-class MaterialOutputNode(GShaderNode):
+class GMaterialOutputNode(GShaderNode):
     graph_changed = pyqtSignal()
 
     def __init__(self, node_scene: NodeScene):
@@ -377,7 +334,7 @@ class MaterialOutputNode(GShaderNode):
             n.input_changed.connect(self._handle_input_changed)
 
         self._recompile()  # Compile and get new program
-        #self._create_io_mapping(connected_nodes)  # needs to be called after the code has been compiled.
+        # self._create_io_mapping(connected_nodes)  # needs to be called after the code has been compiled.
         for node in connected_nodes:
             self._handle_input_changed(node)  # send current input from not node_graph to program
         self.graph_changed.emit()  # Notify the material that the node_graph has changed and there's a new program ready
@@ -422,9 +379,9 @@ class MaterialOutputNode(GShaderNode):
         else:
             return self._program
 
-    def render(self, width, height, call_dict: dict = None) -> typing.Tuple[torch.Tensor, dict, list, dict]:
-        for _, socket in self._node.get_input_sockets().items():
+    def render(self, width, height) -> typing.Tuple[torch.Tensor, list]:
+        for socket in self.get_in_sockets():
             if socket.is_connected():
-                return super().render(width, height, call_dict)
+                return super().render(width, height)
 
-        return None, call_dict, [], {}  # The input is not getting fed a shader, and we can't render anything
+        return None, list() # The input is not getting fed a shader, and we can't render anything

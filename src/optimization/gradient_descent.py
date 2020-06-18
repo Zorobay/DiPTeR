@@ -4,11 +4,10 @@ import typing
 import numpy as np
 import torch
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
-from torch.optim.optimizer import Optimizer
-
-from src.gui.node_editor.g_node_widget import MaterialOutputNode
-from src.optimization.losses import Loss
+from src.gui.node_editor.g_shader_node import GMaterialOutputNode
 from src.misc import image_funcs
+from src.optimization.losses import Loss
+from torch.optim.optimizer import Optimizer
 
 
 class GradientDescentSettings:
@@ -70,7 +69,7 @@ class GradientDescent(QObject):
     iteration_done = pyqtSignal(dict)
     finished = pyqtSignal(list, np.ndarray)
 
-    def __init__(self, image_to_match: torch.Tensor, out_node: MaterialOutputNode, settings: GradientDescentSettings,
+    def __init__(self, image_to_match: torch.Tensor, out_node: GMaterialOutputNode, settings: GradientDescentSettings,
                  optimizer: Optimizer = torch.optim.Adam):
         super().__init__()
         self.out_node = out_node
@@ -96,7 +95,7 @@ class GradientDescent(QObject):
         self.finished.emit(params, loss_hist)
 
     def _run_gd(self, lr=0.01, max_iter=150, early_stopping_thresh=0.01) -> typing.Tuple[list, np.ndarray]:
-        _, call_dict, params, uniform_names = self.out_node.render(self.width, self.height)
+        _, params = self.out_node.render(self.width, self.height)
 
         for p in params:
             p.requires_grad = True
@@ -111,12 +110,12 @@ class GradientDescent(QObject):
             with torch.autograd.set_detect_anomaly(True):
                 optimizer.zero_grad()
                 start = time.time()
-                render, _, _, _ = self.out_node.render(self.width, self.height, call_dict)
+                render, _ = self.out_node.render(self.width, self.height)
                 loss = self.loss_func(render, self.target)
                 new_loss_np = float(loss.detach())
                 loss_hist[i] = new_loss_np
                 props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1], 'learning_rate': lr, 'params': params,
-                         'uniforms': uniform_names, 'iter_time': 0.0, 'render': render}
+                         'iter_time': 0.0, 'render': render}
 
                 # We need to break here, otherwise the parameters will change when we call optimizer.step()
                 if loss <= early_stopping_thresh:

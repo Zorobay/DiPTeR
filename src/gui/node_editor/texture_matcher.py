@@ -6,7 +6,7 @@ from PyQt5.QtCore import pyqtSignal, QThread, Qt
 from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QComboBox
 import numpy as np
 
-from src.gui.node_editor.g_node_widget import MaterialOutputNode
+from src.gui.node_editor.g_shader_node import GMaterialOutputNode
 from src.gui.rendering.image_plotter import ImagePlotter
 from src.gui.rendering.opengl_widget import OpenGLWidget
 from src.gui.widgets.labelled_input import LabelledInput
@@ -137,7 +137,7 @@ class SettingsPanel(QWidget):
 
 class TextureMatcher(QWidget):
 
-    def __init__(self, mat_output_node: MaterialOutputNode):
+    def __init__(self, mat_output_node: GMaterialOutputNode):
         super().__init__(parent=None)
 
         # self._openGL = openGL
@@ -229,9 +229,8 @@ class TextureMatcher(QWidget):
         loss_hist = props['loss_hist']
         iter = props['iter']
         params = props['params']
-
-        uniform_names = props['uniforms']
         render = props['render']
+
         self._image_plotter.set_image(render)
 
         x = np.linspace(0, iter, num=iter+1, endpoint=True)

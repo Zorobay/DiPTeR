@@ -164,11 +164,18 @@ class ShaderNode(Node):
         for i, (_, label, _, _, default) in enumerate(self._shader.get_inputs()):
             self._in_sockets[i].set_value(default)
 
-    def render(self, width: int, height: int) -> Tensor:
+    def render(self, width: int, height: int) -> typing.Tuple[Tensor, list]:
+        """
+        Renders an image from this node graph.
+        :param width: pixel width of rendered image
+        :param height: pixel height of rendered image
+        :return: a Tensor containing the rendered image and a list of parameter Tensors (one for each unconnected graph input)
+        """
         Shader.set_render_size(width, height)
         shader_inputs = self.get_shader().get_inputs()
         assert len(shader_inputs) == len(self._in_sockets)
 
+        args_list = []
         arguments = {}
 
         for i, socket in enumerate(self._in_sockets):
@@ -176,14 +183,16 @@ class ShaderNode(Node):
             if socket.is_connected():
                 nodes = socket.get_connected_nodes()
                 assert len(nodes) == 1  # It should be an input node, so it should only be able to have 1 connected node
-                t = nodes[0].render(width, height)
+                t, al = nodes[0].render(width, height)
+                args_list.extend(al)
             else:
                 value = socket.value()
                 t = torch.tensor(value, dtype=torch.float32).unsqueeze(0)
+                args_list.append(t)
 
             arguments[arg] = t
 
-        return self._shade(arguments)
+        return self._shade(arguments), args_list
 
     def _shade(self, args: dict):
         width, height = Shader.width, Shader.height
