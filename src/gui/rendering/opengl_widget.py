@@ -3,15 +3,14 @@ import logging
 import numpy as np
 from PyQt5.QtCore import QTimer, Qt, pyqtSignal
 from PyQt5.QtGui import QMouseEvent, QImage
-from PyQt5.QtWidgets import QOpenGLWidget, QMenu, QFileDialog
+from PyQt5.QtWidgets import QOpenGLWidget, QMenu, QFileDialog, QSizePolicy
 from glumpy import gl, glm, gloo
 from glumpy.gloo import Program
-
 from src.gui.node_editor.control_center import ControlCenter
 from src.gui.node_editor.material import Material
 from src.opengl import object_vertices
-from src.opengl.object_vertices import get_2d_plane, VERTEX_COORD_MAXES, VERTEX_COORD_MINS
-from src.shaders import OBJECT_MATRIX_NAME, VIEW_MATRIX_NAME, PROJECTION_MATRIX_NAME, UNIFORM_VERTEX_MAXES, UNIFORM_VERTEX_MINS, IN_VERTEX_POS_NAME
+from src.opengl.object_vertices import VERTEX_COORD_MAXES, VERTEX_COORD_MINS
+from src.shaders import OBJECT_MATRIX_NAME, VIEW_MATRIX_NAME, PROJECTION_MATRIX_NAME, UNIFORM_VERTEX_MAXES, UNIFORM_VERTEX_MINS
 from src.shaders.default_shader import DefaultShader
 
 _logger = logging.getLogger(__name__)
@@ -24,10 +23,6 @@ class OpenGLWidget(QOpenGLWidget):
 
     def __init__(self, width: int, height: int, cc: ControlCenter = None, render_mode: int = FREE_RENDER_MODE):
         super().__init__()
-
-        # Set Widget settings
-        self.setMinimumSize(width, height)
-        self.setMouseTracking(False)
 
         # Define variables to track objects
         self.cc = cc
@@ -57,6 +52,12 @@ class OpenGLWidget(QOpenGLWidget):
         self._view_to_projection = np.eye(4, dtype=np.float32)
         self._maxes = np.array((-1, -1, -1), dtype=np.float32)
         self._mins = np.array((1., 1., 1.), dtype=np.float32)
+
+        # Set Widget settings
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        self.setMinimumSize(100, 100)
+        self.resizeGL(width, height)
+        self.setMouseTracking(False)
 
     @property
     def frame_rate(self):
@@ -156,13 +157,11 @@ class OpenGLWidget(QOpenGLWidget):
     def _set_perspective_projection(self, w: int, h: int):
         ratio = w / float(h)
         self._view_to_projection = glm.perspective(45.0, ratio, znear=self._near_clip_z, zfar=self._far_clip_z)
-        self._program[PROJECTION_MATRIX_NAME] = self._view_to_projection
         self.update()
 
     def _set_ortho_texture_projection(self, w: int, h: int):
         self._object_to_world = np.eye(4, dtype=np.float32)
         self._world_to_view = np.eye(4, dtype=np.float32)
-        # self._view_to_projection = glm.ortho(0, w, 0, h, -1, 1)
         self._view_to_projection = np.eye(4, dtype=np.float32)
         self.update()
 

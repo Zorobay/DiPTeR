@@ -31,6 +31,10 @@ class MainWidget(QWidget):
         self._init_widget()
 
     def _init_widget(self):
+        self.grid_layout.setColumnStretch(0,10)
+        self.grid_layout.setColumnStretch(1, 4)
+        self.grid_layout.setColumnStretch(2,2)
+
         self.grid_layout.addWidget(self.material_selector, 0, 0, 1, 1)
         self.grid_layout.addWidget(self.node_view, 1, 0, 1, 1)
         self.grid_layout.addWidget(self.openGL, 0, 1, 2, 1)

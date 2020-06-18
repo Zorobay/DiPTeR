@@ -1,11 +1,12 @@
 import logging
 import typing
 
+import numpy as np
+import pyqtgraph as pg
 from PIL import Image
 from PyQt5.QtCore import pyqtSignal, QThread, Qt
+from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QComboBox
-import numpy as np
-
 from src.gui.node_editor.g_shader_node import GMaterialOutputNode
 from src.gui.rendering.image_plotter import ImagePlotter
 from src.gui.rendering.opengl_widget import OpenGLWidget
@@ -14,8 +15,6 @@ from src.gui.widgets.line_input import FloatInput, IntInput
 from src.misc import image_funcs
 from src.optimization import losses
 from src.optimization.gradient_descent import GradientDescent, GradientDescentSettings
-from src.shaders.default_shader import DefaultShader
-import pyqtgraph as pg
 
 _logger = logging.getLogger(__name__)
 
@@ -151,10 +150,8 @@ class TextureMatcher(QWidget):
         self._target_plotter = ImagePlotter("Target")
         self._loss_plotter = pg.PlotWidget(title="Loss")
         self._layout = QGridLayout()
-        self._shader = DefaultShader()
-
-        self._program = self._shader.get_program()
-        #self._program = (copy=True, set_input=False)
+        self._shader = self._out_node.get_shader()
+        self._program = self._out_node.get_program()
 
         # Define properties
         self._loss_plot_color = (1., 0.6, 0., 1.0)
@@ -183,11 +180,27 @@ class TextureMatcher(QWidget):
         self._target_plotter.hide_axes()
         self._target_plotter.set_user_input(False)
 
-        self._layout.addWidget(self._openGL, 0, 0)
+        # Setup openGL rendering window
+        opengl_layout = QVBoxLayout()
+        opengl_layout.setContentsMargins(20, 0, 20, 10)
+        opengl_title = QLabel("OpenGL Render")
+        opengl_title_font = QFont()
+        opengl_title_font.setPointSize(14)
+        opengl_title.setFont(opengl_title_font)
+        opengl_layout.addWidget(opengl_title, alignment=Qt.AlignHCenter)
+        opengl_layout.addWidget(self._openGL)
+
+        # Setup strech factors
+        self._layout.setColumnStretch(0, 2)
+        self._layout.setColumnStretch(1, 2)
+        self._layout.setColumnStretch(2, 2)
+        self._layout.setColumnStretch(3, 1)
+
+        self._layout.addLayout(opengl_layout, 0, 0)
         self._layout.addWidget(self._image_plotter, 0, 1)
         self._layout.addWidget(self._target_plotter, 0, 2)
         self._layout.addWidget(self._loss_plotter, 1, 0, 1, 3)
-        self._layout.addWidget(self._settings_panel, 0, 4)
+        self._layout.addWidget(self._settings_panel, 0, 3)
 
         self.setLayout(self._layout)
 
@@ -233,14 +246,14 @@ class TextureMatcher(QWidget):
 
         self._image_plotter.set_image(render)
 
-        x = np.linspace(0, iter, num=iter+1, endpoint=True)
+        x = np.linspace(0, iter, num=iter + 1, endpoint=True)
         self._loss_plotter.plot(x, loss_hist, symbol='o')
 
-        #self._set_parameter_values(params, uniform_names)
+        self._set_parameter_values(params)
         _logger.info("{}. loss: {}, params: {}".format(props['iter'], props['loss'], params))
 
-    def _set_parameter_values(self, params: list, uniforms: list):
-        for uniform, param in zip(uniforms, params):
+    def _set_parameter_values(self, params: dict):
+        for uniform, param in params.items():
             try:
                 self._program[uniform] = param.detach().numpy()
             except IndexError as e:
