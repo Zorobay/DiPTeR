@@ -1,14 +1,17 @@
 import logging
+import queue
 import typing
 
 import numpy as np
 import pyqtgraph as pg
 from PIL import Image
 from PyQt5.QtCore import pyqtSignal, QThread, Qt
-from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QComboBox, QMenuBar, QListWidget
+from PyQt5.QtGui import QFont, QBrush, QColor
+from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QComboBox, QMenuBar, QListWidget, \
+    QListWidgetItem
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from misc.fifo_queue import FIFOQueue
 from src.gui.node_editor.g_shader_node import GMaterialOutputNode
 from src.gui.rendering.image_plotter import ImagePlotter
 from src.gui.rendering.opengl_widget import OpenGLWidget
@@ -142,16 +145,25 @@ class LossVisualizer(QWidget):
         super().__init__(parent=None)
         self._mat_out_node = mat_output_node
 
+        # Declare widgets
         self._layout = QGridLayout()
         self._figure = Figure(figsize=(5, 5))
         self._canvas = FigureCanvas(self._figure)
         self._list_widget = QListWidget()
 
-        self._init()
+        # Declare data
+        self._selected_items = []
+        self._item_queue = FIFOQueue(maxsize=2)
+        self._bg_brush_selected = QBrush(QColor("#8bf9b0"))
+        self._bg_brush_default = QBrush(QColor("#ffffff"))
         self._list_parameters()
+        self._init()
 
     def _init(self):
         self.setWindowTitle("Loss Visualizer")
+
+        # Setup list widget
+        self._list_widget.itemChanged.connect(self._item_changed)
 
         self._layout.addWidget(self._list_widget, 0, 0)
         self._layout.addWidget(self._canvas, 0, 1)
@@ -176,8 +188,20 @@ class LossVisualizer(QWidget):
 
         for i in range(len(all_params)):
             item = self._list_widget.item(i)
-            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable ^ Qt.ItemIsSelectable)
             item.setCheckState(Qt.Unchecked)
+
+    def _item_changed(self, item: QListWidgetItem):
+
+        if item.checkState() == Qt.Checked:
+            if self._item_queue.is_full():
+                first_item = self._item_queue.pop()
+                first_item.setCheckState(Qt.Unchecked)
+
+            self._item_queue.put(item)
+        elif item.checkState() == Qt.Unchecked:
+            if item in self._item_queue:
+                self._item_queue.remove(item)
 
 
 class TextureMatcher(QWidget):
