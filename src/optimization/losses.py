@@ -5,8 +5,6 @@ from torch import Tensor
 from torch.nn import Module, MSELoss
 from torchvision import models, transforms as T
 
-#from src.gui.widgets.loading_widget import LoadingModal
-
 mse_loss = MSELoss(reduction="mean")
 sse_loss = MSELoss(reduction="sum")
 
@@ -63,7 +61,7 @@ class NeuralLoss(Loss):
 
     def _preprocess(self, x: Tensor):
         # Swap axes to get image on CxHxW form, which is required for Models in PyTorch, then Normalize to comply with VGG19 and add batch dimension
-        return self._normalize(x.permute(2,1,0)).unsqueeze(0)
+        return self._normalize(x.permute(2, 1, 0)).unsqueeze(0)
 
     def _gram_matrix(self, activation: Tensor, N: int, M: int):
         feature_map = activation.view(N, M)
@@ -89,7 +87,7 @@ class NeuralLoss(Loss):
                 G1 = self._gram_matrix(x_, N, M)
                 G2 = self._gram_matrix(target_, N, M)
 
-                E.append(sse_loss(G1, G2) * (1 / (4. * (N**2) * (M**2))))
+                E.append(sse_loss(G1, G2) * (1 / (4. * (N ** 2) * (M ** 2))))
 
         L_tot = torch.sum(torch.stack(E) * self._layer_weights)
         return L_tot
@@ -106,16 +104,18 @@ class MSELoss(Loss):
 
 class SquaredBinLoss(Loss):
 
-    def __init__(self):
+    def __init__(self, bin_size: int = 10):
         super().__init__()
+        self.size = bin_size
 
     def _loss(self, x: Tensor, target: Tensor):
-        size = 10
-        input_bins = torch.stack(torch.stack(target.split(size, dim=1)).split(size, dim=-1))
-        target_bins = torch.stack(torch.stack(target.split(size, dim=1)).split(size, dim=-1))
-        input_means = torch.mean(input_bins, dim=(2, 3, 4))
-        target_mean = torch.mean(target_bins, dim=(2, 3, 4))
-        return mse_loss(input_means, target_mean)
+        input_bins = x.unfold(1, self.size, self.size).unfold(0, self.size, self.size).transpose(2, -1)
+        input_bins = input_bins.reshape(input_bins.shape[0] * input_bins.shape[1], self.size, self.size, 3)
+        target_bins = target.unfold(1, self.size, self.size).unfold(0, self.size, self.size).transpose(2, -1)
+        target_bins = target_bins.reshape(target_bins.shape[0] * target_bins.shape[1], self.size, self.size, 3)
+        input_means = torch.mean(input_bins, dim=(1, 2))
+        target_means = torch.mean(target_bins, dim=(1, 2))
+        return mse_loss(input_means, target_means)
 
 
 class VerticalBinLoss(Loss):
