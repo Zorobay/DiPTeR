@@ -383,9 +383,20 @@ class GMaterialOutputNode(GShaderNode):
         else:
             return self._program
 
-    def render(self, width, height, retain_graph=False) -> typing.Tuple[torch.Tensor, list]:
+    def can_render(self) -> bool:
+        """
+        Checks whether any shader is connected to this output node and is thus ready to render.
+
+        :return: True if this node can render, False otherwise.
+        """
         for socket in self.get_in_sockets():
             if socket.is_connected():
-                return super().render(width, height, retain_graph=retain_graph)
+                return True
 
-        return None, list() # The input is not getting fed a shader, and we can't render anything
+        return False
+
+    def render(self, width, height, retain_graph=False) -> typing.Tuple[typing.Union[None, torch.Tensor], list]:
+        if self.can_render():
+            return super().render(width, height, retain_graph=retain_graph)
+
+        return None, list()  # The input is not getting fed a shader, and we can't render anything

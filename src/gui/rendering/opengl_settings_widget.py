@@ -1,15 +1,11 @@
 import types
 
-import autograd.numpy as anp
-import numpy as np
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QWidget, QComboBox, QLabel, QPushButton, QVBoxLayout, QHBoxLayout
-
-from src.gui.node_editor.control_center import Material, ControlCenter
+from PyQt5.QtWidgets import QWidget, QComboBox, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QMessageBox
+from src.gui.node_editor.control_center import ControlCenter
 from src.gui.node_editor.texture_matcher import TextureMatcher
 from src.gui.rendering.opengl_widget import OpenGLWidget
 from src.opengl import object_vertices
-from src.shaders.brick_shader import BrickShader
 
 
 def find_module_func_names(module):
@@ -98,6 +94,12 @@ class OpenGLSettingsWidget(QWidget):
         mat = self.cc.active_material
         if mat:
             out_node = mat.get_material_output_node()
-            if out_node:
+            if out_node and out_node.can_render():  # Check that the material output node exists
                 self._matcher = TextureMatcher(out_node)
                 self._matcher.show()
+            else:
+                # Not ready to render, show dialog to user...
+                dialog = QMessageBox(QMessageBox.Warning, "Warning",
+                                     "Can not start Texture Matcher with only a Material Ouput Node. "
+                                     "Please connect the output node to a shader and try again.", buttons=QMessageBox.Ok, parent=self)
+                dialog.exec()
