@@ -6,7 +6,9 @@ import pyqtgraph as pg
 from PIL import Image
 from PyQt5.QtCore import pyqtSignal, QThread, Qt
 from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QComboBox
+from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QComboBox, QMenuBar, QListWidget
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
 from src.gui.node_editor.g_shader_node import GMaterialOutputNode
 from src.gui.rendering.image_plotter import ImagePlotter
 from src.gui.rendering.opengl_widget import OpenGLWidget
@@ -134,15 +136,59 @@ class SettingsPanel(QWidget):
             self.match_stop.emit()
 
 
+class LossVisualizer(QWidget):
+
+    def __init__(self, mat_output_node: GMaterialOutputNode):
+        super().__init__(parent=None)
+        self._mat_out_node = mat_output_node
+
+        self._layout = QGridLayout()
+        self._figure = Figure(figsize=(5, 5))
+        self._canvas = FigureCanvas(self._figure)
+        self._list_widget = QListWidget()
+
+        self._init()
+        self._list_parameters()
+
+    def _init(self):
+        self.setWindowTitle("Loss Visualizer")
+
+        self._layout.addWidget(self._list_widget, 0, 0)
+        self._layout.addWidget(self._canvas, 0, 1)
+
+        self.setLayout(self._layout)
+
+    def _list_parameters(self):
+        all_nodes = self._mat_out_node.get_ancestor_nodes(add_self=False)
+        all_params = []
+
+        for node in all_nodes:
+            node_label = node.label()
+            node_num = node.get_num()
+
+            for inp in node.get_shader().get_inputs():
+                input_label = inp[1]
+                input_range = inp[3]
+
+                all_params.append("{} ({}): {}".format(node_label, node_num, input_label))
+
+        self._list_widget.addItems(all_params)
+
+        for i in range(len(all_params)):
+            item = self._list_widget.item(i)
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            item.setCheckState(Qt.Unchecked)
+
+
 class TextureMatcher(QWidget):
 
     def __init__(self, mat_output_node: GMaterialOutputNode):
         super().__init__(parent=None)
 
-        # self._openGL = openGL
         self._out_node = mat_output_node
 
         # Define components
+        self._menu_bar = QMenuBar()
         self._settings_drawer = QDockWidget(self, Qt.Drawer)
         self._settings_panel = SettingsPanel(self)
         self._openGL = OpenGLWidget(400, 400, None, OpenGLWidget.TEXTURE_RENDER_MODE)
@@ -152,6 +198,7 @@ class TextureMatcher(QWidget):
         self._layout = QGridLayout()
         self._shader = self._out_node.get_shader()
         self._program = self._out_node.get_program()
+        self._loss_visualizer = LossVisualizer(mat_output_node)
 
         # Define properties
         self._loss_plot_color = (1., 0.6, 0., 1.0)
@@ -168,6 +215,14 @@ class TextureMatcher(QWidget):
         self._init_widget()
 
     def _init_widget(self):
+        self.setWindowTitle("Texture Matcher")
+
+        # Setup menu
+        visualize_menu = self._menu_bar.addMenu("visualize")
+        visualize_loss_action = visualize_menu.addAction("visualize loss")
+        visualize_loss_action.triggered.connect(self._open_loss_viz_window)
+
+        # Setup settings panel
         self._settings_panel.texture_loaded.connect(self._set_image_to_match)
         self._settings_panel.match_start.connect(self._run_gradient_descent_torch)
         self._settings_panel.match_stop.connect(self._stop_gradient_descent)
@@ -196,6 +251,7 @@ class TextureMatcher(QWidget):
         self._layout.setColumnStretch(2, 2)
         self._layout.setColumnStretch(3, 1)
 
+        self._layout.setMenuBar(self._menu_bar)
         self._layout.addLayout(opengl_layout, 0, 0)
         self._layout.addWidget(self._image_plotter, 0, 1)
         self._layout.addWidget(self._target_plotter, 0, 2)
@@ -262,3 +318,6 @@ class TextureMatcher(QWidget):
 
     def _update_settings(self, key: str, settings: dict):
         self._settings = settings
+
+    def _open_loss_viz_window(self):
+        self._loss_visualizer.show()
