@@ -301,7 +301,7 @@ class GShaderNode(QGraphicsWidget):
 
     def __str__(self):
         cls = self.__class__
-        return "{} '{}({})'".format(cls, self._label, self.get_num())
+        return "{} '{}({})'".format(cls, self.label(), self.get_num())
 
     def __hash__(self):
         return self._node.__hash__()
