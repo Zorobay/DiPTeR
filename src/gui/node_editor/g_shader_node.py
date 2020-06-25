@@ -187,15 +187,10 @@ class GShaderNode(QGraphicsWidget):
         :param add_self: if True, adds this node to the set of returned nodes.
         :return: a Set of nodes that are ancestors of this node.
         """
+        nodes = self._node.get_ancestor_nodes(add_self=add_self)
         out = set()
-        if add_self:
-            out.add(self)
-
-        for socket in self._node.get_input_sockets():
-            if socket.is_connected():
-                for node in [n.get_container() for n in socket.get_connected_nodes()]:
-                    out.update(node.get_ancestor_nodes(add_self=True))
-
+        for n in nodes:
+            out.add(n.get_container())
         return out
 
     def get_backend_node(self) -> ShaderNode:
@@ -209,6 +204,9 @@ class GShaderNode(QGraphicsWidget):
 
     def get_in_sockets(self) -> typing.List[GNodeSocket]:
         return [s.get_container() for s in self._node.get_input_sockets()]
+
+    def get_input_socket(self, index: int) -> typing.Union[NodeSocket, None]:
+        return self._node.get_input_socket(index).get_container()
 
     def get_out_sockets(self) -> typing.List[GNodeSocket]:
         return [s.get_container() for s in self._node.get_output_sockets()]

@@ -107,6 +107,23 @@ class Node(GraphElement):
         if socket:
             socket.set_value(value)
 
+    def get_ancestor_nodes(self, add_self: bool = False) -> typing.Set['Node']:
+        """
+        Returns a list of all connected ancestors of this node.
+        :param add_self: if True, adds this node to the set of returned nodes.
+        :return: a Set of nodes that are ancestors of this node.
+        """
+        out = set()
+        if add_self:
+            out.add(self)
+
+        for socket in self.get_input_sockets():
+            if socket.is_connected():
+                for node in [n for n in socket.get_connected_nodes()]:
+                    out.update(node.get_ancestor_nodes(add_self=True))
+
+        return out
+
     def num_output_sockets(self) -> int:
         """Returns the number of output NodeSockets of this Node"""
         return len(self._out_sockets)
