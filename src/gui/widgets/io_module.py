@@ -34,12 +34,11 @@ class Input:
         return self._dtype
 
 
-class SocketModule(QWidget):
+class Module(QWidget):
     input_changed = pyqtSignal()
 
-    def __init__(self, socket: GNodeSocket, label: str, input_widget: Input):
+    def __init__(self, label: str, input_widget: Input):
         super().__init__()
-        self._socket = socket
         self._label = label
         self.widget = input_widget
         self._id = uuid.uuid4()
@@ -56,15 +55,14 @@ class SocketModule(QWidget):
 
         self.widget.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.widget.input_changed.connect(self._input_changed)
-        self._layout.addWidget(self.widget)
 
+        self._layout.addWidget(self.widget)
         self._layout.addWidget(self._label_widget)
 
         self.setLayout(self._layout)
 
     @pyqtSlot(name="_input_changed")
     def _input_changed(self):
-        self._socket.set_value(self.widget.get_gl_value())
         self.input_changed.emit()
 
     def id(self) -> uuid.UUID:
@@ -81,6 +79,18 @@ class SocketModule(QWidget):
 
     def get_gl_value(self):
         return self.widget.get_gl_value()
+
+
+class SocketModule(Module):
+    input_changed = pyqtSignal()
+
+    def __init__(self, socket: GNodeSocket, label: str, input_widget: Input):
+        super().__init__(label, input_widget)
+        self._socket = socket
+
+    def _input_changed(self):
+        self._socket.set_value(self.widget.get_gl_value())
+        self.input_changed.emit()
 
 
 class OutputModule(QWidget):
