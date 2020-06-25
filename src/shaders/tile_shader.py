@@ -9,10 +9,10 @@ class TileShader(FunctionShader):
     def __init__(self):
         super().__init__()
 
-    def get_inputs(self) -> typing.List[typing.Tuple[str, str, DataType, typing.Tuple[float, float], typing.Any]]:
+    def get_inputs(self) -> typing.List[ShaderInput]:
         return [
-            ("Scale", "scale", DataType.Vec3_Float, (0, 100), torch.tensor((1., 1., 1.))),
-            ("Shift", "shift", DataType.Vec3_Float, (0, 1), torch.tensor((0., 0.)))
+            ShaderInput("Scale", "scale", DataType.Vec3_Float, (0, 100), torch.tensor((1., 1., 1.))),
+            ShaderInput("Shift", "shift", DataType.Vec3_Float, (0, 1), torch.tensor((0., 0.)))
         ]
 
     # def shade(self, frag_pos: Tensor) -> Tensor:

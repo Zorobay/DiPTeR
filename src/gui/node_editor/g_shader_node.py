@@ -110,14 +110,14 @@ class GShaderNode(QGraphicsWidget):
         shader = self._node.get_shader()
         for i in range(self._node.num_input_sockets()):
             shader_input = shader.get_inputs()[i]
-            label = shader_input[0]
-            ran = shader_input[3]
+            label = shader_input.get_display_label()
+            ran = shader_input.get_range()
             socket = self._node.get_input_socket(i)
             self._add_input_module(input_label=label, node_socket=socket, input_range=ran)
 
         for i in range(self._node.num_output_sockets()):
             shader_output = shader.get_outputs()[i]
-            label = shader_output[0]
+            label = shader_output.get_display_label()
             socket = self._node.get_output_socket(i)
             self._add_output_module(output_label=label, node_socket=socket)
 

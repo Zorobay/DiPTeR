@@ -1,11 +1,5 @@
-import typing
-
-import torch
-from node_graph.data_type import DataType
-from torch import Tensor
-
 import src.shaders.lib.glsl_builtins as gl
-from src.shaders.shader_super import FunctionShader
+from src.shaders.shader_super import *
 
 
 class CheckerShader(FunctionShader):
@@ -14,11 +8,11 @@ class CheckerShader(FunctionShader):
     def __init__(self):
         super().__init__()
 
-    def get_inputs(self) -> typing.List[typing.Tuple[str, str, DataType, typing.Tuple[float, float], float]]:
+    def get_inputs(self) -> typing.List[ShaderInput]:
         return [
-            ("Color1", "color1", DataType.Vec3_RGB, (0, 1), torch.ones(3)),
-            ("Color2", "color2", DataType.Vec3_RGB, (0, 1), torch.zeros(3)),
-            ("Scale", "scale", DataType.Float, (0, 100), 10.0)
+            ShaderInput("Color1", "color1", DataType.Vec3_RGB, (0, 1), torch.ones(3)),
+            ShaderInput("Color2", "color2", DataType.Vec3_RGB, (0, 1), torch.zeros(3)),
+            ShaderInput("Scale", "scale", DataType.Float, (0, 100), 10.0)
         ]
 
     def shade_mat(self, frag_pos: Tensor, color1: Tensor, color2: Tensor, scale: Tensor) -> Tensor:
@@ -42,4 +36,4 @@ class CheckerShader(FunctionShader):
             return color1
         else:
             return color2
-        #return gl.mix(color2, color1, check)
+        # return gl.mix(color2, color1, check)

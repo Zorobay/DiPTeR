@@ -8,9 +8,9 @@ class ColorShader(FunctionShader):
     def __init__(self):
         super().__init__()
 
-    def get_inputs(self) -> typing.List[typing.Tuple[str, str, DataType, typing.Tuple[float, float], typing.Any]]:
+    def get_inputs(self) -> typing.List[ShaderInput]:
         return [
-            ("Color", "color", DataType.Vec3_RGB, (0, 1), torch.tensor((1., 1., 1.)))
+            ShaderInput("Color", "color", DataType.Vec3_RGB, (0, 1), torch.tensor((1., 1., 1.)))
         ]
 
     def shade_mat(self, color: Tensor) -> Tensor:

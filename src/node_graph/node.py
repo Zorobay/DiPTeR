@@ -154,11 +154,11 @@ class ShaderNode(Node):
             self.set_default_inputs()
 
     def _init(self):
-        for _, label, dtype, _, _ in self._shader.get_inputs():
-            self.add_socket(NodeSocket.INPUT, label=label, dtype=dtype)
+        for inp in self._shader.get_inputs():
+            self.add_socket(NodeSocket.INPUT, label=inp.get_argument(), dtype=inp.dtype())
 
-        for label, dtype in self._shader.get_outputs():
-            self.add_socket(NodeSocket.OUTPUT, label=label, dtype=dtype)
+        for out in self._shader.get_outputs():
+            self.add_socket(NodeSocket.OUTPUT, label=out.get_display_label(), dtype=out.dtype())
 
     def get_shader(self) -> Shader:
         return self._shader
@@ -167,8 +167,8 @@ class ShaderNode(Node):
         """
         Sets the values of the input NodeSockets of this Node to the default values according to the specification in this Node's Shader class.
         """
-        for i, (_, label, _, _, default) in enumerate(self._shader.get_inputs()):
-            self._in_sockets[i].set_value(default)
+        for i, inp in enumerate(self._shader.get_inputs()):
+            self._in_sockets[i].set_value(inp.get_default())
 
     def render(self, width: int, height: int, retain_graph: bool = False) -> typing.Tuple[Tensor, list]:
         """

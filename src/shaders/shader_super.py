@@ -64,6 +64,49 @@ def connect_code(node: 'GShaderNode', code: GLSLCode):
             code.connect(socket_arg, connected_code)
 
 
+class ShaderInput:
+
+    def __init__(self, display_label: str, argument: str, dtype: DataType, range_: typing.Tuple[float, float], default: typing.Any):
+        self._display_label = display_label
+        self._argument = argument
+        self._dtype = dtype
+        self._range = range_
+        self._default = default
+
+    def get_display_label(self) -> str:
+        """Returns the formatted display label for this input."""
+        return self._display_label
+
+    def get_argument(self) -> str:
+        """Returns the name of the argument of this input as it appears in the shader definition."""
+        return self._argument
+
+    def dtype(self):
+        return self._dtype
+
+    def get_range(self) -> typing.Tuple[float, float]:
+        """Returns the range of value that this input can accept as a tuple of (min,max)."""
+        return self._range
+
+    def get_default(self):
+        """Returns the default value of this input."""
+        return self._default
+
+
+class ShaderOutput:
+
+    def __init__(self, display_label: str, dtype: DataType):
+        self._display_label = display_label
+        self._dtype = dtype
+
+    def get_display_label(self) -> str:
+        """Returns the formatted display label for this input."""
+        return self._display_label
+
+    def dtype(self):
+        return self._dtype
+
+
 class Shader(ABC):
     FRAGMENT_SHADER_FUNCTION = None
     FRAGMENT_SHADER_FILENAME = None
@@ -99,20 +142,14 @@ class Shader(ABC):
         Shader.frag_pos = render_funcs.generate_frag_pos(width, height)
 
     @abstractmethod
-    def get_inputs(self) -> typing.List[typing.Tuple[str, str, DataType, typing.Tuple[float, float], Tensor]]:
-        """Returns a list of tuples with information about the widgets parameters of this shader.
-
-            :return: a tuple on the form (formatted title, argument title, internal type, (min value, max value), default value)
-        """
+    def get_inputs(self) -> typing.List[ShaderInput]:
+        """Returns a list of ShaderInput objects that describe the inputs of this shader."""
 
     # TODO make abstract (for now this is true for all shaders
-    def get_outputs(self) -> typing.List[typing.Tuple[str, DataType]]:
-        """Returns a list of tuples with information about the output parameters of this shader.
-
-            :return: a tuple on the form (formatted title, internal type)
-        """
+    def get_outputs(self) -> typing.List[ShaderOutput]:
+        """Returns a list of ShaderOutput objects that describe the outputs of this shader."""
         return [
-            ("Color", DataType.Vec3_RGB)
+            ShaderOutput("Color", DataType.Vec3_RGB)
         ]
 
     @abstractmethod
@@ -139,7 +176,7 @@ class FunctionShader(Shader, ABC):
             return
         func = self._parsed_code.get_primary_function()
 
-        py_args = [inp[1] for inp in self.get_inputs()]
+        py_args = [inp.get_argument() for inp in self.get_inputs()]
         shade_mat_args = get_function_arguments(self.shade_mat)
         glsl_args = func.arguments
 
@@ -158,13 +195,6 @@ class FunctionShader(Shader, ABC):
 
     def get_code(self) -> GLSLCode:
         return self._parsed_code
-
-    def get_parameters_dict(self) -> typing.Dict[str, typing.Any]:
-        params = {}
-        for _, arg, _, _, _ in self.get_inputs():
-            params[arg] = self._program[arg]
-
-        return params
 
 
 class CompilableShader(Shader, ABC):
@@ -225,8 +255,8 @@ class CompilableShader(Shader, ABC):
         """
         assert len(inputs) == len(self.get_inputs())
         i = 0
-        for _, arg, _, _, _ in self.get_inputs():
-            self._program[arg] = inputs[i].detach()
+        for inp in self.get_inputs():
+            self._program[inp.get_argument()] = inputs[i].detach()
             i += 1
 
     def get_program(self) -> gloo.Program:
@@ -236,9 +266,10 @@ class CompilableShader(Shader, ABC):
 
         params = []
 
-        for _, arg, dtype, ran, _ in self.get_inputs():
-            val = self._program[arg]
-            if "vec" not in dtype:
+        for inp in self.get_inputs():
+            val = self._program[inp.get_argument()]
+            ran = inp.get_range()
+            if "vec" not in inp.dtype():
                 val = np.array(val[0])  # Uniforms are stored in array even if they're single floats
 
             if randomize:
@@ -287,9 +318,9 @@ class CompilableShader(Shader, ABC):
         program = self._program if program is None else program
 
         if program is not None:
-            for _, arg, type_, _, default in self.get_inputs():
-
+            for inp in self.get_inputs():
+                default = inp.get_default()
                 if isinstance(default, Tensor):
                     default = default.numpy()
 
-                program[arg] = default
+                program[inp.get_argument()] = default

@@ -9,10 +9,10 @@ class CloudShader(FunctionShader):
     def __init__(self):
         super().__init__()
 
-    def get_inputs(self) -> typing.List[typing.Tuple[str, str, DataType, typing.Tuple[float, float], float]]:
+    def get_inputs(self) -> typing.List[ShaderInput]:
         return [
-            ("Scale", "scale", DataType.Float, (0, 100), 1.0),
-            ("Detail", "detail", DataType.Int, (0, 10), 4.0)
+            ShaderInput("Scale", "scale", DataType.Float, (0, 100), 1.0),
+            ShaderInput("Detail", "detail", DataType.Int, (0, 10), 4.0)
         ]
 
     def shade_mat(self, scale: Tensor, detail: Tensor) -> Tensor:
