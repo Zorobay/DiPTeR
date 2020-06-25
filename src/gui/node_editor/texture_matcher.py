@@ -1,5 +1,4 @@
 import logging
-import queue
 import typing
 
 import numpy as np
@@ -149,7 +148,9 @@ class LossVisualizer(QWidget):
         self._layout = QGridLayout()
         self._figure = Figure(figsize=(5, 5))
         self._canvas = FigureCanvas(self._figure)
+        self._fig_ax = self._figure.add_subplot(111)
         self._list_widget = QListWidget()
+        self._plot_button = QPushButton("Plot Loss")
 
         # Declare data
         self._selected_items = []
@@ -165,8 +166,18 @@ class LossVisualizer(QWidget):
         # Setup list widget
         self._list_widget.itemChanged.connect(self._item_changed)
 
+        # Setup plot
+        self._fig_ax.set_title("Loss Surface")
+        self._fig_ax.set_xlabel("Parameter ?")
+        self._fig_ax.set_ylabel("Parameter ?")
+        self._fig_ax.set_zlabel("Loss Value")
+
+        # Setup plot button
+        self._plot_button.clicked.connect(self._plot_loss)
+
         self._layout.addWidget(self._list_widget, 0, 0)
         self._layout.addWidget(self._canvas, 0, 1)
+        self._layout.addWidget(self._plot_button, 1, 1)
 
         self.setLayout(self._layout)
 
@@ -202,6 +213,12 @@ class LossVisualizer(QWidget):
         elif item.checkState() == Qt.Unchecked:
             if item in self._item_queue:
                 self._item_queue.remove(item)
+
+    def _plot_loss(self):
+        xs = np.linspace(0, 100)
+        ys = np.power(xs, 2)
+        self._fig_ax.plot(xs, ys)
+        self._canvas.draw()
 
 
 class TextureMatcher(QWidget):
