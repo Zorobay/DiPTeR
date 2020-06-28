@@ -135,6 +135,13 @@ class Shader(ABC):
     def get_parsed_code(self) -> GLSLCode:
         return self._parsed_code
 
+    def get_input_by_arg(self, argument: str) -> typing.Union[None, ShaderInput]:
+        for inp in self.get_inputs():
+            if inp.get_argument() == argument:
+                return inp
+
+        return None
+
     @classmethod
     def set_render_size(cls, width: int, height: int):
         Shader.width = width

@@ -4,6 +4,7 @@ import uuid
 import torch
 from node_graph.data_type import DataType
 from node_graph.graph_element import GraphElement
+from node_graph.parameter import Parameter
 from src.node_graph.node_socket import NodeSocket, SocketType
 from src.shaders.shader_super import Shader
 from torch import Tensor
@@ -124,6 +125,27 @@ class Node(GraphElement):
 
         return out
 
+    def save_graph_state(self):
+        """Saves the state (socket values) of this node and all ancestor nodes."""
+
+        for node in self.get_ancestor_nodes(add_self=True):
+            node.save_state()
+
+    def save_state(self):
+        """Saves the values of all sockets of this node."""
+        for s in self._in_sockets:
+            s.save_value()
+
+    def restore_graph_state(self):
+        """Restores the state (socket values) of this node and all ancestor nodes."""
+        for node in self.get_ancestor_nodes(add_self=True):
+            node.restore_state()
+
+    def restore_state(self):
+        """Restores the values of all sockets of this node."""
+        for s in self._in_sockets:
+            s.restore_value()
+
     def num_output_sockets(self) -> int:
         """Returns the number of output NodeSockets of this Node"""
         return len(self._out_sockets)
@@ -163,7 +185,7 @@ class ShaderNode(Node):
             self.set_label(shader.__class__)
 
         self._shader = shader
-        self._render_arguments = dict()
+        self._render_parameters = dict()
 
         self._init()
 
@@ -203,32 +225,34 @@ class ShaderNode(Node):
         shader_inputs = self.get_shader().get_inputs()
         assert len(shader_inputs) == len(self._in_sockets)
 
-        complete_args_dict = {}
+        complete_params_dict = {}
         arguments = {}
 
         for i, socket in enumerate(self._in_sockets):
             arg = socket.label()
+            inp = self._shader.get_input_by_arg(arg)
             mod_arg = self.get_shader().get_parsed_code().get_modified_arg_name(arg)
             if socket.is_connected():
                 nodes = socket.get_connected_nodes()
                 assert len(nodes) == 1  # It should be an input node, so it should only be able to have 1 connected node
                 t, ad = nodes[0].render(width, height, retain_graph=retain_graph)
-                complete_args_dict.update(ad)
+                complete_params_dict.update(ad)
             else:
-                if arg in self._render_arguments and retain_graph:  # Argument is already fetched, get saved reference
-                    t = self._render_arguments[arg]
+                if arg in self._render_parameters and retain_graph:  # Argument is already fetched, get saved reference
+                    p = self._render_parameters[arg]
                 else:
                     value = socket.value()
                     if isinstance(value, torch.Tensor):
                         t = value.clone().detach()
                     else:
                         t = torch.tensor(value, dtype=torch.float32).unsqueeze(0)
-                    self._render_arguments[arg] = t
-                complete_args_dict[mod_arg] = t
+                    p = Parameter(inp, t)
+                    self._render_parameters[arg] = p
+                complete_params_dict[mod_arg] = p
 
-            arguments[arg] = t
+            arguments[arg] = p.tensor()
 
-        return self._shade(arguments), complete_args_dict
+        return self._shade(arguments), complete_params_dict
 
     def _shade(self, args: dict):
         width, height = Shader.width, Shader.height
