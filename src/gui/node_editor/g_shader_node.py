@@ -193,6 +193,22 @@ class GShaderNode(QGraphicsWidget):
             out.add(n.get_container())
         return out
 
+    def save_graph_state(self):
+        """Saves the state (socket values) of this node and all ancestor nodes."""
+        self._node.save_graph_state()
+
+    def save_state(self):
+        """Saves the values of all sockets of this node."""
+        self._node.save_state()
+
+    def restore_graph_state(self):
+        """Restores the state (socket values) of this node and all ancestor nodes."""
+        self._node.restore_graph_state()
+
+    def restore_state(self):
+        """Restores the values of all sockets of this node."""
+        self._node.restore_state()
+
     def get_backend_node(self) -> ShaderNode:
         return self._node
 

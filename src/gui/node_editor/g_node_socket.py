@@ -60,6 +60,16 @@ class GNodeSocket(QGraphicsWidget):
     def set_value(self, value: typing.Any):
         self._socket.set_value(value)
 
+    def save_value(self):
+        """Saves the value of this socket internally. This value can be reassigned by calling 'restore_value()'."""
+
+        self._socket.save_value()
+
+    def restore_value(self):
+        """Restores the value of this socket to the last saved value."""
+
+        self._socket.restore_value()
+
     def parent_node(self) -> 'GShaderNode':
         return self._parent_g_node
 

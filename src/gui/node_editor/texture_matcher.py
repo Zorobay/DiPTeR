@@ -3,11 +3,13 @@ import typing
 
 import numpy as np
 import pyqtgraph as pg
+import torch
 from PIL import Image
 from PyQt5.QtCore import pyqtSignal, QThread, Qt
 from PyQt5.QtGui import QFont, QBrush, QColor
 from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QComboBox, QMenuBar, QListWidget, \
     QListWidgetItem
+from gui.widgets.io_module import Module
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from misc.fifo_queue import FIFOQueue
@@ -150,6 +152,8 @@ class LossVisualizer(QWidget):
         self._canvas = FigureCanvas(self._figure)
         self._fig_ax = self._figure.add_subplot(111)
         self._list_widget = QListWidget()
+        self._p1_res = IntInput(0, 100)
+        self._p2_res = IntInput(0, 100)
         self._plot_button = QPushButton("Plot Loss")
 
         # Declare data
@@ -157,6 +161,10 @@ class LossVisualizer(QWidget):
         self._item_queue = FIFOQueue(maxsize=2)
         self._bg_brush_selected = QBrush(QColor("#8bf9b0"))
         self._bg_brush_default = QBrush(QColor("#ffffff"))
+        self._param_item_map = {}
+        self._render_w = 100
+        self._render_h = 100
+
         self._list_parameters()
         self._init()
 
@@ -172,38 +180,54 @@ class LossVisualizer(QWidget):
         self._fig_ax.set_ylabel("Parameter ?")
         self._fig_ax.set_zlabel("Loss Value")
 
+        # Setup resolution input
+        p1_module = Module("Param 1 Res.", self._p1_res)
+        p2_module = Module("Param 2 Res.", self._p2_res)
+
         # Setup plot button
         self._plot_button.clicked.connect(self._plot_loss)
 
         self._layout.addWidget(self._list_widget, 0, 0)
         self._layout.addWidget(self._canvas, 0, 1)
-        self._layout.addWidget(self._plot_button, 1, 1)
+        self._layout.addWidget(self._p1_res, )
+        self._layout.addWidget(p1_module, 1, 1)
+        self._layout.addWidget(p2_module, 1, 2)
+        self._layout.addWidget(self._plot_button, 1, 3)
 
         self.setLayout(self._layout)
 
     def _list_parameters(self):
         all_nodes = self._mat_out_node.get_ancestor_nodes(add_self=False)
-        all_params = []
+        _, param_dict = self._mat_out_node.get_backend_node().render(self._render_w, self._render_h, retain_graph=True)
 
-        for node in all_nodes:
-            node_label = node.label()
-            node_num = node.get_num()
+        for key in param_dict:
+            item_str = "{}".format(key)
+            self._list_widget.addItem(item_str)
 
-            for inp in node.get_shader().get_inputs():
-                input_label = inp[1]
-                input_range = inp[3]
-
-                all_params.append("{} ({}): {}".format(node_label, node_num, input_label))
-
-        self._list_widget.addItems(all_params)
-
-        for i in range(len(all_params)):
-            item = self._list_widget.item(i)
+            last_i = self._list_widget.count() - 1
+            item = self._list_widget.item(last_i)
             item.setFlags(item.flags() | Qt.ItemIsUserCheckable ^ Qt.ItemIsSelectable)
             item.setCheckState(Qt.Unchecked)
 
-    def _item_changed(self, item: QListWidgetItem):
+        # for node in all_nodes:
+        #     node_label = node.label()
+        #     node_num = node.get_num()
+        #
+        #     for i, inp in enumerate(node.get_shader().get_inputs()):
+        #         input_label = inp.get_argument()
+        #         socket = node.get_input_socket(i)
+        #
+        #         item_str = "{} ({}): {}".format(node_label, node_num, input_label)
+        #         self._list_widget.addItem(item_str)
+        #
+        #         last_i = self._list_widget.count() - 1
+        #         item = self._list_widget.item(last_i)
+        #         item.setFlags(item.flags() | Qt.ItemIsUserCheckable ^ Qt.ItemIsSelectable)
+        #         item.setCheckState(Qt.Unchecked)
+        #
+        #         self._param_item_map[id(item)] = {"node": node.get_backend_node(), "input": inp, "index": i, "default": socket.value()}
 
+    def _item_changed(self, item: QListWidgetItem):
         if item.checkState() == Qt.Checked:
             if self._item_queue.is_full():
                 first_item = self._item_queue.pop()
@@ -215,10 +239,29 @@ class LossVisualizer(QWidget):
                 self._item_queue.remove(item)
 
     def _plot_loss(self):
+        loss_surface = torch.empty((self._p1_res.get_gl_value(), self._p1_res.get_gl_value()))
+        checked_items = self._list_widget.selectedItems()
+        ranges = []
+        sockets = []
+
+        for item in checked_items:
+            info = self._param_item_map[id(item)]
+            inp = info["input"]
+            ranges.append(inp.get_range())
+
+        r, param_dict = self._mat_out_node.get_backend_node().render(self._render_w, self._render_h, retain_graph=True)
+
+        for i in range(self._p1_res.get_gl_value()):
+            for j in range(self._p2_res.get_gl_value()):
+                r, param_dict = self._mat_out_node.get_backend_node().render(self._render_w, self._render_h, retain_graph=True)
+
         xs = np.linspace(0, 100)
         ys = np.power(xs, 2)
         self._fig_ax.plot(xs, ys)
         self._canvas.draw()
+
+    def _param_to_mat(self, param: torch.Tensor):
+        return
 
 
 class TextureMatcher(QWidget):

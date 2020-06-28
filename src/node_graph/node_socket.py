@@ -28,6 +28,7 @@ class NodeSocket(GraphElement):
         self._label = label
         self._id = uuid.uuid4()
         self._value = None
+        self._saved_value = None
         self._connected = False
         self._connected_sockets = set()
         self._connected_edges = set()
@@ -108,6 +109,16 @@ class NodeSocket(GraphElement):
 
     def set_value(self, value: typing.Any):
         self._value = value
+
+    def save_value(self):
+        """Saves the value of this socket internally. This value can be reassigned by calling 'restore_value()'."""
+
+        self._saved_value = self._value.detach().clone()
+
+    def restore_value(self):
+        """Restores the value of this socket to the last saved value."""
+
+        self._value = self._saved_value.detach().clone()
 
     def value(self) -> typing.Any:
         return self._value
