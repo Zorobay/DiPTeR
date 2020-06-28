@@ -12,8 +12,12 @@ class DataType(enum.Enum):
     Shader = "type_shader"
 
 
-def dtype_size(dtype: DataType):
-    if "vec3" in dtype:
+def dtype_size(dtype: DataType) -> int:
+    if "vec3" in dtype.value:
         return 3
     else:
         return 1
+
+
+def is_vector(dtype: DataType) -> bool:
+    return dtype_size(dtype) > 1
