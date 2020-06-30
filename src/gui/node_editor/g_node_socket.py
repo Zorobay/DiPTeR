@@ -176,10 +176,10 @@ class GNodeSocket(QGraphicsWidget):
             event.ignore()
 
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent):
-        self.edge_released.emit(self._current_edge)
-
-        self._current_edge = None
-        self._moving_edge = False
+        if self._current_edge:  # Prevent release without dragging
+            self.edge_released.emit(self._current_edge)
+            self._current_edge = None
+            self._moving_edge = False
 
     def itemChange(self, change, value):
         if change == self.ItemScenePositionHasChanged:
