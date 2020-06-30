@@ -80,6 +80,10 @@ class Module(QWidget):
     def get_gl_value(self):
         return self.widget.get_gl_value()
 
+    def setEnabled(self, status: bool):
+        super().setEnabled(status)
+        self.widget.setVisible(status)
+
 
 class SocketModule(Module):
     input_changed = pyqtSignal()

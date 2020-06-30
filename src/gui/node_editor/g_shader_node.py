@@ -280,6 +280,12 @@ class GShaderNode(QGraphicsWidget):
         self._master_layout.addItem(socket, 1, 2)
 
     def _handle_socket_connection(self, socket: GNodeSocket, _):
+
+        if socket.is_connected():  # Disable socket module to show that is not user controllable anymore
+            for (s, mod) in self._in_socket_modules:
+                if s == socket:
+                    mod.setEnabled(False)
+
         self.connection_changed.emit(socket, self)
 
     def _spawn_edge(self, edge):
