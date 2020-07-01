@@ -81,7 +81,7 @@ class ShaderInput:
         """Returns the name of the argument of this input as it appears in the shader definition."""
         return self._argument
 
-    def dtype(self):
+    def dtype(self) -> DataType:
         return self._dtype
 
     def get_range(self) -> typing.Tuple[float, float]:
@@ -166,6 +166,11 @@ class Shader(ABC):
     def get_name(self) -> str:
         """Returns the formatted title of this class"""
         return " ".join(string_funcs.split_on_upper_case(type(self).__name__))
+
+    def tensor(self, data) -> Tensor:
+        """Creates a matrix tensor of a shape that matches the rendering size from data. This is shorthand to creating tensors in the shade
+        function."""
+        return torch.tensor(data, dtype=torch.float32).repeat(Shader.width, Shader.height, 1)
 
 
 class FunctionShader(Shader, ABC):
