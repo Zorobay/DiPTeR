@@ -96,7 +96,8 @@ class GradientDescent(QObject):
 
     def _run_gd(self, lr=0.01, max_iter=150, early_stopping_thresh=0.01) -> typing.Tuple[list, np.ndarray]:
         _, args_dict = self.out_node.render(self.width, self.height, retain_graph=True)
-        args_list = [args_dict[k] for k in args_dict]
+        args_dict = {k: args_dict[k].tensor() for k in args_dict}  # Extract tensors
+        args_list = [args_dict[k] for k in args_dict]  # Convert to list
 
         for p in args_list:
             p.requires_grad = True
