@@ -70,7 +70,7 @@ class GLSLCode:
         self._node_num = -1
         self._reset = False
         self.filename = filename
-        self.shader_name = self.filename.split(".")[0]
+        self.shader_name = self.filename.split("/")[-1].split(".")[0]
         self.functions = []
         self.imports = set()
         self.needed_code = set()
