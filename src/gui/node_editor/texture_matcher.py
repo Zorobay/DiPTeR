@@ -8,11 +8,14 @@ from PIL import Image
 from PyQt5.QtCore import pyqtSignal, QThread, Qt
 from PyQt5.QtGui import QFont, QBrush, QColor
 from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QComboBox, QMenuBar, QListWidget, \
-    QListWidgetItem
+    QListWidgetItem, QMessageBox, QSplitter
 from gui.widgets.io_module import Module
+from gui.widgets.list_widget_item import ListWidgetItem
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from matplotlib import pyplot as plt
 from misc.fifo_queue import FIFOQueue
+from node_graph.parameter import Parameter
 from src.gui.node_editor.g_shader_node import GMaterialOutputNode
 from src.gui.rendering.image_plotter import ImagePlotter
 from src.gui.rendering.opengl_widget import OpenGLWidget
@@ -21,6 +24,8 @@ from src.gui.widgets.line_input import FloatInput, IntInput
 from src.misc import image_funcs
 from src.optimization import losses
 from src.optimization.gradient_descent import GradientDescent, GradientDescentSettings
+import seaborn as sns
+sns.set()
 
 _logger = logging.getLogger(__name__)
 
@@ -50,7 +55,7 @@ class SettingsPanel(QWidget):
         self._learning_rate = FloatInput(0, 1)
 
         # Define data
-        self._loss_func_map = {"Squared Bin Loss": losses.SquaredBinLoss(), "MSE Loss": losses.MSELoss(reduction='mean'), "Neural Loss":
+        self._loss_func_map = {"MSE Loss": losses.MSELoss(reduction='mean'), "Squared Bin Loss": losses.SquaredBinLoss(), "Neural Loss":
             losses.NeuralLoss()}
         self.loaded_image = None
         self._max_iter = 100
@@ -148,9 +153,10 @@ class LossVisualizer(QWidget):
 
         # Declare widgets
         self._layout = QGridLayout()
+        self._splitter = QSplitter(Qt.Horizontal)
         self._figure = Figure(figsize=(5, 5))
         self._canvas = FigureCanvas(self._figure)
-        self._fig_ax = self._figure.add_subplot(111)
+        self._fig_ax = self._figure.add_subplot(111, projection="3d")
         self._list_widget = QListWidget()
         self._p1_res = IntInput(0, 100)
         self._p2_res = IntInput(0, 100)
@@ -164,6 +170,9 @@ class LossVisualizer(QWidget):
         self._param_item_map = {}
         self._render_w = 100
         self._render_h = 100
+        self._settings = {}
+        self._target_image = None
+        self._target_matrix = None
 
         self._list_parameters()
         self._init()
@@ -178,18 +187,21 @@ class LossVisualizer(QWidget):
         self._fig_ax.set_title("Loss Surface")
         self._fig_ax.set_xlabel("Parameter ?")
         self._fig_ax.set_ylabel("Parameter ?")
-        self._fig_ax.set_zlabel("Loss Value")
+        # self._fig_ax.set_zlabel("Loss Value")
 
         # Setup resolution input
+        self._p1_res.set_default_value(20)
+        self._p2_res.set_default_value(20)
         p1_module = Module("Param 1 Res.", self._p1_res)
         p2_module = Module("Param 2 Res.", self._p2_res)
 
         # Setup plot button
         self._plot_button.clicked.connect(self._plot_loss)
 
-        self._layout.addWidget(self._list_widget, 0, 0)
-        self._layout.addWidget(self._canvas, 0, 1)
-        self._layout.addWidget(self._p1_res, )
+        # Add widgets to layout
+        self._splitter.addWidget(self._list_widget)
+        self._splitter.addWidget(self._canvas)
+        self._layout.addWidget(self._splitter, 0, 0, 1, 4)
         self._layout.addWidget(p1_module, 1, 1)
         self._layout.addWidget(p2_module, 1, 2)
         self._layout.addWidget(self._plot_button, 1, 3)
@@ -197,35 +209,33 @@ class LossVisualizer(QWidget):
         self.setLayout(self._layout)
 
     def _list_parameters(self):
-        all_nodes = self._mat_out_node.get_ancestor_nodes(add_self=False)
         _, param_dict = self._mat_out_node.get_backend_node().render(self._render_w, self._render_h, retain_graph=True)
+        row = 0
 
         for key in param_dict:
-            item_str = "{}".format(key)
-            self._list_widget.addItem(item_str)
+            param = param_dict[key]
+            item = ListWidgetItem(key, param)
+            self._list_widget.insertItem(row, item)
+            row += 1
 
-            last_i = self._list_widget.count() - 1
-            item = self._list_widget.item(last_i)
-            item.setFlags(item.flags() | Qt.ItemIsUserCheckable ^ Qt.ItemIsSelectable)
-            item.setCheckState(Qt.Unchecked)
+            if param.is_vector():
+                item.set_checkable(False)
+                item.remove_checkbox()
+                # item.set_enabled(False)
 
-        # for node in all_nodes:
-        #     node_label = node.label()
-        #     node_num = node.get_num()
-        #
-        #     for i, inp in enumerate(node.get_shader().get_inputs()):
-        #         input_label = inp.get_argument()
-        #         socket = node.get_input_socket(i)
-        #
-        #         item_str = "{} ({}): {}".format(node_label, node_num, input_label)
-        #         self._list_widget.addItem(item_str)
-        #
-        #         last_i = self._list_widget.count() - 1
-        #         item = self._list_widget.item(last_i)
-        #         item.setFlags(item.flags() | Qt.ItemIsUserCheckable ^ Qt.ItemIsSelectable)
-        #         item.setCheckState(Qt.Unchecked)
-        #
-        #         self._param_item_map[id(item)] = {"node": node.get_backend_node(), "input": inp, "index": i, "default": socket.value()}
+                for i in range(param.shape()[1]):
+                    item = ListWidgetItem("  [{}]".format(i), param, index=i)
+                    self._list_widget.insertItem(row, item)
+                    row += 1
+
+    def _checked_items(self) -> typing.List[ListWidgetItem]:
+        checked = []
+        for i in range(self._list_widget.count()):
+            item = self._list_widget.item(i)
+            if item.checkState() == Qt.Checked:
+                checked.append(item)
+
+        return checked
 
     def _item_changed(self, item: QListWidgetItem):
         if item.checkState() == Qt.Checked:
@@ -239,29 +249,50 @@ class LossVisualizer(QWidget):
                 self._item_queue.remove(item)
 
     def _plot_loss(self):
-        loss_surface = torch.empty((self._p1_res.get_gl_value(), self._p1_res.get_gl_value()))
-        checked_items = self._list_widget.selectedItems()
-        ranges = []
-        sockets = []
+        W, H = self._settings.get_render_width(), self._settings.get_render_height()
+        R1, R2 = self._p1_res.get_gl_value(), self._p2_res.get_gl_value()
 
-        for item in checked_items:
-            info = self._param_item_map[id(item)]
-            inp = info["input"]
-            ranges.append(inp.get_range())
+        self._target_matrix = image_funcs.image_to_tensor(self._target_image, (W, H))
+        loss_surface = np.empty((R1, R2))
+        loss_f = self._settings.get_loss_func()
+        checked_items = self._checked_items()
 
-        r, param_dict = self._mat_out_node.get_backend_node().render(self._render_w, self._render_h, retain_graph=True)
+        item1 = checked_items[0]
+        self._fig_ax.set_xlabel(item1.text())
+        param1: Parameter = item1.param
+        p1_values = torch.from_numpy(np.linspace(param1.get_range()[0], param1.get_range()[1], num=R1, endpoint=True))
 
-        for i in range(self._p1_res.get_gl_value()):
-            for j in range(self._p2_res.get_gl_value()):
-                r, param_dict = self._mat_out_node.get_backend_node().render(self._render_w, self._render_h, retain_graph=True)
+        item2 = checked_items[1]
+        self._fig_ax.set_ylabel(item2.text())
+        param2: Parameter = item2.param
+        p2_values = torch.from_numpy(np.linspace(param2.get_range()[0], param2.get_range()[1], num=R2, endpoint=True))
 
-        xs = np.linspace(0, 100)
-        ys = np.power(xs, 2)
-        self._fig_ax.plot(xs, ys)
+        for i in range(R1):
+            param1.set_value(p1_values[i], index=item1.index)
+            for j in range(R2):
+                param2.set_value(p2_values[j], index=item2.index)
+                r, _ = self._mat_out_node.get_backend_node().render(W, H, retain_graph=True)
+                loss = loss_f(r, self._target_matrix)
+                loss_surface[i, j] = loss.detach().numpy()
+
+            _logger.info("{:.2f}% complete...".format((i+1)/R1 * 100))
+
+        P1,P2 = torch.meshgrid([p1_values, p2_values])
+
+        self._fig_ax.plot_surface(P1, P2, loss_surface, cmap=plt.cm.viridis)
         self._canvas.draw()
 
     def _param_to_mat(self, param: torch.Tensor):
         return
+
+    def open(self, settings: GradientDescentSettings, target: Image):
+        if target is None:
+            msg = QMessageBox(QMessageBox.Warning, "Need to set Target Texture!", "Can not open loss visualizer because target texture is not set.")
+            msg.exec()
+        else:
+            self._settings = settings
+            self._target_image = target
+            super().show()
 
 
 class TextureMatcher(QWidget):
@@ -404,4 +435,4 @@ class TextureMatcher(QWidget):
         self._settings = settings
 
     def _open_loss_viz_window(self):
-        self._loss_visualizer.show()
+        self._loss_visualizer.open(self._settings_panel.settings, self._target_image)
