@@ -1,5 +1,5 @@
 import torch
-from node_graph.data_type import is_vector, dtype_size
+from node_graph.data_type import is_vector
 from shaders.shader_super import ShaderInput
 
 
@@ -20,6 +20,12 @@ class Parameter(ShaderInput):
     def set_default(self):
         """Set the value to the default value."""
         self._t.data = torch.as_tensor(self.get_default())
+
+    def set_value(self, value, index=-1):
+        if index >= 0:
+            self._t[index] = torch.as_tensor(value)
+        else:
+            self._t.data = torch.as_tensor(value)
 
     def is_vector(self) -> bool:
         return is_vector(self.dtype())
