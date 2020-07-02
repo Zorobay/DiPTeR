@@ -8,7 +8,7 @@ from PIL import Image
 from PyQt5.QtCore import pyqtSignal, QThread, Qt
 from PyQt5.QtGui import QFont, QBrush, QColor
 from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QComboBox, QMenuBar, QListWidget, \
-    QListWidgetItem, QMessageBox, QSplitter
+    QListWidgetItem, QMessageBox, QSplitter, QProgressDialog
 from gui.widgets.io_module import Module
 from gui.widgets.list_widget_item import ListWidgetItem
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -249,8 +249,14 @@ class LossVisualizer(QWidget):
                 self._item_queue.remove(item)
 
     def _plot_loss(self):
+        self._fig_ax.clear()
+
         W, H = self._settings.get_render_width(), self._settings.get_render_height()
         R1, R2 = self._p1_res.get_gl_value(), self._p2_res.get_gl_value()
+        progress_dialog = QProgressDialog("Calculating loss surface...", "Cancel", 0, R1-1, self)
+        progress_dialog.setWindowTitle("Calculating")
+        progress_dialog.setWindowModality(Qt.WindowModal)
+        progress_dialog.setMinimumDuration(1)
 
         self._target_matrix = image_funcs.image_to_tensor(self._target_image, (W, H))
         loss_surface = np.empty((R1, R2))
@@ -269,6 +275,11 @@ class LossVisualizer(QWidget):
 
         for i in range(R1):
             param1.set_value(p1_values[i], index=item1.index)
+            progress_dialog.setValue(i)
+
+            if progress_dialog.wasCanceled():
+                return
+
             for j in range(R2):
                 param2.set_value(p2_values[j], index=item2.index)
                 r, _ = self._mat_out_node.get_backend_node().render(W, H, retain_graph=True)
