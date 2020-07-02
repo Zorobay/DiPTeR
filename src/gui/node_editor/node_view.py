@@ -4,6 +4,7 @@ from PyQt5 import QtGui
 from PyQt5.QtCore import Qt, QPoint, QPointF
 from PyQt5.QtGui import QWheelEvent, QMouseEvent
 from PyQt5.QtWidgets import QGraphicsView, QMenu, QGraphicsSceneMouseEvent, QMessageBox
+from shaders.mini_brick_shader import MiniBrickShader
 
 from src.gui.node_editor.control_center import ControlCenter
 from src.gui.node_editor.g_edge import GEdge
@@ -25,7 +26,7 @@ from tests.stuff_for_testing.shaders.test_box_shader import TestBoxShader
 
 SHADERS_TO_CONTEXT_MENU = [TileShader, GradientShader, CloudShader, CheckerShader, HSVShader, ColorShader, RGBShader, BrickShader, MixShader]
 
-SHADERS_MISC_MENU = [FragmentCoordinatesShader, TestBoxShader]
+SHADERS_MISC_MENU = [FragmentCoordinatesShader, TestBoxShader, MiniBrickShader]
 SHADERS_MATH_MENU = [VectorMathShader]
 
 
