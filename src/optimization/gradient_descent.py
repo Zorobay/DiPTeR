@@ -51,9 +51,10 @@ class GradientDescent(QObject):
         loss_func = self.settings.loss_func
         width, height = self.settings.render_width, self.settings.render_height
 
-        _, args_dict = self.out_node.render(width, height, retain_graph=True)
-        args_dict = {k: args_dict[k].tensor() for k in args_dict}  # Extract tensors
-        args_list = [args_dict[k] for k in args_dict]  # Convert to list
+        _, params_dict = self.out_node.render(width, height, retain_graph=True)
+        for _,p in params_dict.items():
+            p.save_value()
+        args_list = [params_dict[k].tensor() for k in params_dict]  # Convert to list of tensors
 
         for p in args_list:
             p.requires_grad = True
@@ -63,7 +64,7 @@ class GradientDescent(QObject):
 
         for i in range(max_iter):
             if self._stop:
-                return args_dict, loss_hist
+                return params_dict, loss_hist
 
             with torch.autograd.set_detect_anomaly(True):
                 optimizer.zero_grad()
@@ -72,7 +73,7 @@ class GradientDescent(QObject):
                 loss = loss_func(render, self.target)
                 new_loss_np = float(loss.detach())
                 loss_hist[i] = new_loss_np
-                props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1], 'learning_rate': lr, 'params': args_dict,
+                props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1], 'learning_rate': lr, 'params': params_dict,
                          'iter_time': 0.0, 'render': render}
 
                 # We need to break here, otherwise the parameters will change when we call optimizer.step()
@@ -87,4 +88,4 @@ class GradientDescent(QObject):
             props['iter_time'] = time.time() - start
             self.iteration_done.emit(props)
 
-        return args_dict, loss_hist
+        return params_dict, loss_hist

@@ -49,6 +49,11 @@ class ImagePlotter(pg.GraphicsLayoutWidget):
             self._plotItem.addItem(self._cant_render_text)
             self._cant_render_text.setPos(self._image_width / 2, self._image_height / 2)
 
+    def clear(self):
+        self._imgItem.clear()
+        self._plotItem.clear()
+        self._imgItem._updateView()
+
     def auto_range(self):
         self.set_x_range(0, self._image_width)
         self.set_y_range(0, self._image_height)

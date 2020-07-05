@@ -10,6 +10,7 @@ class Parameter(ShaderInput):
         super().__init__(shader_input.get_display_label(), shader_input.get_argument(), shader_input.dtype(), shader_input.get_range(),
                          shader_input.get_default())
         self._t = value
+        self._data = None
 
     def __str__(self):
         return "Parameter({})".format(self._t)
@@ -20,6 +21,14 @@ class Parameter(ShaderInput):
     def set_default(self):
         """Set the value to the default value."""
         self._t.data = torch.as_tensor(self.get_default())
+
+    def save_value(self):
+        """Saves the current value of this Parameter. Can be restored by calling 'restore_value()'."""
+        self._data = self._t.data.clone()
+
+    def restore_value(self):
+        """Restores the data of the contained tensor to the value of the last saved data."""
+        self._t.data = self._data
 
     def set_value(self, value, index=-1):
         if index >= 0:

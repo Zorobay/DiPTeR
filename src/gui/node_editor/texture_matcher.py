@@ -39,6 +39,7 @@ CHANNELS = 3
 class SettingsPanel(QWidget):
     match_start = pyqtSignal()
     match_stop = pyqtSignal()
+    reset_requested = pyqtSignal()
     texture_loaded = pyqtSignal(Image.Image)
     settings_changed = pyqtSignal(GradientDescentSettings)  # changed key as well as all settings
 
@@ -65,6 +66,7 @@ class SettingsPanel(QWidget):
         self._max_iter = 100
         self.settings = GradientDescentSettings()
         self._is_running = False
+        self._is_cleared = True
 
         self._init_widget()
 
@@ -138,7 +140,8 @@ class SettingsPanel(QWidget):
         self._change_settings("optimizer", optimizer)
 
     def set_gd_finished(self):
-        self._match_button.setText("Match Texture")
+        self._match_button.setText("Reset")
+        self._is_running = False
 
     def set_gd_finishing(self):
         self._match_button.setText("Stopping...")
@@ -150,12 +153,19 @@ class SettingsPanel(QWidget):
 
     def _toggle_matching(self):
         if not self._is_running:
-            self._is_running = True
-            self._match_button.setText("Stop")
-            self.match_start.emit()
+            if not self._is_cleared:
+                self._is_cleared = True
+                self.reset_requested.emit()
+                self._match_button.setText("Match Texture")
+            else:
+                self._is_running = True
+                self._is_cleared = False
+                self._match_button.setText("Stop")
+                self.match_start.emit()
         else:
             self._is_running = False
-            self._match_button.setText("Match Texture")
+            self._is_cleared = False
+            self._match_button.setText("Reset")
             self.match_stop.emit()
 
 
@@ -284,7 +294,7 @@ class LossVisualizer(QWidget):
     def _plot_loss(self):
         self._fig_ax.clear()
 
-        W, H = self._settings.get_render_width(), self._settings.get_render_height()
+        W, H = self._settings.render_width, self._settings.render_height
         R1, R2 = self._p1_res.get_gl_value(), self._p2_res.get_gl_value()
         progress_dialog = QProgressDialog("Calculating loss surface...", "Cancel", 0, R1 - 1, self)
         progress_dialog.setWindowTitle("Calculating")
@@ -371,6 +381,7 @@ class TextureMatcher(QWidget):
         self.thread = None
         self.gd = None
         self.ren_i = 0
+        self._params = {}
 
         self._init_widget()
 
@@ -386,6 +397,7 @@ class TextureMatcher(QWidget):
         self._settings_panel.texture_loaded.connect(self._set_image_to_match)
         self._settings_panel.match_start.connect(self._run_gradient_descent_torch)
         self._settings_panel.match_stop.connect(self._stop_gradient_descent)
+        self._settings_panel.reset_requested.connect(self._reset)
         self._settings_panel.setMaximumWidth(250)
 
         # Setup plots
@@ -421,17 +433,18 @@ class TextureMatcher(QWidget):
         self.setLayout(self._layout)
 
     def _set_image_to_match(self, image: Image):
-        # We want to display the same image that we are testing the loss against. This image is columns majos (input,y)
+        # We want to display the same image that we are testing the loss against. This image is columns major (input,y)
         # which is not what matplotlib want's so we have to transpose it back to row major
         self._target_image = image.convert("RGB")
         self._target_matrix = image_funcs.image_to_tensor(self._target_image)
-
         self._target_plotter.set_image(self._target_matrix)
 
     def _set_gl_program(self):
         self._openGL.set_program(self._program)
 
     def _run_gradient_descent_torch(self):
+        self._reset()
+
         self.gd = GradientDescent(self._target_image, self._out_node, self._settings_panel.settings)
         self.thread = QThread()
         self.gd.iteration_done.connect(self._gd_iter_callback)
@@ -443,16 +456,28 @@ class TextureMatcher(QWidget):
         _logger.debug("Started Gradient Descent Thread...")
         self.thread.start()
 
+    def _reset(self):
+        # Reset procedural model parameters
+        for key in self._params:
+            self._params[key].restore_value()
+            self._set_parameter_values(self._params)
+
+        # Reset plots
+        self._loss_plotter.plotItem.clear()
+        self._image_plotter.clear()
+
     def _stop_gradient_descent(self):
         if self.thread.isRunning():
             _logger.info("Stopping Gradient Descent Thread...")
             self._settings_panel.set_gd_finishing()
             self.gd.stop()
             self.thread.quit()
+            self._settings_panel.set_gd_finished()
 
-    def _finish_gradient_descent(self):
-        self._settings_panel.set_gd_finished()
-        _logger.info("Gradient Descent Thread Stopped.")
+    def _finish_gradient_descent(self, params, loss_hist):
+        self._params = params
+        self._stop_gradient_descent()
+        _logger.info("Gradient Descent finished with a final loss of {:.4f}.".format(loss_hist[-1]))
 
     def _gd_iter_callback(self, props):
         loss_hist = props['loss_hist']
@@ -471,7 +496,7 @@ class TextureMatcher(QWidget):
     def _set_parameter_values(self, params: dict):
         for uniform, param in params.items():
             try:
-                self._program[uniform] = param.detach().numpy()
+                self._program[uniform] = param.tensor().detach().numpy()
             except IndexError as e:
                 _logger.error("Uniform {} does not exist in program!".format(uniform))
                 raise e
