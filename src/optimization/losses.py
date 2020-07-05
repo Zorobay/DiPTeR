@@ -46,8 +46,6 @@ class NeuralLoss(Loss):
             if isinstance(mod, torch.nn.MaxPool2d):
                 self.modulelist[i] = torch.nn.AvgPool2d(kernel_size=mod.kernel_size, stride=mod.stride, padding=mod.padding, ceil_mode=mod.ceil_mode)
 
-        self._norm_mean = torch.tensor([0.485, 0.456, 0.406], dtype=torch.float32)
-        self._norm_std = torch.tensor([0.229, 0.224, 0.225], dtype=torch.float32)
         self._normalize = T.Compose([
             T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
@@ -55,9 +53,6 @@ class NeuralLoss(Loss):
     def __str__(self):
         layers = "\n\t".join([self.modulelist[i + 1].__str__() for i in self._layer_indices])
         return "Neural Loss (\n\tlayers:\n {}, \n\tweights: {}\n)".format(layers, self._layer_weights)
-
-    # def _normalize(self, x: Tensor):
-    #     return (x - self._norm_mean) / self._norm_std
 
     def _preprocess(self, x: Tensor):
         # Swap axes to get image on CxHxW form, which is required for Models in PyTorch, then Normalize to comply with VGG19 and add batch dimension
