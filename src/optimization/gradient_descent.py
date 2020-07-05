@@ -13,55 +13,14 @@ from torch.optim.optimizer import Optimizer
 class GradientDescentSettings:
 
     def __init__(self):
-        self._loss_func = None
-        self._render_width = 200
-        self._render_height = 200
-        self._max_iter = 100
-        self._early_stopping_thresh = 0.01
-        self._learning_rate = 0.01
-        self._decay = 0.99
-
-    def set_loss_func(self, func: Loss):
-        self._loss_func = func
-
-    def get_loss_func(self) -> Loss:
-        return self._loss_func
-
-    def set_render_width(self, width: int):
-        self._render_width = width
-
-    def get_render_width(self) -> int:
-        return self._render_width
-
-    def set_render_height(self, height: int):
-        self._render_height = height
-
-    def get_render_height(self) -> int:
-        return self._render_height
-
-    def set_max_iter(self, iter: int):
-        self._max_iter = iter
-
-    def get_max_iter(self) -> int:
-        return self._max_iter
-
-    def set_early_stopping_thresh(self, thresh: float):
-        self._early_stopping_thresh = thresh
-
-    def get_early_stopping_thresh(self) -> float:
-        return self._early_stopping_thresh
-
-    def set_learning_rate(self, rate: float):
-        self._learning_rate = rate
-
-    def get_learning_rate(self) -> float:
-        return self._learning_rate
-
-    def set_decay(self, decay: float):
-        self._decay = decay
-
-    def get_decay(self) -> float:
-        return self._decay
+        self.loss_func = None
+        self.optimizer = None
+        self.render_width = 200
+        self.render_height = 200
+        self.max_iter = 100
+        self.early_stopping_thresh = 0.01
+        self.learning_rate = 0.01
+        self.decay = 0.99
 
 
 class GradientDescent(QObject):
@@ -69,20 +28,11 @@ class GradientDescent(QObject):
     iteration_done = pyqtSignal(dict)
     finished = pyqtSignal(dict, np.ndarray)
 
-    def __init__(self, image_to_match: torch.Tensor, out_node: GMaterialOutputNode, settings: GradientDescentSettings,
-                 optimizer: Optimizer = torch.optim.Adam):
+    def __init__(self, image_to_match: torch.Tensor, out_node: GMaterialOutputNode, settings: GradientDescentSettings):
         super().__init__()
         self.out_node = out_node
         self.settings = settings
-        self.optimizer = optimizer
-        self.width, self.height = self.settings.get_render_width(), self.settings.get_render_height()
-        self.lr = self.settings.get_learning_rate()
-        self.decay = self.settings.get_decay()
-        self.max_iter = self.settings.get_max_iter()
-        self.early_stopping_thresh = self.settings.get_early_stopping_thresh()
         self.target = image_to_match
-        self.f = None
-        self.loss_func = self.settings.get_loss_func()
         self._stop = False
 
     def stop(self):
@@ -90,20 +40,26 @@ class GradientDescent(QObject):
 
     @pyqtSlot(name='run')
     def run(self):
-        self.target = image_funcs.image_to_tensor(self.target, (self.settings.get_render_width(), self.settings.get_render_height()))
-        params, loss_hist = self._run_gd(lr=self.lr, max_iter=self.max_iter, early_stopping_thresh=self.early_stopping_thresh)
+        self.target = image_funcs.image_to_tensor(self.target, (self.settings.render_width, self.settings.render_height))
+        params, loss_hist = self._run_gd()
         self.finished.emit(params, loss_hist)
 
-    def _run_gd(self, lr=0.01, max_iter=150, early_stopping_thresh=0.01) -> typing.Tuple[list, np.ndarray]:
-        _, args_dict = self.out_node.render(self.width, self.height, retain_graph=True)
+    def _run_gd(self) -> typing.Tuple[dict, np.ndarray]:
+        lr = self.settings.learning_rate
+        max_iter = self.settings.max_iter
+        early_stopping_thresh = self.settings.early_stopping_thresh
+        loss_func = self.settings.loss_func
+        width, height = self.settings.render_width, self.settings.render_height
+
+        _, args_dict = self.out_node.render(width, height, retain_graph=True)
         args_dict = {k: args_dict[k].tensor() for k in args_dict}  # Extract tensors
         args_list = [args_dict[k] for k in args_dict]  # Convert to list
 
         for p in args_list:
             p.requires_grad = True
 
-        optimizer = self.optimizer(args_list, lr=lr)
         loss_hist = np.empty(max_iter, dtype=np.float32)
+        optimizer = self.settings.optimizer(args_list, lr=lr)
 
         for i in range(max_iter):
             if self._stop:
@@ -112,8 +68,8 @@ class GradientDescent(QObject):
             with torch.autograd.set_detect_anomaly(True):
                 optimizer.zero_grad()
                 start = time.time()
-                render, _ = self.out_node.render(self.width, self.height, retain_graph=True)
-                loss = self.loss_func(render, self.target)
+                render, _ = self.out_node.render(width, height, retain_graph=True)
+                loss = loss_func(render, self.target)
                 new_loss_np = float(loss.detach())
                 loss_hist[i] = new_loss_np
                 props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1], 'learning_rate': lr, 'params': args_dict,

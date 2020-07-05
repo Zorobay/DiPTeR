@@ -25,6 +25,7 @@ from src.gui.widgets.line_input import FloatInput, IntInput
 from src.misc import image_funcs
 from src.optimization import losses
 from src.optimization.gradient_descent import GradientDescent, GradientDescentSettings
+from torch import optim
 
 sns.set()
 
@@ -49,6 +50,7 @@ class SettingsPanel(QWidget):
         self._texture_label = QLabel("load texture...")
         self._match_button = QPushButton("Match Texture")
         self._loss_combo_box = QComboBox()
+        self._optimizer_combo_box = QComboBox()
         self._width_input = IntInput(0, 1000)
         self._height_input = IntInput(0, 1000)
         self._max_iter_input = IntInput(0, 10000)
@@ -58,6 +60,7 @@ class SettingsPanel(QWidget):
         # Define data
         self._loss_func_map = {"MSE Loss": losses.MSELoss(reduction='mean'), "Squared Bin Loss": losses.SquaredBinLoss(), "Neural Loss":
             losses.NeuralLoss()}
+        self._optimizer_map = {"Adam": optim.Adam, "AdamW": optim.AdamW, "SGD": optim.SGD, "RMSprop": optim.RMSprop}
         self.loaded_image = None
         self._max_iter = 100
         self.settings = GradientDescentSettings()
@@ -74,30 +77,36 @@ class SettingsPanel(QWidget):
         self._loss_combo_box.addItems(list(self._loss_func_map))
         self._loss_combo_box.currentIndexChanged.connect(self._set_loss_func)
         self._loss_combo_box.setCurrentIndex(0)
-        self.settings.set_loss_func(self._loss_func_map[self._loss_combo_box.currentText()])
+        self.settings.loss_func = self._loss_func_map[self._loss_combo_box.currentText()]
+
+        # --- Setup optimizer combo box ---
+        self._optimizer_combo_box.addItems(list(self._optimizer_map))
+        self._optimizer_combo_box.currentTextChanged.connect(self._set_optimizer)
+        self.settings.optimizer = self._optimizer_map["Adam"]
 
         # --- Setup render size input ---
-        self._width_input.set_default_value(self.settings.get_render_width())
-        self._height_input.set_default_value(self.settings.get_render_height())
-        self._width_input.input_changed.connect(lambda: self._change_settings(self.settings.set_render_width, self._width_input.get_gl_value()))
-        self._height_input.input_changed.connect(lambda: self._change_settings(self.settings.set_render_height, self._height_input.get_gl_value()))
+        self._width_input.set_default_value(self.settings.render_width)
+        self._height_input.set_default_value(self.settings.render_height)
+        self._width_input.input_changed.connect(lambda: self._change_settings("render_width", self._width_input.get_gl_value()))
+        self._height_input.input_changed.connect(lambda: self._change_settings("render_height", self._height_input.get_gl_value()))
 
         # --- Setup max iterations input ---
-        self._max_iter_input.input_changed.connect(lambda: self._change_settings(self.settings.set_max_iter, self._max_iter_input.get_gl_value()))
+        self._max_iter_input.input_changed.connect(lambda: self._change_settings("max_iter", self._max_iter_input.get_gl_value()))
         self._max_iter_input.set_default_value(100)
 
         # --- Setup early stopping loss threshold input ---
-        self._early_stopping_loss_thresh.input_changed.connect(lambda: self._change_settings(self.settings.set_early_stopping_thresh,
+        self._early_stopping_loss_thresh.input_changed.connect(lambda: self._change_settings("early_stopping_thresh",
                                                                                              self._early_stopping_loss_thresh.get_gl_value()))
         self._early_stopping_loss_thresh.set_default_value(0.01)
 
         # --- Setup learning rate input ---
-        self._learning_rate.input_changed.connect(lambda: self._change_settings(self.settings.set_learning_rate, self._learning_rate.get_gl_value()))
+        self._learning_rate.input_changed.connect(lambda: self._change_settings("learning_rate", self._learning_rate.get_gl_value()))
         self._learning_rate.set_default_value(0.1)
 
         self._layout.addWidget(self._match_button)
         self._layout.addWidget(self._load_texture_button)
         self._layout.addWidget(LabelledInput("Loss function", self._loss_combo_box))
+        self._layout.addWidget(LabelledInput("Optimizer", self._optimizer_combo_box))
         self._layout.addWidget(LabelledInput("Render width", self._width_input))
         self._layout.addWidget(LabelledInput("Render height", self._height_input))
         self._layout.addWidget(LabelledInput("Max iterations", self._max_iter_input))
@@ -122,7 +131,11 @@ class SettingsPanel(QWidget):
             self._width_input.set_default_value(224)
             self._height_input.set_default_value(224)
 
-        self._change_settings(self.settings.set_loss_func, loss_func)
+        self._change_settings("loss_func", loss_func)
+
+    def _set_optimizer(self, text: str):
+        optimizer = self._optimizer_map[text]
+        self._change_settings("optimizer", optimizer)
 
     def set_gd_finished(self):
         self._match_button.setText("Match Texture")
@@ -130,9 +143,9 @@ class SettingsPanel(QWidget):
     def set_gd_finishing(self):
         self._match_button.setText("Stopping...")
 
-    def _change_settings(self, func: typing.Callable, new_val: typing.Any):
-        func(new_val)
-        _logger.debug("New value for setting {} -> {}.".format(func.__name__, new_val))
+    def _change_settings(self, var: str, new_val: typing.Any):
+        _logger.debug("New value for setting {} -> {}.".format(var, new_val))
+        setattr(self.settings, var, new_val)
         self.settings_changed.emit(self.settings)
 
     def _toggle_matching(self):
