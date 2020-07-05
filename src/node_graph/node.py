@@ -209,7 +209,7 @@ class ShaderNode(Node):
         for i, inp in enumerate(self._shader.get_inputs()):
             self._in_sockets[i].set_value(inp.get_default())
 
-    def render(self, width: int, height: int, retain_graph: bool = False) -> typing.Tuple[Tensor, list]:
+    def render(self, width: int, height: int, retain_graph: bool = False) -> typing.Tuple[Tensor, dict]:
         """
         Renders an image from this node graph.
 

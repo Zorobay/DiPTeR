@@ -306,7 +306,7 @@ class GShaderNode(QGraphicsWidget):
         painter.setBrush(QBrush(self._bg_color))
         painter.drawRoundedRect(0, 0, self._width, self._height, self._rounding, 1)
 
-    def render(self, width: int, height: int, retain_graph=False) -> typing.Tuple[torch.Tensor, list]:
+    def render(self, width: int, height: int, retain_graph=False) -> typing.Tuple[torch.Tensor, dict]:
         """
         Renders an image from this node graph.
 
@@ -415,8 +415,8 @@ class GMaterialOutputNode(GShaderNode):
 
         return False
 
-    def render(self, width, height, retain_graph=False) -> typing.Tuple[typing.Union[None, torch.Tensor], list]:
+    def render(self, width, height, retain_graph=False) -> typing.Tuple[typing.Union[None, torch.Tensor], dict]:
         if self.can_render():
             return super().render(width, height, retain_graph=retain_graph)
 
-        return None, list()  # The input is not getting fed a shader, and we can't render anything
+        return None, dict()  # The input is not getting fed a shader, and we can't render anything
