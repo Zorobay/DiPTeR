@@ -3,6 +3,7 @@ import typing
 
 import numpy as np
 import pyqtgraph as pg
+import seaborn as sns
 import torch
 from PIL import Image
 from PyQt5.QtCore import pyqtSignal, QThread, Qt
@@ -11,9 +12,9 @@ from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDial
     QListWidgetItem, QMessageBox, QSplitter, QProgressDialog
 from gui.widgets.io_module import Module
 from gui.widgets.list_widget_item import ListWidgetItem
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
 from matplotlib import pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT as NavigationToolbar
+from matplotlib.figure import Figure
 from misc.fifo_queue import FIFOQueue
 from node_graph.parameter import Parameter
 from src.gui.node_editor.g_shader_node import GMaterialOutputNode
@@ -24,7 +25,7 @@ from src.gui.widgets.line_input import FloatInput, IntInput
 from src.misc import image_funcs
 from src.optimization import losses
 from src.optimization.gradient_descent import GradientDescent, GradientDescentSettings
-import seaborn as sns
+
 sns.set()
 
 _logger = logging.getLogger(__name__)
@@ -145,6 +146,25 @@ class SettingsPanel(QWidget):
             self.match_stop.emit()
 
 
+class PlotWidget3D(QWidget):
+
+    def __init__(self):
+        super().__init__()
+        self._figure = Figure(figsize=(5, 5))
+        self._canvas = FigureCanvas(self._figure)
+        self._navbar = NavigationToolbar(self._canvas, self)
+        self._layout = QVBoxLayout()
+        self._layout.addWidget(self._navbar)
+        self._layout.addWidget(self._canvas)
+        self.setLayout(self._layout)
+
+    def get_axis(self):
+        return self._figure.add_subplot(111, projection="3d")
+
+    def get_canvas(self):
+        return self._canvas
+
+
 class LossVisualizer(QWidget):
 
     def __init__(self, mat_output_node: GMaterialOutputNode):
@@ -154,9 +174,9 @@ class LossVisualizer(QWidget):
         # Declare widgets
         self._layout = QGridLayout()
         self._splitter = QSplitter(Qt.Horizontal)
-        self._figure = Figure(figsize=(5, 5))
-        self._canvas = FigureCanvas(self._figure)
-        self._fig_ax = self._figure.add_subplot(111, projection="3d")
+        self._plot = PlotWidget3D()
+        self._canvas = self._plot.get_canvas()
+        self._fig_ax = self._plot.get_axis()
         self._list_widget = QListWidget()
         self._p1_res = IntInput(0, 100)
         self._p2_res = IntInput(0, 100)
@@ -187,7 +207,7 @@ class LossVisualizer(QWidget):
         self._fig_ax.set_title("Loss Surface")
         self._fig_ax.set_xlabel("Parameter ?")
         self._fig_ax.set_ylabel("Parameter ?")
-        # self._fig_ax.set_zlabel("Loss Value")
+        self._fig_ax.set_zlabel("Loss Value")
 
         # Setup resolution input
         self._p1_res.set_default_value(20)
@@ -200,7 +220,7 @@ class LossVisualizer(QWidget):
 
         # Add widgets to layout
         self._splitter.addWidget(self._list_widget)
-        self._splitter.addWidget(self._canvas)
+        self._splitter.addWidget(self._plot)
         self._layout.addWidget(self._splitter, 0, 0, 1, 4)
         self._layout.addWidget(p1_module, 1, 1)
         self._layout.addWidget(p2_module, 1, 2)
@@ -253,7 +273,7 @@ class LossVisualizer(QWidget):
 
         W, H = self._settings.get_render_width(), self._settings.get_render_height()
         R1, R2 = self._p1_res.get_gl_value(), self._p2_res.get_gl_value()
-        progress_dialog = QProgressDialog("Calculating loss surface...", "Cancel", 0, R1-1, self)
+        progress_dialog = QProgressDialog("Calculating loss surface...", "Cancel", 0, R1 - 1, self)
         progress_dialog.setWindowTitle("Calculating")
         progress_dialog.setWindowModality(Qt.WindowModal)
         progress_dialog.setMinimumDuration(1)
@@ -286,11 +306,12 @@ class LossVisualizer(QWidget):
                 loss = loss_f(r, self._target_matrix)
                 loss_surface[i, j] = loss.detach().numpy()
 
-            _logger.info("{:.2f}% complete...".format((i+1)/R1 * 100))
+            _logger.info("{:.2f}% complete...".format((i + 1) / R1 * 100))
 
-        P1,P2 = torch.meshgrid([p1_values, p2_values])
+        P1, P2 = torch.meshgrid([p1_values, p2_values])
 
         self._fig_ax.plot_surface(P1, P2, loss_surface, cmap=plt.cm.viridis)
+        self._fig_ax.set_zlim(bottom=0)
         self._canvas.draw()
 
     def _param_to_mat(self, param: torch.Tensor):
