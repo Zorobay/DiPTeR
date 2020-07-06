@@ -2,8 +2,8 @@ import types
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget, QComboBox, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QMessageBox
+from gui.texture_matching.texture_matcher import TextureMatcher
 from src.gui.node_editor.control_center import ControlCenter
-from src.gui.node_editor.texture_matcher import TextureMatcher
 from src.gui.rendering.opengl_widget import OpenGLWidget
 from src.opengl import object_vertices
 

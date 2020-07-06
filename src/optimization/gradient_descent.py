@@ -34,6 +34,7 @@ class GradientDescent(QObject):
         self.settings = settings
         self.target = image_to_match
         self._stop = False
+        self._last_params = None
 
     def stop(self):
         self._stop = True
@@ -42,7 +43,12 @@ class GradientDescent(QObject):
     def run(self):
         self.target = image_funcs.image_to_tensor(self.target, (self.settings.render_width, self.settings.render_height))
         params, loss_hist = self._run_gd()
+        self._last_params = params
         self.finished.emit(params, loss_hist)
+
+    def restore_params(self):
+        for key in self._last_params:
+            self._last_params[key].restore_value()
 
     def _run_gd(self) -> typing.Tuple[dict, np.ndarray]:
         lr = self.settings.learning_rate

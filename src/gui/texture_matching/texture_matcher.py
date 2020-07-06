@@ -4,19 +4,11 @@ import typing
 import numpy as np
 import pyqtgraph as pg
 import seaborn as sns
-import torch
 from PIL import Image
 from PyQt5.QtCore import pyqtSignal, QThread, Qt
-from PyQt5.QtGui import QFont, QBrush, QColor
-from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QComboBox, QMenuBar, QListWidget, \
-    QListWidgetItem, QMessageBox, QSplitter, QProgressDialog
-from gui.widgets.io_module import Module
-from gui.widgets.list_widget_item import ListWidgetItem
-from matplotlib import pyplot as plt
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT as NavigationToolbar
-from matplotlib.figure import Figure
-from misc.fifo_queue import FIFOQueue
-from node_graph.parameter import Parameter
+from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QComboBox, QMenuBar
+from gui.texture_matching.loss_visualizer import LossVisualizer
 from src.gui.node_editor.g_shader_node import GMaterialOutputNode
 from src.gui.rendering.image_plotter import ImagePlotter
 from src.gui.rendering.opengl_widget import OpenGLWidget
@@ -167,187 +159,6 @@ class SettingsPanel(QWidget):
             self._is_cleared = False
             self._match_button.setText("Reset")
             self.match_stop.emit()
-
-
-class PlotWidget3D(QWidget):
-
-    def __init__(self):
-        super().__init__()
-        self._figure = Figure(figsize=(5, 5))
-        self._canvas = FigureCanvas(self._figure)
-        self._navbar = NavigationToolbar(self._canvas, self)
-        self._layout = QVBoxLayout()
-        self._layout.addWidget(self._navbar)
-        self._layout.addWidget(self._canvas)
-        self.setLayout(self._layout)
-
-    def get_axis(self):
-        return self._figure.add_subplot(111, projection="3d")
-
-    def get_canvas(self):
-        return self._canvas
-
-
-class LossVisualizer(QWidget):
-
-    def __init__(self, mat_output_node: GMaterialOutputNode):
-        super().__init__(parent=None)
-        self._mat_out_node = mat_output_node
-
-        # Declare widgets
-        self._layout = QGridLayout()
-        self._splitter = QSplitter(Qt.Horizontal)
-        self._plot = PlotWidget3D()
-        self._canvas = self._plot.get_canvas()
-        self._fig_ax = self._plot.get_axis()
-        self._list_widget = QListWidget()
-        self._p1_res = IntInput(0, 100)
-        self._p2_res = IntInput(0, 100)
-        self._plot_button = QPushButton("Plot Loss")
-
-        # Declare data
-        self._selected_items = []
-        self._item_queue = FIFOQueue(maxsize=2)
-        self._bg_brush_selected = QBrush(QColor("#8bf9b0"))
-        self._bg_brush_default = QBrush(QColor("#ffffff"))
-        self._param_item_map = {}
-        self._render_w = 100
-        self._render_h = 100
-        self._settings = {}
-        self._target_image = None
-        self._target_matrix = None
-
-        self._list_parameters()
-        self._init()
-
-    def _init(self):
-        self.setWindowTitle("Loss Visualizer")
-
-        # Setup list widget
-        self._list_widget.itemChanged.connect(self._item_changed)
-
-        # Setup plot
-        self._fig_ax.set_title("Loss Surface")
-        self._fig_ax.set_xlabel("Parameter ?")
-        self._fig_ax.set_ylabel("Parameter ?")
-        self._fig_ax.set_zlabel("Loss Value")
-
-        # Setup resolution input
-        self._p1_res.set_default_value(20)
-        self._p2_res.set_default_value(20)
-        p1_module = Module("Param 1 Res.", self._p1_res)
-        p2_module = Module("Param 2 Res.", self._p2_res)
-
-        # Setup plot button
-        self._plot_button.clicked.connect(self._plot_loss)
-
-        # Add widgets to layout
-        self._splitter.addWidget(self._list_widget)
-        self._splitter.addWidget(self._plot)
-        self._layout.addWidget(self._splitter, 0, 0, 1, 4)
-        self._layout.addWidget(p1_module, 1, 1)
-        self._layout.addWidget(p2_module, 1, 2)
-        self._layout.addWidget(self._plot_button, 1, 3)
-
-        self.setLayout(self._layout)
-
-    def _list_parameters(self):
-        _, param_dict = self._mat_out_node.get_backend_node().render(self._render_w, self._render_h, retain_graph=True)
-        row = 0
-
-        for key in param_dict:
-            param = param_dict[key]
-            item = ListWidgetItem(key, param)
-            self._list_widget.insertItem(row, item)
-            row += 1
-
-            if param.is_vector():
-                item.set_checkable(False)
-                item.remove_checkbox()
-                # item.set_enabled(False)
-
-                for i in range(param.shape()[1]):
-                    item = ListWidgetItem("  [{}]".format(i), param, index=i)
-                    self._list_widget.insertItem(row, item)
-                    row += 1
-
-    def _checked_items(self) -> typing.List[ListWidgetItem]:
-        checked = []
-        for i in range(self._list_widget.count()):
-            item = self._list_widget.item(i)
-            if item.checkState() == Qt.Checked:
-                checked.append(item)
-
-        return checked
-
-    def _item_changed(self, item: QListWidgetItem):
-        if item.checkState() == Qt.Checked:
-            if self._item_queue.is_full():
-                first_item = self._item_queue.pop()
-                first_item.setCheckState(Qt.Unchecked)
-
-            self._item_queue.put(item)
-        elif item.checkState() == Qt.Unchecked:
-            if item in self._item_queue:
-                self._item_queue.remove(item)
-
-    def _plot_loss(self):
-        self._fig_ax.clear()
-
-        W, H = self._settings.render_width, self._settings.render_height
-        R1, R2 = self._p1_res.get_gl_value(), self._p2_res.get_gl_value()
-        progress_dialog = QProgressDialog("Calculating loss surface...", "Cancel", 0, R1 - 1, self)
-        progress_dialog.setWindowTitle("Calculating")
-        progress_dialog.setWindowModality(Qt.WindowModal)
-        progress_dialog.setMinimumDuration(1)
-
-        self._target_matrix = image_funcs.image_to_tensor(self._target_image, (W, H))
-        loss_surface = np.empty((R1, R2))
-        loss_f = self._settings.get_loss_func()
-        checked_items = self._checked_items()
-
-        item1 = checked_items[0]
-        self._fig_ax.set_xlabel(item1.text())
-        param1: Parameter = item1.param
-        p1_values = torch.from_numpy(np.linspace(param1.get_range()[0], param1.get_range()[1], num=R1, endpoint=True))
-
-        item2 = checked_items[1]
-        self._fig_ax.set_ylabel(item2.text())
-        param2: Parameter = item2.param
-        p2_values = torch.from_numpy(np.linspace(param2.get_range()[0], param2.get_range()[1], num=R2, endpoint=True))
-
-        for i in range(R1):
-            param1.set_value(p1_values[i], index=item1.index)
-            progress_dialog.setValue(i)
-
-            if progress_dialog.wasCanceled():
-                return
-
-            for j in range(R2):
-                param2.set_value(p2_values[j], index=item2.index)
-                r, _ = self._mat_out_node.get_backend_node().render(W, H, retain_graph=True)
-                loss = loss_f(r, self._target_matrix)
-                loss_surface[i, j] = loss.detach().numpy()
-
-            _logger.info("{:.2f}% complete...".format((i + 1) / R1 * 100))
-
-        P1, P2 = torch.meshgrid([p1_values, p2_values])
-
-        self._fig_ax.plot_surface(P1, P2, loss_surface, cmap=plt.cm.viridis)
-        self._fig_ax.set_zlim(bottom=0)
-        self._canvas.draw()
-
-    def _param_to_mat(self, param: torch.Tensor):
-        return
-
-    def open(self, settings: GradientDescentSettings, target: Image):
-        if target is None:
-            msg = QMessageBox(QMessageBox.Warning, "Need to set Target Texture!", "Can not open loss visualizer because target texture is not set.")
-            msg.exec()
-        else:
-            self._settings = settings
-            self._target_image = target
-            super().show()
 
 
 class TextureMatcher(QWidget):
@@ -505,4 +316,4 @@ class TextureMatcher(QWidget):
         self._settings = settings
 
     def _open_loss_viz_window(self):
-        self._loss_visualizer.open(self._settings_panel.settings, self._target_image)
+        self._loss_visualizer.open(self._settings_panel.settings, self._target_image, self._out_node)

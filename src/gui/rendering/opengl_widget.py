@@ -3,7 +3,7 @@ import logging
 import numpy as np
 from PyQt5.QtCore import QTimer, Qt, pyqtSignal
 from PyQt5.QtGui import QMouseEvent, QImage
-from PyQt5.QtWidgets import QOpenGLWidget, QMenu, QFileDialog, QSizePolicy
+from PyQt5.QtWidgets import QOpenGLWidget, QMenu, QFileDialog, QSizePolicy, QLayout
 from glumpy import gl, glm, gloo
 from glumpy.gloo import Program
 from src.gui.node_editor.control_center import ControlCenter
@@ -54,9 +54,11 @@ class OpenGLWidget(QOpenGLWidget):
         self._mins = np.array((1., 1., 1.), dtype=np.float32)
 
         # Set Widget settings
-        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        size_policy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        size_policy.setHeightForWidth(True)
+        self.setSizePolicy(size_policy)
         self.setMinimumSize(100, 100)
-        self.resizeGL(width, height)
+        #self.resizeGL(width, height)
         self.setMouseTracking(False)
 
     @property
@@ -189,6 +191,9 @@ class OpenGLWidget(QOpenGLWidget):
         self.set_vertices(temp_V, temp_I)
 
         return img
+
+    def heightForWidth(self, width: int) -> int:
+        return width
 
     # ============== ============ ==============
     # ============== HANDLE EVENTS ==============
