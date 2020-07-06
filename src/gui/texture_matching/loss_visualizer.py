@@ -11,7 +11,6 @@ from gui.node_editor.g_shader_node import GMaterialOutputNode
 from gui.widgets.checkbox_item import CheckboxItem
 from gui.widgets.io_module import Module
 from gui.widgets.line_input import IntInput, FloatInput
-from gui.widgets.list_widget_item import ListWidgetItem
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
@@ -209,6 +208,10 @@ class LossVisualizer(QWidget):
         self._p2.save_value()
         p2_values = torch.from_numpy(np.linspace(item2_min, item2_max, num=R2, endpoint=True))
 
+        min_loss = np.finfo(np.float32).max
+        min_loss_p1 = None
+        min_loss_p2 = None
+
         for i in range(R1):
             self._p1.set_value(p1_values[i], index=item1.content["index"])
             progress_dialog.setValue(i)
@@ -219,8 +222,13 @@ class LossVisualizer(QWidget):
             for j in range(R2):
                 self._p2.set_value(p2_values[j], index=item2.content["index"])
                 r, _ = self._mat_out_node.get_backend_node().render(W, H, retain_graph=True)
-                loss = loss_f(r, self._target_matrix)
-                loss_surface[i, j] = loss.detach().numpy()
+                loss = loss_f(r, self._target_matrix).detach().numpy()
+                if loss < min_loss:
+                    min_loss = loss
+                    min_loss_p1 = self._p1.tensor().detach().numpy()
+                    min_loss_p2 = self._p2.tensor().detach().numpy()
+
+                loss_surface[i, j] = loss
 
             _logger.info("{:.2f}% complete...".format((i + 1) / R1 * 100))
 
@@ -230,6 +238,11 @@ class LossVisualizer(QWidget):
 
         self._fig_ax.plot_surface(P1, P2, loss_surface, cmap=plt.cm.viridis)
         self._fig_ax.set_zlim(bottom=0)
+
+        # Add min value marker
+        self._fig_ax.plot([min_loss_p1], [min_loss_p2], [min_loss], marker='+', color="#ff00ff")
+        self._fig_ax.text(min_loss_p1, min_loss_p2, min_loss*1.1, "Minimum Loss = {:.4f}".format(float(min_loss)), color='#ff00ff')
+
         self._canvas.draw()
         self._start_gd_button.setEnabled(True)
 
@@ -246,18 +259,11 @@ class LossVisualizer(QWidget):
         self._thread.start()
 
     def _gd_callback(self, info: dict):
-        if self._plot_last_x is None:
-            self._plot_last_x = self._p1.tensor().detach().numpy()
-            self._plot_last_y = self._p2.tensor().detach().numpy()
-            return
-
         loss = info["loss"]
-        self._fig_ax.plot([self._plot_last_x, self._p1.tensor().detach().numpy()],
-                          [self._plot_last_y, self._p2.tensor().detach().numpy()],
-                          zs=[loss], color='r', marker='o', linestyle='-')
+        x = self._p1.tensor().detach().numpy()
+        y = self._p2.tensor().detach().numpy()
+        self._fig_ax.plot([x],[y], zs=[loss], color='#ff0000', marker='o', linestyle='-', markersize=8)
         self._canvas.draw()
-        self._plot_last_x = self._p1.tensor().detach().numpy()
-        self._plot_last_y = self._p2.tensor().detach().numpy()
         _logger.debug("Loss: {}, P1: {}, P2: {}".format(loss, self._plot_last_x, self._plot_last_y))
 
     def _finish_gradient_descent(self):
