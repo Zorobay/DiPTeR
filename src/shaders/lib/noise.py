@@ -45,7 +45,7 @@ def fractalBrownianMotion(p: Tensor, detail: Tensor) -> Tensor:
     amplitude = torch.tensor((0.5)).repeat(w, h, 1)
 
     # Loop and add octaves of more and more detailed noise
-    for i in range(4):
+    for i in range(detail):
         value = value + (amplitude * smoothNoise2D(p))
         p = p * 2.0
         amplitude = amplitude * 0.5

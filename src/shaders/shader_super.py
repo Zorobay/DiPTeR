@@ -66,12 +66,14 @@ def connect_code(node: 'GShaderNode', code: GLSLCode):
 
 class ShaderInput:
 
-    def __init__(self, display_label: str, argument: str, dtype: DataType, range_: typing.Tuple[float, float], default: typing.Any):
+    def __init__(self, display_label: str, argument: str, dtype: DataType, range_: typing.Tuple[float, float], default: typing.Any,
+                 connectable: bool = True):
         self._display_label = display_label
         self._argument = argument
         self._dtype = dtype
         self._range = range_
         self._default = default
+        self._connectable = connectable
 
     def get_display_label(self) -> str:
         """Returns the formatted display label for this input."""
@@ -91,6 +93,10 @@ class ShaderInput:
     def get_default(self):
         """Returns the default value of this input."""
         return self._default
+
+    def is_connectable(self) -> bool:
+        """Returns a boolean indicating whether this input can be connected to other nodes."""
+        return self._connectable
 
 
 class ShaderOutput:

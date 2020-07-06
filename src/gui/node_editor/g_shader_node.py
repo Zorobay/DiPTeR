@@ -113,7 +113,7 @@ class GShaderNode(QGraphicsWidget):
             label = shader_input.get_display_label()
             ran = shader_input.get_range()
             socket = self._node.get_input_socket(i)
-            self._add_input_module(input_label=label, node_socket=socket, input_range=ran)
+            self._add_input_module(input_label=label, node_socket=socket, input_range=ran, is_connectable=shader_input.is_connectable())
 
         for i in range(self._node.num_output_sockets()):
             shader_output = shader.get_outputs()[i]
@@ -235,9 +235,9 @@ class GShaderNode(QGraphicsWidget):
 
         return socket
 
-    def _add_input_module(self, input_label: str, node_socket: NodeSocket, input_range: (float, float) = (0, 1)):
-        socket = self._create_g_socket(node_socket)
+    def _add_input_module(self, input_label: str, node_socket: NodeSocket, input_range: (float, float) = (0, 1), is_connectable:bool=True):
         dtype = node_socket.dtype()
+        socket = self._create_g_socket(node_socket)
 
         if dtype == DataType.Float:
             # Create an widgets widget
@@ -268,6 +268,9 @@ class GShaderNode(QGraphicsWidget):
         self._master_layout.setRowAlignment(self._input_index, Qt.AlignBottom)
         self._input_index += 1
         self._height = self._input_index * 40
+
+        if not is_connectable:
+            socket.setVisible(False)
 
     def _add_output_module(self, output_label: str, node_socket: NodeSocket):
         socket = self._create_g_socket(node_socket)

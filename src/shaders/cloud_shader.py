@@ -12,18 +12,17 @@ class CloudShader(FunctionShader):
     def get_inputs(self) -> typing.List[ShaderInput]:
         return [
             ShaderInput("Scale", "scale", DataType.Float, (0, 100), 1.0),
-            ShaderInput("Detail", "detail", DataType.Int, (0, 10), 4.0)
+            ShaderInput("Detail", "detail", DataType.Int, (0, 10), 4.0, connectable=False)
         ]
 
     def shade_mat(self, scale: Tensor, detail: Tensor) -> Tensor:
         w, h = Shader.width, Shader.height
         uv = Shader.frag_pos[:, :, :2]
         color = torch.tensor((0., 0., 0.)).repeat(w, h, 1)
-        color = color + noise.fractalBrownianMotion(uv * scale, detail)
+
+        # Detail has to be controlled as a scalar
+        detail_scalar = detail[0, 0]
+
+        color = color + noise.fractalBrownianMotion(uv * scale, detail_scalar)
 
         return color
-
-    # def shade(self, frag_pos: Tensor) -> Tensor:
-    #     uv = frag_pos[:2]
-    #     noise = noise.noise2D(uv)
-    #     return torch.stack((noise, noise, noise))
