@@ -12,7 +12,7 @@ class MaterialOutputShader(CompilableShader):
     def get_outputs(self) -> typing.List[typing.Tuple[str, str]]:
         return []
 
-    def shade(self, frag_pos: Tensor, shader: Tensor) -> Tensor:
+    def shade_iter(self, frag_pos: Tensor, shader: Tensor) -> Tensor:
         return shader
 
     def shade_mat(self, shader: Tensor) -> Tensor:

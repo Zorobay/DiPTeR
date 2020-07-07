@@ -12,7 +12,13 @@ class CloudShader(FunctionShader):
     def get_inputs(self) -> typing.List[ShaderInput]:
         return [
             ShaderInput("Scale", "scale", DataType.Float, (0, 100), 1.0),
-            ShaderInput("Detail", "detail", DataType.Int, (0, 10), 4.0, connectable=False)
+            ShaderInput("Detail", "detail", DataType.Int, (0, 10), 4.0, force_scalar=True)
+        ]
+
+    def get_outputs(self) -> typing.List[ShaderOutput]:
+        return [
+            ShaderOutput("Factor", DataType.Float, argument="out_factor"),
+            ShaderOutput("Color", DataType.Vec3_RGB, argument="out_color")
         ]
 
     def shade_mat(self, scale: Tensor, detail: Tensor) -> Tensor:
@@ -20,9 +26,7 @@ class CloudShader(FunctionShader):
         uv = Shader.frag_pos[:, :, :2]
         color = torch.tensor((0., 0., 0.)).repeat(w, h, 1)
 
-        # Detail has to be controlled as a scalar
-        detail_scalar = detail[0, 0]
+        fBM = noise.fractalBrownianMotion(uv*scale, detail)
+        color = color + fBM
 
-        color = color + noise.fractalBrownianMotion(uv * scale, detail_scalar)
-
-        return color
+        return (fBM, color)

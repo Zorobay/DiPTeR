@@ -26,7 +26,7 @@ class CheckerShader(FunctionShader):
         else:
             return color2
 
-    def shade(self, frag_pos: Tensor, color1: Tensor, color2: Tensor, scale: Tensor) -> Tensor:
+    def shade_iter(self, frag_pos: Tensor, color1: Tensor, color2: Tensor, scale: Tensor) -> Tensor:
         p = frag_pos * scale
 
         p_int = torch.abs(torch.floor(p))
@@ -36,4 +36,5 @@ class CheckerShader(FunctionShader):
             return color1
         else:
             return color2
-        # return gl.mix(color2, color1, check)
+
+        return gl.mix(color2, color1, check)

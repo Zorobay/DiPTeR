@@ -196,17 +196,19 @@ class GLSLCode:
 
         return None
 
-    def connect(self, argument: str, other_code: 'GLSLCode'):
+    def connect(self, argument: str, other_code: 'GLSLCode', out_arg: str = None):
         """
-        Connect the argument 'argument' of this other_code's primary_function to the output of the primary_function of the other_code in 'other_code'.
+        Connect the argument 'argument' of this other_code's primary_function to the output of the primary_function of the other_code in
+        'other_code'. If the primary function to be connected is using inout variables, specify the 'out_arg' as well.
         :param argument: The title of the argument that is to be replaced by a call to another primary_function.
         :param other_code: The other_code that will be called and whose return value will replace the argument
+        :param out_arg: The name of the 'out' variable in the primary function.
         """
         self.needed_code.add(other_code)
         for sub_code in other_code.needed_code:
             self.needed_code.add(sub_code)
 
-        self.primary_function.connect(argument, other_code)
+        self.primary_function.connect(argument, other_code, out_arg)
 
     def get_uniforms(self) -> typing.List[typing.Tuple[str, str]]:
         return self._uniforms
@@ -268,6 +270,7 @@ class GLSLFunction:
         self.function_name = ""
         self.modified_function_name = ""
         self.arguments = []
+        self._is_inout = False
 
         # Track line numbers of important parts of code
         self._body_start_line = -1
@@ -317,7 +320,9 @@ class GLSLFunction:
         args = arguments.split(",")
 
         for arg in args:
-            self.arguments.append(GLSLArgument(arg, self))
+            a = GLSLArgument(arg, self)
+            self.arguments.append(a)
+            self._is_inout = self._is_inout or a.is_output()
 
     def reset(self):
         """Reset this function and all connections to it."""
@@ -326,6 +331,9 @@ class GLSLFunction:
         for arg in self.arguments:
             arg.reset()
 
+    def is_inout(self):
+        return self._is_inout
+
     def get_argument(self, name: str) -> 'GLSLArgument':
         for arg in self.arguments:
             if arg.name == name:
@@ -333,29 +341,62 @@ class GLSLFunction:
 
         return None
 
-    def connect(self, argument: str, other_code: GLSLCode):
+    def get_output_args(self) -> typing.List['GLSLArgument']:
+        args = []
+        for arg in self.arguments:
+            if arg.is_output():
+                args.append(arg)
+
+        return args
+
+    def connect(self, argument: str, other_code: GLSLCode, out_arg: str = None):
         """
-        Connects the output of the primary function of 'other_code' to the input with title 'argument'.
+        Connects the output of the primary function of 'other_code' to the input with title 'argument'. If the primary function in the code to be
+        connected is using inout variables, specify the connected output via 'out_arg'.
         :param argument: The title of the input argument of this code.
         :param other_code: The code whose output is to be input to the argument.
+        :param out_arg: The name of the 'out' variable which is the output of the other code's primary function.
         """
         func = other_code.get_primary_function()
-        for arg in self.arguments:
-            if argument == arg.name:
-                arg.connect(func)
-                return
-
-        raise KeyError("No argument with title {} in primary function {}".format(argument, func))
+        try:
+            arg = self.get_argument(argument)
+            arg.connect(func, other_arg=out_arg)
+            if out_arg:
+                func.get_argument(out_arg).connect(self, other_arg=arg)
+        except AttributeError:
+            raise KeyError("No argument with title {} in primary function {}".format(argument, func))
 
     def _get_call_string(self, argument: str) -> str:
-        call = "{}({})".format(self.modified_function_name, ", ".join([arg.get_modified_name() for arg in self.arguments]))
-        return "\t{type} {arg} = {call};".format(type=self.return_type, arg=argument, call=call)
+
+        if self.is_inout():
+            call = []
+            vars = []
+            for i, arg in enumerate(self.arguments):
+                if arg.is_output():
+                    if arg.is_connected():
+                        # Generate variable declaration like 'type name;' and add to call
+                        other_arg = arg.get_connected_arg()
+                        mod_other_arg = other_arg.get_modified_name()
+                        call.append("\t{} {};".format(other_arg.type, mod_other_arg))
+                        vars.append(mod_other_arg)
+                    else:
+                        mod_arg = arg.get_modified_name() + "_" + "UNUSED"
+                        call.append("\t{} {};".format(arg.type, mod_arg))
+                        vars.append(mod_arg)
+                else:
+                    vars.append(arg.get_modified_name())
+
+            call.append("\t{}({});".format(self.modified_function_name, ", ".join(vars)))
+            return "\n".join(call)
+        else:
+            call = "{}({})".format(self.modified_function_name, ", ".join([arg.get_modified_name() for arg in self.arguments]))
+            return "\t{type} {arg} = {call};".format(type=self.return_type, arg=argument, call=call)
 
     def get_call_strings(self) -> typing.List[str]:
         call_strings = []
         for arg in self.arguments:
-            if arg.is_connected():
-                connected_func = arg.connected_to
+            if arg.is_connected() and not arg.is_output():
+                connected_func = arg._connected_func
                 call_string = connected_func._get_call_string(arg.get_modified_name()) + "\n"
                 call_strings.append(call_string)
 
@@ -378,19 +419,31 @@ class GLSLArgument:
         self.parent_function = parent_function
         self.type = ""
         self.name = ""
+        self.inout = ""
         self.modified_name = ""
-        self.connected_to = None
+        self._connected_func = None
+        self._connected_arg = None
         self._is_connected = False
 
         self._parse()
 
     def __str__(self):
-        return "(GLSLArgument) {} {}".format(self.type, self.name)
+        if self.inout:
+            return "(GLSLArgument) {} {} {}".format(self.inout, self.type, self.name)
+        else:
+            return "(GLSLArgument) {} {}".format(self.type, self.name)
 
     def _parse(self):
         parts = REG_SPACE.split(self.code)
-        self.type = parts[0]
-        self.name = parts[1]
+        if len(parts) == 2:
+            self.type = parts[0]
+            self.name = parts[1]
+        elif len(parts) == 3:
+            self.inout = parts[0]
+            self.type = parts[1]
+            self.name = parts[2]
+        else:
+            raise SyntaxError("GLSLArguments needs to have at least a type and a name but was given: {}".format(parts))
 
     def get_node_num(self):
         return self.parent_function.parent_code.get_node_num()
@@ -401,17 +454,31 @@ class GLSLArgument:
         else:
             return "{}_{}_{}".format(self.parent_function.modified_function_name, self.get_node_num(), self.name)
 
+    def get_connected_func(self) -> 'GLSLFunction':
+        return self._connected_func
+
+    def get_connected_arg(self) -> 'GLSLArgument':
+        return self._connected_arg
+
     def is_connected(self) -> bool:
         return self._is_connected
 
+    def is_output(self) -> bool:
+        return "out" in self.inout
+
     def reset(self):
         self._is_connected = False
-        self.connected_to = None
+        self._connected_func = None
 
     def get_uniform_string(self) -> str:
         return "uniform {} {};".format(self.type, self.get_modified_name())
 
-    def connect(self, other: GLSLFunction):
-        """Connects this argument to a call to another shaders primary_function."""
-        self.connected_to = other
+    def get_declaration_string(self) -> str:
+        return "{} {};".format(self.type, self.get_modified_name())
+
+    def connect(self, other_func: GLSLFunction, other_arg: 'GLSLArgument' = None):
+        """Connects this argument to a call to another shaders primary_function or directly to another argument of another function,
+        if inout arguments are used."""
+        self._connected_func = other_func
+        self._connected_arg = other_arg
         self._is_connected = True

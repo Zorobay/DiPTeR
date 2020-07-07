@@ -26,7 +26,7 @@ class HSVShader(FunctionShader):
         color = v * gl.mix(K0, torch.clamp(p - K0, 0., 1.), s)
         return color
 
-    def shade(self, frag_pos: Tensor, h: Tensor, s: Tensor, v: Tensor) -> Tensor:
+    def shade_iter(self, frag_pos: Tensor, h: Tensor, s: Tensor, v: Tensor) -> Tensor:
         K = torch.tensor((1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0))
         p = torch.abs(gl.fract(torch.stack([h, h, h]) + K[0:3]) * torch.tensor(6.0) - torch.stack([K[3], K[3], K[3]]))
         color = v * gl.mix(torch.stack([K[0], K[0], K[0]]), torch.clamp(p - torch.stack([K[0], K[0], K[0]]), 0, 1.0), s)

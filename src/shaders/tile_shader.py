@@ -15,10 +15,10 @@ class TileShader(FunctionShader):
             ShaderInput("Shift", "shift", DataType.Vec3_Float, (0, 1), torch.tensor((0., 0.)))
         ]
 
-    # def shade(self, frag_pos: Tensor) -> Tensor:
-    #     input = frag_pos[0]
-    #     color = torch.stack((input, input, input))
-    #     return color
+    def shade_iter(self, frag_pos: Tensor) -> Tensor:
+        input = frag_pos[0]
+        color = torch.stack((input, input, input))
+        return color
 
     def shade_mat(self, frag_pos: Tensor, scale: Tensor, shift: Tensor) -> Tensor:
         return pattern.tile(frag_pos, scale, shift)

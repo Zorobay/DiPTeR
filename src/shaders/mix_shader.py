@@ -19,5 +19,5 @@ class MixShader(FunctionShader):
     def shade_mat(self, x: Tensor, y: Tensor, a: Tensor) -> Tensor:
         return gl.mix(x, y, a)
 
-    def shade(self, frag_pos: Tensor, x: Tensor, y: Tensor, a: Tensor) -> Tensor:
+    def shade_iter(self, frag_pos: Tensor, x: Tensor, y: Tensor, a: Tensor) -> Tensor:
         return gl.mix(x, y, a)

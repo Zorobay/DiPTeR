@@ -11,5 +11,5 @@ class DefaultShader(CompilableShader):
     def shade_mat(self, frag_pos: Tensor) -> Tensor:
         return frag_pos
 
-    def shade(self, frag_pos: Tensor) -> Tensor:
+    def shade_iter(self, frag_pos: Tensor) -> Tensor:
         return frag_pos

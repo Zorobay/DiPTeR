@@ -54,26 +54,38 @@ def connect_code(node: 'GShaderNode', code: GLSLCode):
         connected_nodes = socket.get_connected_nodes()
         assert len(connected_nodes) <= 1
 
-        if len(connected_nodes) > 0:
+        if len(connected_nodes) == 1:
             connected_node = connected_nodes[0]
             connected_code = connected_node.get_shader().get_code()
+
+            connected_arg = None
+            if connected_code.get_primary_function().is_inout():  # We will have to connect the 'out' argument too
+                connected_socket = socket.get_connected_sockets()
+                assert len(connected_socket) == 1
+                connected_socket = connected_socket[0]
+                shader_output = connected_node.get_shader().get_outputs()[connected_socket.get_index()]
+                connected_arg = shader_output.get_argument()
 
             # Recurse...
             connect_code(connected_node, connected_code)
 
-            code.connect(socket_arg, connected_code)
+            code.connect(socket_arg, connected_code, out_arg=connected_arg)
 
 
 class ShaderInput:
 
     def __init__(self, display_label: str, argument: str, dtype: DataType, range_: typing.Tuple[float, float], default: typing.Any,
-                 connectable: bool = True):
+                 connectable: bool = True, force_scalar: bool = False):
         self._display_label = display_label
         self._argument = argument
         self._dtype = dtype
         self._range = range_
         self._default = default
         self._connectable = connectable
+        self._force_scalar = force_scalar
+
+        if self._force_scalar:
+            self._connectable = False
 
     def get_display_label(self) -> str:
         """Returns the formatted display label for this input."""
@@ -98,12 +110,17 @@ class ShaderInput:
         """Returns a boolean indicating whether this input can be connected to other nodes."""
         return self._connectable
 
+    def is_scalar(self) -> bool:
+        """Returns whether this parameter should be handled as a scalar, and thus not converted to matrix form when shading."""
+        return self._force_scalar
+
 
 class ShaderOutput:
 
-    def __init__(self, display_label: str, dtype: DataType):
+    def __init__(self, display_label: str, dtype: DataType, argument: str = None):
         self._display_label = display_label
         self._dtype = dtype
+        self._argument = argument
 
     def get_display_label(self) -> str:
         """Returns the formatted display label for this input."""
@@ -111,6 +128,9 @@ class ShaderOutput:
 
     def dtype(self):
         return self._dtype
+
+    def get_argument(self) -> str:
+        return self._argument
 
 
 class Shader(ABC):
@@ -158,12 +178,25 @@ class Shader(ABC):
     def get_inputs(self) -> typing.List[ShaderInput]:
         """Returns a list of ShaderInput objects that describe the inputs of this shader."""
 
-    # TODO make abstract (for now this is true for all shaders
     def get_outputs(self) -> typing.List[ShaderOutput]:
         """Returns a list of ShaderOutput objects that describe the outputs of this shader."""
         return [
             ShaderOutput("Color", DataType.Vec3_RGB)
         ]
+
+    def shade(self, args: dict) -> Tensor:
+        """Convenience function that converts all connectable arguments to matrix form before returning the rendered image."""
+        width, height = Shader.width, Shader.height
+        mat_args = dict()
+
+        for key_arg, param in zip(args, self.get_inputs()):
+            arg = args[key_arg]
+            if (len(arg.shape) == 3 and arg.shape[0] == width and arg.shape[1] == height) or param.is_scalar():
+                mat_args[key_arg] = arg.float()
+            else:
+                mat_args[key_arg] = arg.repeat(width, height, 1).float()
+
+        return self.shade_mat(**mat_args)
 
     @abstractmethod
     def shade_mat(self, **args) -> Tensor:
