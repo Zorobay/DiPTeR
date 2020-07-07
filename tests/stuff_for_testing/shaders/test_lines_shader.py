@@ -13,11 +13,11 @@ class TestLinesShader(FunctionShader):
     def get_inputs(self) -> typing.List[typing.Tuple[str, str, str, typing.Tuple[float, float], typing.Any]]:
         return []
 
-    def shade(self, frag_pos: ndarray, *args) -> ndarray:
+    def shade_iter(self, frag_pos: ndarray, *args) -> ndarray:
         frag_color = None
         return None
 
-    def shade(self, frag_pos, *args):
+    def shade_iter(self, frag_pos, *args):
         frag_color = None
 
         if frag_pos[0] > 0.05 and frag_pos[0] < 0.06:

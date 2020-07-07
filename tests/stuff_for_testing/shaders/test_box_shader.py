@@ -10,10 +10,10 @@ class TestBoxShader(FunctionShader):
     def __init__(self):
         super().__init__()
 
-    def shade(self, frag_pos: ndarray, *args) -> ndarray:
+    def shade_iter(self, frag_pos: ndarray, *args) -> ndarray:
         return np.zeros((4))
 
-    def shade(self, frag_pos: torch.Tensor, width: Tensor, height: Tensor) -> torch.Tensor:
+    def shade_iter(self, frag_pos: torch.Tensor, width: Tensor, height: Tensor) -> torch.Tensor:
         bg_color = torch.tensor((1., 1., 1.))
         box_color = torch.tensor((0., 0., 0.))
         frag_color = gl.mix(bg_color, box_color, box(frag_pos[:2], torch.stack([width, height])))

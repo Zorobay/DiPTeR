@@ -16,12 +16,12 @@ class TestSmoothstepShader(FunctionShader):
             ("Edge1", "edge1", INTERNAL_TYPE_ARRAY_FLOAT, (0, 1), torch.tensor((1., 1.)))
         ]
 
-    def shade(self, frag_pos: ndarray, edge0, edge1) -> ndarray:
+    def shade_iter(self, frag_pos: ndarray, edge0, edge1) -> ndarray:
         frag_color = None
 
         return np.array((1., 1., 1.))
 
-    def shade(self, frag_pos: torch.Tensor, edge0: torch.Tensor, edge1: torch.Tensor) -> torch.Tensor:
+    def shade_iter(self, frag_pos: torch.Tensor, edge0: torch.Tensor, edge1: torch.Tensor) -> torch.Tensor:
         frag_color = None
 
         red = gl.smoothstep(edge0, edge1, frag_pos[:2])

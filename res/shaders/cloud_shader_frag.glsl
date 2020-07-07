@@ -2,11 +2,12 @@
 #import "noise.glsl"
 
 
-vec3 cloud(vec3 frag_pos, float scale, int detail)
+void cloud(vec3 frag_pos, float scale, int detail, out float out_factor, out vec3 out_color)
 {
     vec2 uv = frag_pos.xy;
     vec3 color = vec3(0.);
-    color += fractalBrownianMotion(uv * scale, detail);
 
-    return color;
+    float fBM = fractalBrownianMotion(uv * scale, detail);
+    out_factor = fBM;
+    out_color += fBM;
 }

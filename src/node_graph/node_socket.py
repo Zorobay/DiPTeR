@@ -27,6 +27,7 @@ class NodeSocket(GraphElement):
         self._dtype = dtype
         self._label = label
         self._id = uuid.uuid4()
+        self._index = -1
         self._value = None
         self._saved_value = None
         self._connected = False
@@ -99,13 +100,21 @@ class NodeSocket(GraphElement):
 
         return nodes
 
-    def get_connected_sockets(self) -> set:
+    def get_connected_sockets(self) -> list:
         """
         Returns each NodeSocket that this NodeSocket is connected to.
         :return: A list of NodeSockets connected to this NodeSocket.
         """
 
         return self._connected_sockets.copy()
+
+    def set_index(self, index):
+        """Set the index of this socket. This value is used to figure out what input/output this socket corresponds to."""
+        self._index = index
+
+    def get_index(self) -> int:
+        """Gets the index of this socket."""
+        return self._index
 
     def set_value(self, value: typing.Any):
         self._value = value

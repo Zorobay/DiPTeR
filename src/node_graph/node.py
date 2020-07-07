@@ -235,7 +235,13 @@ class ShaderNode(Node):
             if socket.is_connected():
                 nodes = socket.get_connected_nodes()
                 assert len(nodes) == 1  # It should be an input node, so it should only be able to have 1 connected node
-                t, ad = nodes[0].render(width, height, retain_graph=retain_graph)
+                con_socket_i = socket.get_connected_sockets().pop().get_index()
+                con_node = nodes[0]
+                res, ad = con_node.render(width, height, retain_graph=retain_graph)
+                if isinstance(res, (list, tuple)):
+                    t = res[con_socket_i]  # Pick out appropriate value, as some shaders have multiple outputs
+                else:
+                    t = res
                 complete_params_dict.update(ad)
             else:
                 if arg in self._render_parameters and retain_graph:  # Argument is already fetched, get saved reference
@@ -253,15 +259,15 @@ class ShaderNode(Node):
 
             arguments[arg] = t
 
-        return self._shade(arguments), complete_params_dict
+        return self.get_shader().shade(arguments), complete_params_dict
 
-    def _shade(self, args: dict):
-        width, height = Shader.width, Shader.height
-        mat_args = dict()
-        for key, arg in args.items():
-            if len(arg.shape) == 3 and arg.shape[0] == width and arg.shape[1] == height:
-                mat_args[key] = arg.float()
-            else:
-                mat_args[key] = arg.repeat(width, height, 1).float()
-
-        return self.get_shader().shade_mat(**mat_args)
+    # def _shade(self, args: dict):
+    #     width, height = Shader.width, Shader.height
+    #     mat_args = dict()
+    #     for key, arg in args.items():
+    #         if len(arg.shape) == 3 and arg.shape[0] == width and arg.shape[1] == height:
+    #             mat_args[key] = arg.float()
+    #         else:
+    #             mat_args[key] = arg.repeat(width, height, 1).float()
+    #
+    #     return self.get_shader().shade_mat(**mat_args)

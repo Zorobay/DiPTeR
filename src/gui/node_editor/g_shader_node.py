@@ -64,7 +64,8 @@ class GShaderNode(QGraphicsWidget):
         # define Node properties
         self._selected = False
         self._deletable = True
-        self._input_index = 2
+        self._input_index = 1
+        self._output_index = 1
         self._width = 250
         self._height = 50
         self._rounding = 5
@@ -94,12 +95,11 @@ class GShaderNode(QGraphicsWidget):
         self._init_sockets()
 
     def _init_layout(self):
-        self._master_layout.setContentsMargins(-5, 4, 4, -5)
+        self._master_layout.setContentsMargins(-5, 4, 4, -15)
         self._master_layout.setRowSpacing(0, self._title_font.pointSize() + 12)  # Add empty space for first row so that title is visible
         self._master_layout.setHorizontalSpacing(2.0)
         self._master_layout.setVerticalSpacing(0.0)
         self._master_layout.setColumnAlignment(2, Qt.AlignRight)
-        self._master_layout.setRowAlignment(1, Qt.AlignVCenter)
         self._master_layout.setColumnFixedWidth(0, 15)  # Input socket column
         self._master_layout.setColumnFixedWidth(2, 15)  # Output socket column
         self._master_layout.setColumnFixedWidth(1, self._width - 15 - 15)
@@ -108,18 +108,21 @@ class GShaderNode(QGraphicsWidget):
 
     def _init_sockets(self):
         shader = self._node.get_shader()
-        for i in range(self._node.num_input_sockets()):
-            shader_input = shader.get_inputs()[i]
-            label = shader_input.get_display_label()
-            ran = shader_input.get_range()
-            socket = self._node.get_input_socket(i)
-            self._add_input_module(input_label=label, node_socket=socket, input_range=ran, is_connectable=shader_input.is_connectable())
 
         for i in range(self._node.num_output_sockets()):
             shader_output = shader.get_outputs()[i]
             label = shader_output.get_display_label()
             socket = self._node.get_output_socket(i)
+            socket.set_index(i)
             self._add_output_module(output_label=label, node_socket=socket)
+
+        for i in range(self._node.num_input_sockets()):
+            shader_input = shader.get_inputs()[i]
+            label = shader_input.get_display_label()
+            ran = shader_input.get_range()
+            socket = self._node.get_input_socket(i)
+            socket.set_index(i)
+            self._add_input_module(input_label=label, node_socket=socket, input_range=ran, is_connectable=shader_input.is_connectable())
 
     def _notify_change(self):
         """Event is called when any of this node's widget's inputs are changed"""
@@ -263,9 +266,8 @@ class GShaderNode(QGraphicsWidget):
         self._in_socket_modules.append((socket, module))
 
         module_item = self.node_scene.addWidget(module)
-        self._master_layout.addItem(socket, self._input_index, 0)
-        self._master_layout.addItem(module_item, self._input_index, 1)
-        self._master_layout.setRowAlignment(self._input_index, Qt.AlignBottom)
+        self._master_layout.addItem(socket, self._input_index, 0, Qt.AlignVCenter)
+        self._master_layout.addItem(module_item, self._input_index, 1, Qt.AlignVCenter)
         self._input_index += 1
         self._height = self._input_index * 40
 
@@ -279,8 +281,10 @@ class GShaderNode(QGraphicsWidget):
         module_item = self.node_scene.addWidget(module)
         self._out_socket_modules.append((socket, module))
 
-        self._master_layout.addItem(module_item, 1, 1)
-        self._master_layout.addItem(socket, 1, 2)
+        self._master_layout.addItem(module_item, self._output_index, 1, Qt.AlignVCenter)
+        self._master_layout.addItem(socket, self._input_index, 2, Qt.AlignVCenter)
+        self._output_index += 1
+        self._input_index += 1
 
     def _handle_socket_connection(self, socket: GNodeSocket, _):
 

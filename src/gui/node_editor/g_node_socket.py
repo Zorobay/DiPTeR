@@ -83,6 +83,15 @@ class GNodeSocket(QGraphicsWidget):
     def get_connected_nodes(self) -> typing.List['GShaderNode']:
         return [n.get_container() for n in self._socket.get_connected_nodes()]
 
+    def get_connected_sockets(self) -> typing.List['GNodeSocket']:
+        return [s.get_container() for s in self._socket.get_connected_sockets()]
+
+    def set_index(self, index: int):
+        self._socket.set_index(index)
+
+    def get_index(self) -> int:
+        return self._socket.get_index()
+
     def is_connected(self) -> bool:
         return self._socket.is_connected()
 
