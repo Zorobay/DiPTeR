@@ -1,5 +1,3 @@
-#version 430
-
 float box(vec2 coord, vec2 size) {
     vec2 edge_smooth = vec2(0.001);
     // Normalize

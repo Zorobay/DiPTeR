@@ -231,7 +231,7 @@ class GLSLCode:
                     self._uniforms.append((arg.type, arg.modified_name))
 
         # Step 3, handle imports
-        all_imports = [im for n in self.needed_code for im in n.imports]
+        all_imports = set([im for n in self.needed_code for im in n.imports])  # Convert to set to remove double imports
         for import_file in all_imports:
             libcode = generate_comment_line(import_file) + "\n" + get_import_code(import_file)
             self._generated_code.append(libcode + "\n")

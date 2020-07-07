@@ -1,5 +1,3 @@
-#version 430
-
 vec2 simpleSmoothstep(vec2 p) {
     return p*p*(3. -2.*p);
 }
