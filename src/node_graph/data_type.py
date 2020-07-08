@@ -7,6 +7,7 @@ import enum
 class DataType(enum.Enum):
     Float = "type_float"
     Int = "type_int"
+    Int_Choice = "type_int_choice"
     Vec3_Float = "type_vec3_float"
     Vec3_RGB = "type_vec3_rgb"
     Shader = "type_shader"

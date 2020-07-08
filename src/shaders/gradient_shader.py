@@ -8,7 +8,7 @@ class GradientShader(FunctionShader):
     def __init__(self):
         super().__init__()
 
-    def get_inputs(self) -> typing.List[ShaderInput]:
+    def get_inputs(self) -> typing.List[ShaderInputParameter]:
         return [
         ]
 

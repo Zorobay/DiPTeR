@@ -7,8 +7,8 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
 from src.gui.node_editor.control_center import ControlCenter
 from src.gui.node_editor.material import Material
 from src.gui.rendering.image_plotter import ImagePlotter
-from src.gui.widgets.labelled_input import LabelledInput
-from src.gui.widgets.line_input import IntInput
+from src.gui.widgets.node_input.labelled_input import LabelledInput
+from src.gui.widgets.node_input.line_input import IntInput
 
 _logger = logging.getLogger("PythonRenderingWidget")
 

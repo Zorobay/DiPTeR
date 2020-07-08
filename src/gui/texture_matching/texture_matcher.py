@@ -12,8 +12,8 @@ from gui.texture_matching.loss_visualizer import LossVisualizer
 from src.gui.node_editor.g_shader_node import GMaterialOutputNode
 from src.gui.rendering.image_plotter import ImagePlotter
 from src.gui.rendering.opengl_widget import OpenGLWidget
-from src.gui.widgets.labelled_input import LabelledInput
-from src.gui.widgets.line_input import FloatInput, IntInput
+from src.gui.widgets.node_input.labelled_input import LabelledInput
+from src.gui.widgets.node_input.line_input import FloatInput, IntInput
 from src.misc import image_funcs
 from src.optimization import losses
 from src.optimization.gradient_descent import GradientDescent, GradientDescentSettings

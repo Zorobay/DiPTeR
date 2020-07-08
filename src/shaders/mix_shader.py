@@ -9,11 +9,11 @@ class MixShader(FunctionShader):
     def __init__(self):
         super().__init__()
 
-    def get_inputs(self) -> typing.List[ShaderInput]:
+    def get_inputs(self) -> typing.List[ShaderInputParameter]:
         return [
-            ShaderInput("X", "x", DataType.Vec3_RGB, (0, 1), torch.tensor((1.0, 1.0, 1.0))),
-            ShaderInput("Y", "y", DataType.Vec3_RGB, (0, 1), torch.tensor((0.0, 0.0, 0.0))),
-            ShaderInput("Factor", "a", DataType.Float, (0, 1), 0.5)
+            ShaderInputParameter("X", "x", DataType.Vec3_RGB, (0, 1), torch.tensor((1.0, 1.0, 1.0))),
+            ShaderInputParameter("Y", "y", DataType.Vec3_RGB, (0, 1), torch.tensor((0.0, 0.0, 0.0))),
+            ShaderInputParameter("Factor", "a", DataType.Float, (0, 1), 0.5)
         ]
 
     def shade_mat(self, x: Tensor, y: Tensor, a: Tensor) -> Tensor:

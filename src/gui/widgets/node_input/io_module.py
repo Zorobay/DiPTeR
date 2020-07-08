@@ -6,13 +6,14 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt
 from PyQt5.QtGui import QPalette, QColor
 from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout, QSizePolicy, QVBoxLayout
 from gui.node_editor.g_node_socket import GNodeSocket
+from node_graph.data_type import DataType
 
 
 class Input:
     # To be called by subclasses when widgets changes!
     input_changed = pyqtSignal()
 
-    def __init__(self, dtype: str):
+    def __init__(self, dtype: DataType):
         self._dtype = dtype
 
     @abstractmethod
@@ -30,7 +31,7 @@ class Input:
         """Set the value of this widgets."""
         raise NotImplementedError("Input subclass need to implement this method!")
 
-    def get_dtype(self) -> str:
+    def get_dtype(self) -> DataType:
         return self._dtype
 
 

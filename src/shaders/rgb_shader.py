@@ -8,11 +8,11 @@ class RGBShader(FunctionShader):
     def __init__(self):
         super().__init__()
 
-    def get_inputs(self) -> typing.List[ShaderInput]:
+    def get_inputs(self) -> typing.List[ShaderInputParameter]:
         return [
-            ShaderInput("Red", "red", DataType.Float, (0, 1), 0.0),
-            ShaderInput("Green", "green", DataType.Float, (0, 1), 0.0),
-            ShaderInput("Blue", "blue", DataType.Float, (0, 1), 0.0)
+            ShaderInputParameter("Red", "red", DataType.Float, (0, 1), 0.0),
+            ShaderInputParameter("Green", "green", DataType.Float, (0, 1), 0.0),
+            ShaderInputParameter("Blue", "blue", DataType.Float, (0, 1), 0.0)
         ]
 
     def shade_mat(self, red: Tensor, green: Tensor, blue: Tensor) -> Tensor:

@@ -9,16 +9,16 @@ class CloudShader(FunctionShader):
     def __init__(self):
         super().__init__()
 
-    def get_inputs(self) -> typing.List[ShaderInput]:
+    def get_inputs(self) -> typing.List[ShaderInputParameter]:
         return [
-            ShaderInput("Scale", "scale", DataType.Float, (0, 100), 1.0),
-            ShaderInput("Detail", "detail", DataType.Int, (0, 10), 4.0, force_scalar=True)
+            ShaderInputParameter("Scale", "scale", DataType.Float, (0, 100), 1.0),
+            ShaderInputParameter("Detail", "detail", DataType.Int, (0, 10), 4.0, force_scalar=True)
         ]
 
-    def get_outputs(self) -> typing.List[ShaderOutput]:
+    def get_outputs(self) -> typing.List[ShaderOutputParameter]:
         return [
-            ShaderOutput("Factor", DataType.Float, argument="out_factor"),
-            ShaderOutput("Color", DataType.Vec3_RGB, argument="out_color")
+            ShaderOutputParameter("Factor", DataType.Float, argument="out_factor"),
+            ShaderOutputParameter("Color", DataType.Vec3_RGB, argument="out_color")
         ]
 
     def shade_mat(self, scale: Tensor, detail: Tensor) -> Tensor:

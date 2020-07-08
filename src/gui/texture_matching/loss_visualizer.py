@@ -9,8 +9,8 @@ from PyQt5.QtGui import QBrush, QColor
 from PyQt5.QtWidgets import QWidget, QGridLayout, QSplitter, QTableWidget, QPushButton, QMessageBox, QProgressDialog, QVBoxLayout
 from gui.node_editor.g_shader_node import GMaterialOutputNode
 from gui.widgets.checkbox_item import CheckboxItem
-from gui.widgets.io_module import Module
-from gui.widgets.line_input import IntInput, FloatInput
+from gui.widgets.node_input.io_module import Module
+from gui.widgets.node_input.line_input import IntInput, FloatInput
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
@@ -121,11 +121,11 @@ class LossVisualizer(QWidget):
 
         for key in param_dict:
             param = param_dict[key]
-            range = param.get_range()
-            min_item = FloatInput(range[0], range[1])
-            min_item.set_value(range[0])
-            max_item = FloatInput(range[0], range[1])
-            max_item.set_value(range[1])
+            limits = param.get_limits()
+            min_item = FloatInput(limits[0], limits[1])
+            min_item.set_value(limits[0])
+            max_item = FloatInput(limits[0], limits[1])
+            max_item.set_value(limits[1])
             item = CheckboxItem(key, content={"param": param, "index": -1})
             item.state_changed.connect(self._item_state_changed)
             self._table_widget.setCellWidget(row, 0, item)
@@ -140,10 +140,10 @@ class LossVisualizer(QWidget):
 
                 for i in range(param.shape()[1]):
                     self._table_widget.insertRow(row)
-                    min_item = FloatInput(range[0], range[1])
-                    min_item.set_value(range[0])
-                    max_item = FloatInput(range[0], range[1])
-                    max_item.set_value(range[1])
+                    min_item = FloatInput(limits[0], limits[1])
+                    min_item.set_value(limits[0])
+                    max_item = FloatInput(limits[0], limits[1])
+                    max_item.set_value(limits[1])
                     sub_item = CheckboxItem("  [{}]".format(i), content={"param": param, "index": i})
                     sub_item.state_changed.connect(self._item_state_changed)
                     self._table_widget.setCellWidget(row, 0, sub_item)
@@ -197,6 +197,7 @@ class LossVisualizer(QWidget):
         item1_max = checked_items[0][2].get_gl_value()
         self._fig_ax.set_xlabel(item1.label)
         self._p1: Parameter = item1.content["param"]
+        p1_index = item1.content["index"]
         self._p1.save_value()
         p1_values = torch.from_numpy(np.linspace(item1_min, item1_max, num=R1, endpoint=True))
 
@@ -205,6 +206,7 @@ class LossVisualizer(QWidget):
         item2_max = checked_items[1][2].get_gl_value()
         self._fig_ax.set_ylabel(item2.label)
         self._p2: Parameter = item2.content["param"]
+        p2_index = item2.content["index"]
         self._p2.save_value()
         p2_values = torch.from_numpy(np.linspace(item2_min, item2_max, num=R2, endpoint=True))
 
@@ -213,20 +215,20 @@ class LossVisualizer(QWidget):
         min_loss_p2 = None
 
         for i in range(R1):
-            self._p1.set_value(p1_values[i], index=item1.content["index"])
+            self._p1.set_value(p1_values[i], index=p1_index)
             progress_dialog.setValue(i)
 
             if progress_dialog.wasCanceled():
                 return
 
             for j in range(R2):
-                self._p2.set_value(p2_values[j], index=item2.content["index"])
+                self._p2.set_value(p2_values[j], index=p2_index)
                 r, _ = self._mat_out_node.get_backend_node().render(W, H, retain_graph=True)
                 loss = loss_f(r, self._target_matrix).detach().numpy()
                 if loss < min_loss:
                     min_loss = loss
-                    min_loss_p1 = self._p1.tensor().detach().numpy()
-                    min_loss_p2 = self._p2.tensor().detach().numpy()
+                    min_loss_p1 = self._p1.get_value(p1_index)
+                    min_loss_p2 = self._p2.get_value(p2_index)
 
                 loss_surface[i, j] = loss
 

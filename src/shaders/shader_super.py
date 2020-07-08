@@ -16,7 +16,9 @@ from torch import Tensor
 _logger = logging.getLogger(__name__)
 
 # Define useful constants for numerical manipulation
-TINY_FLOAT = torch.finfo(torch.float32).eps
+TORCH_FLOAT_FINFO = torch.finfo(torch.float32)
+TINY_FLOAT = TORCH_FLOAT_FINFO.eps
+FLOAT_INTERVAL = (TORCH_FLOAT_FINFO.min,TORCH_FLOAT_FINFO.max)
 
 # GLSL Shaders Directory
 GLSL_SHADERS_DIR = Path(__file__) / ".." / ".." / ".." / "res" / "shaders"
@@ -72,17 +74,20 @@ def connect_code(node: 'GShaderNode', code: GLSLCode):
             code.connect(socket_arg, connected_code, out_arg=connected_arg)
 
 
-class ShaderInput:
+class ShaderInputParameter:
 
-    def __init__(self, display_label: str, argument: str, dtype: DataType, range_: typing.Tuple[float, float], default: typing.Any,
-                 connectable: bool = True, force_scalar: bool = False):
+    def __init__(self, display_label: str, argument: str, dtype: DataType, limits: typing.Tuple[float, float], default: typing.Any,
+                 connectable: bool = True, force_scalar: bool = False, names: typing.List[str] = None):
         self._display_label = display_label
         self._argument = argument
         self._dtype = dtype
-        self._range = range_
+        self._limits = limits
         self._default = default
         self._connectable = connectable
         self._force_scalar = force_scalar
+        if names is None:
+            names = list()
+        self._names = names
 
         if self._force_scalar:
             self._connectable = False
@@ -98,9 +103,9 @@ class ShaderInput:
     def dtype(self) -> DataType:
         return self._dtype
 
-    def get_range(self) -> typing.Tuple[float, float]:
+    def get_limits(self) -> typing.Tuple[float, float]:
         """Returns the range of value that this input can accept as a tuple of (min,max)."""
-        return self._range
+        return self._limits
 
     def get_default(self):
         """Returns the default value of this input."""
@@ -114,8 +119,12 @@ class ShaderInput:
         """Returns whether this parameter should be handled as a scalar, and thus not converted to matrix form when shading."""
         return self._force_scalar
 
+    def get_names(self) -> typing.List[str]:
+        """Returns a list of names of the values of this Input."""
+        return self._names
 
-class ShaderOutput:
+
+class ShaderOutputParameter:
 
     def __init__(self, display_label: str, dtype: DataType, argument: str = None):
         self._display_label = display_label
@@ -161,7 +170,7 @@ class Shader(ABC):
     def get_parsed_code(self) -> GLSLCode:
         return self._parsed_code
 
-    def get_input_by_arg(self, argument: str) -> typing.Union[None, ShaderInput]:
+    def get_input_by_arg(self, argument: str) -> typing.Union[None, ShaderInputParameter]:
         for inp in self.get_inputs():
             if inp.get_argument() == argument:
                 return inp
@@ -175,13 +184,13 @@ class Shader(ABC):
         Shader.frag_pos = render_funcs.generate_frag_pos(width, height)
 
     @abstractmethod
-    def get_inputs(self) -> typing.List[ShaderInput]:
+    def get_inputs(self) -> typing.List[ShaderInputParameter]:
         """Returns a list of ShaderInput objects that describe the inputs of this shader."""
 
-    def get_outputs(self) -> typing.List[ShaderOutput]:
+    def get_outputs(self) -> typing.List[ShaderOutputParameter]:
         """Returns a list of ShaderOutput objects that describe the outputs of this shader."""
         return [
-            ShaderOutput("Color", DataType.Vec3_RGB)
+            ShaderOutputParameter("Color", DataType.Vec3_RGB)
         ]
 
     def shade(self, args: dict) -> Tensor:
@@ -319,7 +328,7 @@ class CompilableShader(Shader, ABC):
 
         for inp in self.get_inputs():
             val = self._program[inp.get_argument()]
-            ran = inp.get_range()
+            ran = inp.get_limits()
             if "vec" not in inp.dtype():
                 val = np.array(val[0])  # Uniforms are stored in array even if they're single floats
 

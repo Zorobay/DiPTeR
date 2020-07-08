@@ -4,14 +4,13 @@ from PyQt5 import QtGui
 from PyQt5.QtCore import Qt, QPoint, QPointF
 from PyQt5.QtGui import QWheelEvent, QMouseEvent
 from PyQt5.QtWidgets import QGraphicsView, QMenu, QGraphicsSceneMouseEvent, QMessageBox
-from shaders.mini_brick_shader import MiniBrickShader
-
+from src.shaders.mini_brick_shader import MiniBrickShader
+from src.shaders.mul_add_shader import MulAddShader
 from src.gui.node_editor.control_center import ControlCenter
 from src.gui.node_editor.g_edge import GEdge
 from src.gui.node_editor.material import Material
 from src.misc import string_funcs, array_funcs
 from src.shaders.brick_shader import BrickShader
-from src.shaders.checker_shader import CheckerShader
 from src.shaders.cloud_shader import CloudShader
 from src.shaders.color_shader import ColorShader
 from src.shaders.frag_coord_shader import FragmentCoordinatesShader
@@ -22,12 +21,13 @@ from src.shaders.rgb_shader import RGBShader
 from src.shaders.shader_super import FunctionShader
 from src.shaders.tile_shader import TileShader
 from src.shaders.vector_math_shader import VectorMathShader
+from src.shaders.math_shader import ScalarMathShader
 from tests.stuff_for_testing.shaders.test_box_shader import TestBoxShader
 
 SHADERS_TO_CONTEXT_MENU = [TileShader, GradientShader, CloudShader, HSVShader, ColorShader, RGBShader, BrickShader, MixShader]
 
 SHADERS_MISC_MENU = [FragmentCoordinatesShader, TestBoxShader, MiniBrickShader]
-SHADERS_MATH_MENU = [VectorMathShader]
+SHADERS_MATH_MENU = [VectorMathShader, ScalarMathShader, MulAddShader]
 
 
 class NodeView(QGraphicsView):

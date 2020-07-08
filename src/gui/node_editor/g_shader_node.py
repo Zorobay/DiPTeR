@@ -9,6 +9,7 @@ from PyQt5.QtGui import QBrush, QFont, QColor, QPalette, QPainter, QPen
 from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsWidget
 from boltons.setutils import IndexedSet
 from glumpy.gloo import Program
+from gui.widgets.node_input.int_choice_input import IntChoiceInput
 from node_graph.edge import Edge
 from node_graph.node import ShaderNode
 from node_graph.node_socket import NodeSocket
@@ -16,13 +17,13 @@ from src.gui.node_editor.g_edge import GEdge
 from src.gui.node_editor.g_node_socket import GNodeSocket
 from src.gui.node_editor.layouts import GraphicsGridLayout
 from src.gui.node_editor.node_scene import NodeScene
-from src.gui.widgets.array_input import ArrayInput
-from src.gui.widgets.color_input import ColorInput
-from src.gui.widgets.io_module import SocketModule, OutputModule
-from src.gui.widgets.line_input import FloatInput, IntInput
-from src.gui.widgets.shader_input import ShaderInput
+from src.gui.widgets.node_input.array_input import ArrayInput
+from src.gui.widgets.node_input.color_input import ColorInput
+from src.gui.widgets.node_input.io_module import SocketModule, OutputModule
+from src.gui.widgets.node_input.line_input import FloatInput, IntInput
+from src.gui.widgets.node_input.shader_input import ShaderInput
 from src.shaders.material_output_shader import MaterialOutputShader, DataType
-from src.shaders.shader_super import Shader
+from src.shaders.shader_super import Shader, ShaderInputParameter
 
 TYPE_VALUE = "type_value"
 TYPE_FUNC = "type_func"
@@ -128,11 +129,9 @@ class GShaderNode(QGraphicsWidget):
 
         for i in range(self._node.num_input_sockets()):
             shader_input = shader.get_inputs()[i]
-            label = shader_input.get_display_label()
-            ran = shader_input.get_range()
             socket = self._node.get_input_socket(i)
             socket.set_index(i)
-            self._add_input_module(input_label=label, node_socket=socket, input_range=ran, is_connectable=shader_input.is_connectable())
+            self._add_input_module(socket, shader_input)
 
     def _notify_change(self):
         """Event is called when any of this node's widget's inputs are changed"""
@@ -262,40 +261,48 @@ class GShaderNode(QGraphicsWidget):
 
         return socket
 
-    def _add_input_module(self, input_label: str, node_socket: NodeSocket, input_range: (float, float) = (0, 1), is_connectable: bool = True):
+    def _add_input_module(self, node_socket: NodeSocket, shader_input: ShaderInputParameter):
         dtype = node_socket.dtype()
         socket = self._create_g_socket(node_socket)
+        lim_min = shader_input.get_limits()[0]
+        lim_max = shader_input.get_limits()[1]
+        display_label = shader_input.get_display_label()
+        z_value = 0
 
         if dtype == DataType.Float:
             # Create an widgets widget
-            input_widget = FloatInput(min_=input_range[0], max_=input_range[1], dtype=dtype)
+            input_widget = FloatInput(min_=lim_min, max_=lim_max, dtype=dtype)
         elif dtype == DataType.Int:
-            input_widget = IntInput(min_=input_range[0], max_=input_range[1], dtype=dtype)
+            input_widget = IntInput(min_=lim_min, max_=lim_max, dtype=dtype)
         elif dtype == DataType.Vec3_RGB:
             input_widget = ColorInput(dtype)
         elif dtype == DataType.Shader:
             input_widget = ShaderInput(dtype)
         elif dtype == DataType.Vec3_Float:
             size = 3
-            input_widget = ArrayInput(size, min_=input_range[0], max_=input_range[1], dtype=dtype)
-
+            input_widget = ArrayInput(size, min_=lim_min, max_=lim_max, dtype=dtype)
+        elif dtype == DataType.Int_Choice:
+            input_widget = IntChoiceInput(values=shader_input.get_names())
+            input_widget.raise_()
+            z_value = 1
         else:
             raise TypeError("Data Type {} is not yet supported!".format(dtype))
 
         # Create a module and add to this node
-        module = SocketModule(socket, input_label, input_widget)
+        module = SocketModule(socket, display_label, input_widget)
         module.input_changed.connect(self._notify_change)
         module.set_label_palette(self._input_label_palette)
         module.set_value(socket.value())
         self._in_socket_modules.append((socket, module))
 
         module_item = self.node_scene.addWidget(module)
+        module_item.setZValue(z_value)
         self._master_layout.addItem(socket, self._input_index, 0, Qt.AlignVCenter)
         self._master_layout.addItem(module_item, self._input_index, 1, Qt.AlignVCenter)
         self._input_index += 1
-        self._height = self._input_index * 40
+        self._height = self._master_layout.preferredHeight() + 10
 
-        if not is_connectable:
+        if not shader_input.is_connectable():
             socket.setVisible(False)
 
     def _add_output_module(self, output_label: str, node_socket: NodeSocket):

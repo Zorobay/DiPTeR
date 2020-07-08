@@ -10,14 +10,14 @@ class BrickShader(FunctionShader):
     def __init__(self):
         super().__init__()
 
-    def get_inputs(self) -> typing.List[ShaderInput]:
+    def get_inputs(self) -> typing.List[ShaderInputParameter]:
         return [
-            ShaderInput("Mortar Scale", "mortar_scale", DataType.Float, (0.0, 1.0), 0.85),
-            ShaderInput("Brick Scale", "brick_scale", DataType.Float, (0.0, 100.0), 10.0),
-            ShaderInput("Brick Elongate", "brick_elongate", DataType.Float, (0.0, 100.0), 2.0),
-            ShaderInput("Brick Shift", "brick_shift", DataType.Float, (0., 1.), 0.5),
-            ShaderInput("Brick Color", "color_brick", DataType.Vec3_RGB, (0, 1), torch.tensor((0.69, 0.25, 0.255))),
-            ShaderInput("Mortar Color", "color_mortar", DataType.Vec3_RGB, (0, 1), torch.tensor((0.9, 0.9, 0.9)))
+            ShaderInputParameter("Mortar Scale", "mortar_scale", DataType.Float, (0.0, 1.0), 0.85),
+            ShaderInputParameter("Brick Scale", "brick_scale", DataType.Float, (0.0, 100.0), 10.0),
+            ShaderInputParameter("Brick Elongate", "brick_elongate", DataType.Float, (0.0, 100.0), 2.0),
+            ShaderInputParameter("Brick Shift", "brick_shift", DataType.Float, (0., 1.), 0.5),
+            ShaderInputParameter("Brick Color", "color_brick", DataType.Vec3_RGB, (0, 1), torch.tensor((0.69, 0.25, 0.255))),
+            ShaderInputParameter("Mortar Color", "color_mortar", DataType.Vec3_RGB, (0, 1), torch.tensor((0.9, 0.9, 0.9)))
         ]
 
     def shade_mat(self, mortar_scale: Tensor, brick_scale: Tensor, brick_elongate: Tensor, brick_shift: Tensor,

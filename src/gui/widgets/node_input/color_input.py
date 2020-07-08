@@ -6,7 +6,7 @@ from PyQt5.QtGui import QColor, QPalette
 from PyQt5.QtWidgets import QPushButton, QColorDialog
 from node_graph.data_type import DataType
 
-from src.gui.widgets.io_module import Input
+from src.gui.widgets.node_input.io_module import Input
 
 
 class ColorInput(QPushButton, Input):

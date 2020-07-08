@@ -8,11 +8,11 @@ class CheckerShader(FunctionShader):
     def __init__(self):
         super().__init__()
 
-    def get_inputs(self) -> typing.List[ShaderInput]:
+    def get_inputs(self) -> typing.List[ShaderInputParameter]:
         return [
-            ShaderInput("Color1", "color1", DataType.Vec3_RGB, (0, 1), torch.ones(3)),
-            ShaderInput("Color2", "color2", DataType.Vec3_RGB, (0, 1), torch.zeros(3)),
-            ShaderInput("Scale", "scale", DataType.Float, (0, 100), 10.0)
+            ShaderInputParameter("Color1", "color1", DataType.Vec3_RGB, (0, 1), torch.ones(3)),
+            ShaderInputParameter("Color2", "color2", DataType.Vec3_RGB, (0, 1), torch.zeros(3)),
+            ShaderInputParameter("Scale", "scale", DataType.Float, (0, 100), 10.0)
         ]
 
     def shade_mat(self, frag_pos: Tensor, color1: Tensor, color2: Tensor, scale: Tensor) -> Tensor:

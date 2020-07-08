@@ -1,13 +1,13 @@
 import torch
 from node_graph.data_type import is_vector
-from shaders.shader_super import ShaderInput
+from shaders.shader_super import ShaderInputParameter
 
 
-class Parameter(ShaderInput):
+class Parameter(ShaderInputParameter):
     """A class to represent a PyTorch tensor with extra metadata and value restrictions specified by a ShaderInput."""
 
-    def __init__(self, shader_input: ShaderInput, value: torch.Tensor):
-        super().__init__(shader_input.get_display_label(), shader_input.get_argument(), shader_input.dtype(), shader_input.get_range(),
+    def __init__(self, shader_input: ShaderInputParameter, value: torch.Tensor):
+        super().__init__(shader_input.get_display_label(), shader_input.get_argument(), shader_input.dtype(), shader_input.get_limits(),
                          shader_input.get_default())
         self._t = value
         self._data = None
@@ -35,6 +35,12 @@ class Parameter(ShaderInput):
             self._t[index] = torch.as_tensor(value)
         else:
             self._t.data = torch.as_tensor(value)
+
+    def get_value(self, index=-1):
+        if index >= 0:
+            return self._t[index].detach().numpy()
+        else:
+            return self._t.detach().numpy()
 
     def is_vector(self) -> bool:
         return is_vector(self.dtype())

@@ -1,13 +1,12 @@
 import typing
-import torch
 from abc import abstractmethod
 
 import numpy as np
+import torch
 from PyQt5.QtGui import QValidator, QDoubleValidator, QIntValidator
 from PyQt5.QtWidgets import QLineEdit
 from node_graph.data_type import DataType
-
-from src.gui.widgets.io_module import Input
+from src.gui.widgets.node_input.io_module import Input
 
 Number = typing.Union[int, float]
 
@@ -157,11 +156,11 @@ class FloatInput(LineInput):
         self.max_ = max_
         self.setValidator(FloatValidator(bottom=self.min_, top=self.max_, decimals=5))
 
-    def set_value(self, default_value: typing.Any):
-        assert isinstance(default_value, (float, np.float32, torch.FloatTensor, torch.cuda.FloatTensor)),\
+    def set_value(self, value: typing.Any):
+        assert isinstance(value, (float, int, np.int, np.float32, torch.FloatTensor, torch.cuda.FloatTensor)), \
             "Incompatible type of default value for FloatInput!"
 
-        self.setText(str(float(default_value)))
+        self.setText(str(float(value)))
 
     def get_gl_value(self) -> typing.Any:
         text = self.text().strip()

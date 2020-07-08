@@ -9,11 +9,11 @@ class HSVShader(FunctionShader):
     def __init__(self):
         super().__init__()
 
-    def get_inputs(self) -> typing.List[ShaderInput]:
+    def get_inputs(self) -> typing.List[ShaderInputParameter]:
         return [
-            ShaderInput("Hue", "h", DataType.Float, (0, 1), 1.0),
-            ShaderInput("Saturation", "s", DataType.Float, (0, 1), 1.0),
-            ShaderInput("Value", "v", DataType.Float, (0, 1), 1.0)
+            ShaderInputParameter("Hue", "h", DataType.Float, (0, 1), 1.0),
+            ShaderInputParameter("Saturation", "s", DataType.Float, (0, 1), 1.0),
+            ShaderInputParameter("Value", "v", DataType.Float, (0, 1), 1.0)
         ]
 
     def shade_mat(self, h: Tensor, s: Tensor, v: Tensor) -> Tensor:

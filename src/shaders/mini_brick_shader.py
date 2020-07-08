@@ -10,10 +10,10 @@ class MiniBrickShader(FunctionShader):
     def __init__(self):
         super().__init__()
 
-    def get_inputs(self) -> typing.List[ShaderInput]:
+    def get_inputs(self) -> typing.List[ShaderInputParameter]:
         return [
-            ShaderInput("Mortar Scale", "mortar_scale", DataType.Float, (0.0, 1.0), 0.85),
-            ShaderInput("Brick Scale", "brick_scale", DataType.Float, (0.0, 100.0), 10.0)
+            ShaderInputParameter("Mortar Scale", "mortar_scale", DataType.Float, (0.0, 1.0), 0.85),
+            ShaderInputParameter("Brick Scale", "brick_scale", DataType.Float, (0.0, 100.0), 10.0)
         ]
 
     def shade_mat(self, mortar_scale: Tensor, brick_scale: Tensor) -> Tensor:

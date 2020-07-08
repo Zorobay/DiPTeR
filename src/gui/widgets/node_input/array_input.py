@@ -4,14 +4,14 @@ import numpy as np
 from PyQt5.QtWidgets import QVBoxLayout, QWidget
 from node_graph.data_type import DataType
 
-from src.gui.widgets.io_module import Input
-from src.gui.widgets.line_input import FloatInput
+from src.gui.widgets.node_input.io_module import Input
+from src.gui.widgets.node_input.line_input import FloatInput
 
 
 class ArrayInput(QWidget, Input):
 
     def __init__(self, size: int, min_:float, max_:float, dtype: DataType):
-        super(Input, self).__init__(dtype=dtype)
+        super().__init__(dtype=dtype)
 
         self._size = size
         self._min = min_
@@ -19,15 +19,17 @@ class ArrayInput(QWidget, Input):
         self._inputs = []
         self._layout = QVBoxLayout()
 
-        self._setup()
+        self._init()
 
-    def _setup(self):
+    def _init(self):
         for i in range(self._size):
             inp = FloatInput(self._min, self._max, self._dtype)
             inp.input_changed.connect(self._fire_input_changed)
             self._layout.addWidget(inp)
             self._inputs.append(inp)
 
+        self._layout.setContentsMargins(0,0,0,0)
+        self._layout.setSpacing(0)
         self.setLayout(self._layout)
 
     def _fire_input_changed(self):
