@@ -7,6 +7,7 @@ from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QRectF, pyqtSignal
 from PyQt5.QtGui import QBrush, QFont, QColor, QPalette, QPainter, QPen
 from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsWidget
+from boltons.setutils import IndexedSet
 from glumpy.gloo import Program
 from node_graph.edge import Edge
 from node_graph.node import ShaderNode
@@ -21,7 +22,7 @@ from src.gui.widgets.io_module import SocketModule, OutputModule
 from src.gui.widgets.line_input import FloatInput, IntInput
 from src.gui.widgets.shader_input import ShaderInput
 from src.shaders.material_output_shader import MaterialOutputShader, DataType
-from src.shaders.shader_super import Shader, CompilableShader
+from src.shaders.shader_super import Shader
 
 TYPE_VALUE = "type_value"
 TYPE_FUNC = "type_func"
@@ -49,11 +50,20 @@ class GShaderNode(QGraphicsWidget):
     input_changed = pyqtSignal(object)  # Node
 
     @abc.abstractmethod
-    def __init__(self, node_scene: NodeScene, shader: Shader, label: str = "", parent=None):
+    def __init__(self, node_scene: NodeScene, shader: Shader = None, label: str = "", parent=None, backend_node: ShaderNode = None):
         super(QGraphicsWidget, self).__init__(parent)
 
-        self._shader = shader
-        self._node = ShaderNode(shader=shader, label=label, set_default_inputs=True, container=self)
+        self._node = backend_node
+        if self._node is None:
+            if shader is None:
+                raise ValueError("shader or backend_node needs to be provided!")
+            else:
+                self._node = ShaderNode(shader=shader, label=label, set_default_inputs=True, container=self)
+        else:
+            self._node.set_container(self)
+        if label:
+            self._node.set_label(label)
+
         self.node_scene = node_scene
         self._num = -1
 
@@ -184,14 +194,14 @@ class GShaderNode(QGraphicsWidget):
 
         return out
 
-    def get_ancestor_nodes(self, add_self: bool = False) -> typing.Set['GShaderNode']:
+    def get_ancestor_nodes(self, add_self: bool = False) -> IndexedSet:
         """
         Returns a list of all connected ancestors of this node.
         :param add_self: if True, adds this node to the set of returned nodes.
         :return: a Set of nodes that are ancestors of this node.
         """
         nodes = self._node.get_ancestor_nodes(add_self=add_self)
-        out = set()
+        out = IndexedSet()
         for n in nodes:
             out.add(n.get_container())
         return out
@@ -216,19 +226,33 @@ class GShaderNode(QGraphicsWidget):
         return self._node
 
     def get_shader(self) -> Shader:
-        return self._shader
+        return self._node.get_shader()
 
     def has_socket(self, socket: GNodeSocket) -> bool:
         return self._node.has_socket(socket.get_backend_socket())
 
-    def get_in_sockets(self) -> typing.List[GNodeSocket]:
+    def get_input_sockets(self) -> typing.List[GNodeSocket]:
         return [s.get_container() for s in self._node.get_input_sockets()]
 
-    def get_input_socket(self, index: int) -> typing.Union[NodeSocket, None]:
+    def get_input_socket(self, index: int) -> typing.Union[GNodeSocket, None]:
         return self._node.get_input_socket(index).get_container()
 
-    def get_out_sockets(self) -> typing.List[GNodeSocket]:
+    def get_input_module(self, socket=None, index=None):
+        assert not (socket is None and index is None), "Specify at least one identifier to find input module!"
+
+        for i, (s, m) in enumerate(self._in_socket_modules):
+            if socket and s == socket:
+                return m
+            elif index and i == index:
+                return m
+
+        return None
+
+    def get_output_sockets(self) -> typing.List[GNodeSocket]:
         return [s.get_container() for s in self._node.get_output_sockets()]
+
+    def get_output_socket(self, identifier) -> 'GNodeSocket':
+        return self._node.get_output_socket(identifier).get_container()
 
     def _create_g_socket(self, socket: NodeSocket) -> GNodeSocket:
         socket = GNodeSocket(self, socket)
@@ -238,7 +262,7 @@ class GShaderNode(QGraphicsWidget):
 
         return socket
 
-    def _add_input_module(self, input_label: str, node_socket: NodeSocket, input_range: (float, float) = (0, 1), is_connectable:bool=True):
+    def _add_input_module(self, input_label: str, node_socket: NodeSocket, input_range: (float, float) = (0, 1), is_connectable: bool = True):
         dtype = node_socket.dtype()
         socket = self._create_g_socket(node_socket)
 
@@ -262,7 +286,7 @@ class GShaderNode(QGraphicsWidget):
         module = SocketModule(socket, input_label, input_widget)
         module.input_changed.connect(self._notify_change)
         module.set_label_palette(self._input_label_palette)
-        module.set_default_value(socket.value())
+        module.set_value(socket.value())
         self._in_socket_modules.append((socket, module))
 
         module_item = self.node_scene.addWidget(module)
@@ -343,12 +367,12 @@ class GShaderNode(QGraphicsWidget):
 class GMaterialOutputNode(GShaderNode):
     graph_changed = pyqtSignal()
 
-    def __init__(self, node_scene: NodeScene):
-        super().__init__(node_scene, shader=MaterialOutputShader(), label="Material Output Node")
+    def __init__(self, node_scene: NodeScene, **kwargs):
+        super().__init__(node_scene, shader=MaterialOutputShader(), label="Material Output Node", **kwargs)
 
         # define data properties
         self._deletable = False
-        self._program = self._shader.get_program()
+        self._program = self.get_shader().get_program()
         self._io_mapping = {}  # node.id() -> (uniform name, modified uniform name)
         self._connected_node = None
 
@@ -389,9 +413,6 @@ class GMaterialOutputNode(GShaderNode):
     def _handle_input_changed(self, node: GShaderNode):
         set_program_uniforms_from_node(self._program, node)
 
-    def get_shader(self) -> CompilableShader:
-        return self._shader
-
     def get_program(self, copy=True, set_input=True) -> Program:
         """
         Gets the full compiled Program of the node tree.
@@ -416,7 +437,7 @@ class GMaterialOutputNode(GShaderNode):
 
         :return: True if this node can render, False otherwise.
         """
-        for socket in self.get_in_sockets():
+        for socket in self.get_input_sockets():
             if socket.is_connected():
                 return True
 

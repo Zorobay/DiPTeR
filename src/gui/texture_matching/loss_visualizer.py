@@ -93,8 +93,8 @@ class LossVisualizer(QWidget):
         self._fig_ax.set_zlabel("Loss Value")
 
         # Setup resolution input
-        self._p1_res.set_default_value(20)
-        self._p2_res.set_default_value(20)
+        self._p1_res.set_value(20)
+        self._p2_res.set_value(20)
         p1_module = Module("Param 1 Res.", self._p1_res)
         p2_module = Module("Param 2 Res.", self._p2_res)
 
@@ -123,9 +123,9 @@ class LossVisualizer(QWidget):
             param = param_dict[key]
             range = param.get_range()
             min_item = FloatInput(range[0], range[1])
-            min_item.set_default_value(range[0])
+            min_item.set_value(range[0])
             max_item = FloatInput(range[0], range[1])
-            max_item.set_default_value(range[1])
+            max_item.set_value(range[1])
             item = CheckboxItem(key, content={"param": param, "index": -1})
             item.state_changed.connect(self._item_state_changed)
             self._table_widget.setCellWidget(row, 0, item)
@@ -141,9 +141,9 @@ class LossVisualizer(QWidget):
                 for i in range(param.shape()[1]):
                     self._table_widget.insertRow(row)
                     min_item = FloatInput(range[0], range[1])
-                    min_item.set_default_value(range[0])
+                    min_item.set_value(range[0])
                     max_item = FloatInput(range[0], range[1])
-                    max_item.set_default_value(range[1])
+                    max_item.set_value(range[1])
                     sub_item = CheckboxItem("  [{}]".format(i), content={"param": param, "index": i})
                     sub_item.state_changed.connect(self._item_state_changed)
                     self._table_widget.setCellWidget(row, 0, sub_item)

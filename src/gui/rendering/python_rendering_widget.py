@@ -41,8 +41,8 @@ class PythonRenderingWidget(QWidget):
         # Setup settings controls
         settings_layout = QHBoxLayout()
         settings_layout.setAlignment(Qt.AlignLeft)
-        self._width_input.set_default_value(self._width)
-        self._height_input.set_default_value(self._height)
+        self._width_input.set_value(self._width)
+        self._height_input.set_value(self._height)
         self._resize_button.clicked.connect(self._handle_resize)
         settings_layout.addWidget(LabelledInput("Width", self._width_input))
         settings_layout.addWidget(LabelledInput("Height", self._height_input))

@@ -24,7 +24,7 @@ from src.shaders.tile_shader import TileShader
 from src.shaders.vector_math_shader import VectorMathShader
 from tests.stuff_for_testing.shaders.test_box_shader import TestBoxShader
 
-SHADERS_TO_CONTEXT_MENU = [TileShader, GradientShader, CloudShader, CheckerShader, HSVShader, ColorShader, RGBShader, BrickShader, MixShader]
+SHADERS_TO_CONTEXT_MENU = [TileShader, GradientShader, CloudShader, HSVShader, ColorShader, RGBShader, BrickShader, MixShader]
 
 SHADERS_MISC_MENU = [FragmentCoordinatesShader, TestBoxShader, MiniBrickShader]
 SHADERS_MATH_MENU = [VectorMathShader]

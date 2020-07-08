@@ -46,7 +46,7 @@ def connect_code(node: 'GShaderNode', code: GLSLCode):
     :param code: The parsed shader code that is held by the Node 'node'
     """
     code.reset(node.get_num())
-    for socket in node.get_in_sockets():
+    for socket in node.get_input_sockets():
         assert socket.type() == socket.INPUT
 
         socket_arg = socket.label()

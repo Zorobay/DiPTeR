@@ -53,10 +53,11 @@ class ControlCenter(QObject):
         """
         return len(self._materials)
 
-    def new_material(self, name: str) -> typing.Union[Material, None]:
+    def new_material(self, name: str, filename: str = None) -> typing.Union[Material, None]:
         """
         Adds a new Material to the Node Editor and returns it. The title must be unique.
         :param name: The display title of the Material to be created.
+        :param filename: (Optional) a path to a material save file to load from.
         :return: the newly created Material or None is the title was not unique.
         """
         for _, m in self._materials.items():
@@ -64,7 +65,7 @@ class ControlCenter(QObject):
                 _logger.error("Material with title {} already exists! Failed to create new material.".format(m.name))
                 return None
 
-        material = Material(self, name)
+        material = Material(self, name, material_filepath=filename)
         self._materials[material.id()] = material
         _logger.debug("New material {} ({}) added.".format(material.name, material.id()))
 

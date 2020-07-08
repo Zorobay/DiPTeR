@@ -73,7 +73,7 @@ class GLSLCode:
         self.shader_name = self.filename.split("/")[-1].split(".")[0]
         self.functions = []
         self.imports = set()
-        self.needed_code = set()
+        self.connected_code = set()
         self.parse_time = 0
         self._primary_func_name = primary_function
         self.primary_function: GLSLFunction = None
@@ -176,7 +176,7 @@ class GLSLCode:
         """
         self._node_num = node_num
         self._generated_code = []
-        self.needed_code = set()
+        self.connected_code = set()
         self._uniforms = []
         for func in self.functions:
             func.reset()
@@ -204,9 +204,9 @@ class GLSLCode:
         :param other_code: The other_code that will be called and whose return value will replace the argument
         :param out_arg: The name of the 'out' variable in the primary function.
         """
-        self.needed_code.add(other_code)
-        for sub_code in other_code.needed_code:
-            self.needed_code.add(sub_code)
+        self.connected_code.add(other_code)
+        for sub_code in other_code.connected_code:
+            self.connected_code.add(sub_code)
 
         self.primary_function.connect(argument, other_code, out_arg)
 
@@ -222,41 +222,68 @@ class GLSLCode:
         self._generated_code = self.code[0:self._functions_start_line].copy()
 
         # Step 2, insert uniforms for all connected nodes for each unconnected argument
-        for needed_code in self.needed_code:
+        for needed_code in self.connected_code:
             needed_code._reset = False
             prim_func = needed_code.get_primary_function()
             for arg in prim_func.arguments:
-                if not arg.is_connected() and arg.name != "frag_pos":
+                if not arg.is_connected() and arg.name != "frag_pos" and not arg.is_output():
                     self._generated_code.append(arg.get_uniform_string() + "\n")
                     self._uniforms.append((arg.type, arg.modified_name))
 
         # Step 3, handle imports
-        all_imports = set([im for n in self.needed_code for im in n.imports])  # Convert to set to remove double imports
+        all_imports = set([im for n in self.connected_code for im in n.imports])  # Convert to set to remove double imports
         for import_file in all_imports:
             libcode = generate_comment_line(import_file) + "\n" + get_import_code(import_file)
             self._generated_code.append(libcode + "\n")
 
         # Step 4, import code from connected nodes
+        var_declarations = []
         function_calls = []
         added_function_defs = []
-        for needed_code in self.needed_code:
-            for needed_func in needed_code.functions:
-                comment = generate_comment_line("{}.{}".format(needed_code.shader_name, needed_func.function_name))
+        _add_calls(self, var_declarations, function_calls, added_function_defs, self._generated_code)
 
-                if needed_func.modified_function_name not in added_function_defs:  # We don't want to add duplicate function definitions
-                    func_code = "\n" + comment + "\n" + "".join(needed_func.generated_code)
-                    self._generated_code.append(func_code + "\n")
-                    added_function_defs.append(needed_func.modified_function_name)
-
-                # Step 4.1, generate calls to connected functions
-                function_calls.extend(needed_func.get_call_strings())
+        # for needed_code in self.connected_code:
+        #     for needed_func in needed_code.functions:
+        #         comment = generate_comment_line("{}.{}".format(needed_code.shader_name, needed_func.function_name))
+        #
+        #         if needed_func.modified_function_name not in added_function_defs:  # We don't want to add duplicate function definitions
+        #             func_code = "\n" + comment + "\n" + "".join(needed_func.generated_code)
+        #             self._generated_code.append(func_code + "\n")
+        #             added_function_defs.append(needed_func.modified_function_name)
+        #
+        #         # Step 4.1, generate calls to connected functions
+        #         func_calls, var_declars = needed_func.get_call_strings()
+        #         var_declarations.extend(var_declars)
+        #         function_calls.extend(func_calls)
 
         # Step 5, generate calls to connected functions in own primary function
-        self.primary_function.add_function_calls(function_calls)
+        self.primary_function.add_calls(function_calls, var_declarations)
         primary_code = "".join(self.primary_function.generated_code)
         self._generated_code.append(primary_code)
         self._reset = False
         return "".join(self._generated_code)
+
+
+def _add_calls(code: 'GLSLCode', declarations: list, calls: list, added_function_defs:list, generated_code: list):
+
+    for arg in code.primary_function.arguments:
+        if arg.is_connected() and arg.name != "frag_pos" and not arg.is_output():
+            connected_code = arg.get_connected_func().get_parent_code()
+            for needed_func in connected_code.functions:
+                comment = generate_comment_line("{}.{}".format(connected_code.shader_name, needed_func.function_name))
+
+                if needed_func.modified_function_name not in added_function_defs:  # We don't want to add duplicate function definitions
+                    func_code = "\n" + comment + "\n" + "".join(needed_func.generated_code)
+                    generated_code.append(func_code + "\n")
+                    added_function_defs.append(needed_func.modified_function_name)
+
+            _add_calls(connected_code, declarations, calls, added_function_defs, generated_code)
+
+            # Step 4.1, generate calls to connected functions
+            prim_function = connected_code.primary_function
+            func_calls, var_declars = prim_function.get_call_strings()
+            declarations.extend(var_declars)
+            calls.extend(func_calls)
 
 
 class GLSLFunction:
@@ -349,27 +376,30 @@ class GLSLFunction:
 
         return args
 
-    def connect(self, argument: str, other_code: GLSLCode, out_arg: str = None):
+    def get_parent_code(self) -> 'GLSLCode':
+        return self.parent_code
+
+    def connect(self, argument: str, other_code: GLSLCode, out_argument: str = None):
         """
         Connects the output of the primary function of 'other_code' to the input with title 'argument'. If the primary function in the code to be
         connected is using inout variables, specify the connected output via 'out_arg'.
         :param argument: The title of the input argument of this code.
         :param other_code: The code whose output is to be input to the argument.
-        :param out_arg: The name of the 'out' variable which is the output of the other code's primary function.
+        :param out_argument: The name of the 'out' variable which is the output of the other code's primary function.
         """
         func = other_code.get_primary_function()
         try:
             arg = self.get_argument(argument)
+            out_arg = func.get_argument(out_argument)
             arg.connect(func, other_arg=out_arg)
-            if out_arg:
-                func.get_argument(out_arg).connect(self, other_arg=arg)
+            if out_argument:
+                func.get_argument(out_argument).connect(self, other_arg=arg)
         except AttributeError:
             raise KeyError("No argument with title {} in primary function {}".format(argument, func))
 
-    def _get_call_string(self, argument: str) -> str:
-
+    def _get_call_string(self, argument: str) -> typing.Tuple[str, str]:
+        declarations = []
         if self.is_inout():
-            call = []
             vars = []
             for i, arg in enumerate(self.arguments):
                 if arg.is_output():
@@ -377,39 +407,47 @@ class GLSLFunction:
                         # Generate variable declaration like 'type name;' and add to call
                         other_arg = arg.get_connected_arg()
                         mod_other_arg = other_arg.get_modified_name()
-                        call.append("\t{} {};".format(other_arg.type, mod_other_arg))
+                        declarations.append("\t{} {};".format(other_arg.type, mod_other_arg))
                         vars.append(mod_other_arg)
                     else:
                         mod_arg = arg.get_modified_name() + "_" + "UNUSED"
-                        call.append("\t{} {};".format(arg.type, mod_arg))
+                        declarations.append("\t{} {};".format(arg.type, mod_arg))
                         vars.append(mod_arg)
                 else:
                     vars.append(arg.get_modified_name())
 
-            call.append("\t{}({});".format(self.modified_function_name, ", ".join(vars)))
-            return "\n".join(call)
+            call = "\t{}({});".format(self.modified_function_name, ", ".join(vars))
         else:
-            call = "{}({})".format(self.modified_function_name, ", ".join([arg.get_modified_name() for arg in self.arguments]))
-            return "\t{type} {arg} = {call};".format(type=self.return_type, arg=argument, call=call)
+            func = "{}({})".format(self.modified_function_name, ", ".join([arg.get_modified_name() for arg in self.arguments]))
+            call = "\t{type} {arg} = {call};".format(type=self.return_type, arg=argument, call=func)
 
-    def get_call_strings(self) -> typing.List[str]:
+        declarations = "\n".join(declarations)
+        return call, declarations
+
+    def get_call_strings(self) -> typing.Tuple[typing.List[str], typing.List[str]]:
+        var_declarations = []
         call_strings = []
         for arg in self.arguments:
             if arg.is_connected() and not arg.is_output():
                 connected_func = arg._connected_func
-                call_string = connected_func._get_call_string(arg.get_modified_name()) + "\n"
-                call_strings.append(call_string)
+                arg_call, arg_declarations = connected_func._get_call_string(arg.get_modified_name())
+                var_declarations.append(arg_declarations + "\n")
+                call_strings.append(arg_call + "\n")
 
-        return call_strings
+        return call_strings, var_declarations
 
-    def add_function_calls(self, calls: typing.List[str]):
-        own_call_strings = self.get_call_strings()
+    def add_calls(self, calls: typing.List[str], var_declars: typing.List[str]):
+        own_call_strings, own_variable_declarations = self.get_call_strings()
+        var_declars.insert(0, generate_comment_line("Variable Declarations") + "\n")
+        var_declars.extend(own_variable_declarations)
+        calls.insert(0, generate_comment_line("Function Calls") + "\n")
         calls.extend(own_call_strings)
 
         if len(calls) > 0:
             insert_line = self._body_start_line
+            declarations_code = "".join(var_declars)
             calls_code = "".join(calls)
-            self.generated_code.insert(insert_line, calls_code)
+            self.generated_code.insert(insert_line, declarations_code + "\n" + calls_code)
 
 
 class GLSLArgument:
@@ -453,6 +491,9 @@ class GLSLArgument:
             return self.name
         else:
             return "{}_{}_{}".format(self.parent_function.modified_function_name, self.get_node_num(), self.name)
+
+    def get_parent_code(self) -> 'GLSLCode':
+        return self.parent_function.parent_code
 
     def get_connected_func(self) -> 'GLSLFunction':
         return self._connected_func

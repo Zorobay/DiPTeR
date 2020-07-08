@@ -19,5 +19,5 @@ class ShaderInput(QWidget, Input):
     def get_gl_value(self) -> typing.Any:
         pass
 
-    def set_default_value(self, default_value: typing.Any):
+    def set_value(self, default_value: typing.Any):
         pass

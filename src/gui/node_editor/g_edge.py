@@ -1,12 +1,10 @@
 import logging
-import uuid
-
 import typing
-from PyQt5.QtCore import QPoint, QRectF, Qt, QPointF
-from PyQt5.QtGui import QColor, QPainter, QPen
-from PyQt5.QtWidgets import QGraphicsWidget, QGraphicsLineItem, QGraphicsItem
-from node_graph.edge import Edge
 
+from PyQt5.QtCore import QPointF
+from PyQt5.QtGui import QColor, QPen
+from PyQt5.QtWidgets import QGraphicsLineItem
+from node_graph.edge import Edge
 
 _logger = logging.getLogger(__name__)
 
@@ -25,6 +23,12 @@ class GEdge(QGraphicsLineItem):
 
     def _init_item(self):
         self.setPen(self._edge_pen)
+
+    @classmethod
+    def from_edge(cls, edge: Edge) -> 'GEdge':
+        gedge = GEdge(edge.get_source().get_container(), edge.get_destination().get_container())
+        gedge.update_edge()
+        return gedge
 
     def set_source_socket(self, socket: 'GNodeSocket'):
         """Sets the socket that is to be the source of this Edge."""
@@ -92,4 +96,3 @@ class GEdge(QGraphicsLineItem):
         if self.src_pos() and self.dest_pos():
             dest, source = self.src_pos(), self.dest_pos()
             self.setLine(source.x(), source.y(), dest.x(), dest.y())
-

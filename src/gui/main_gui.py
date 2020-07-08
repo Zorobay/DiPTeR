@@ -1,7 +1,6 @@
 import logging
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QApplication, QMainWindow, QAction
-
 from src.gui.node_editor.control_center import ControlCenter
 from src.gui.node_editor.node_view import NodeView
 from src.gui.rendering.opengl_settings_widget import OpenGLSettingsWidget
@@ -31,9 +30,9 @@ class MainWidget(QWidget):
         self._init_widget()
 
     def _init_widget(self):
-        self.grid_layout.setColumnStretch(0,10)
+        self.grid_layout.setColumnStretch(0, 10)
         self.grid_layout.setColumnStretch(1, 4)
-        self.grid_layout.setColumnStretch(2,2)
+        self.grid_layout.setColumnStretch(2, 2)
 
         self.grid_layout.addWidget(self.material_selector, 0, 0, 1, 1)
         self.grid_layout.addWidget(self.node_view, 1, 0, 1, 1)
@@ -41,9 +40,12 @@ class MainWidget(QWidget):
         self.grid_layout.addWidget(self.opengl_settings, 0, 2, 2, 1)
 
         # Add starting material to Scene after openGL is done initializing
-        self.openGL.init_done.connect(lambda: self.material_selector.add_material("Default Material"))
+        self.openGL.init_done.connect(self._init_default_material)
 
         self.setLayout(self.grid_layout)
+
+    def _init_default_material(self):
+        self.material_selector.load_material("cloud material.json")
 
 
 class MainWindow(QMainWindow):

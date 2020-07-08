@@ -43,6 +43,6 @@ class ArrayInput(QWidget, Input):
 
         return out
 
-    def set_default_value(self, default_value: typing.Any):
+    def set_value(self, default_value: typing.Any):
         for i,d in enumerate(default_value):
-            self._inputs[i].set_default_value(d)
+            self._inputs[i].set_value(d)

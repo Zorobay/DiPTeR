@@ -3,6 +3,7 @@ import logging
 import typing
 import uuid
 
+from boltons.setutils import IndexedSet
 from node_graph.edge import Edge
 from node_graph.data_type import DataType
 from node_graph.graph_element import GraphElement
@@ -31,8 +32,8 @@ class NodeSocket(GraphElement):
         self._value = None
         self._saved_value = None
         self._connected = False
-        self._connected_sockets = set()
-        self._connected_edges = set()
+        self._connected_sockets = IndexedSet()
+        self._connected_edges = IndexedSet()
 
     def connect_to(self, other_socket: 'NodeSocket') -> Edge:
         """
@@ -45,7 +46,7 @@ class NodeSocket(GraphElement):
 
         # Check if this socket is already connected to 'socket'
         if other_socket in self._connected_sockets:
-            edge = self._find_connecting_edge(other_socket)
+            edge = self.find_connecting_edge(other_socket)
             return edge
 
         # Create a directed edge
@@ -70,7 +71,7 @@ class NodeSocket(GraphElement):
         """
         assert other_socket in self._connected_sockets, "Can not disconnect from a socket that is not connected!"
 
-        edge = self._find_connecting_edge(other_socket)
+        edge = self.find_connecting_edge(other_socket)
 
         if edge is not None:
             self._connected_sockets.remove(other_socket)
@@ -106,7 +107,7 @@ class NodeSocket(GraphElement):
         :return: A list of NodeSockets connected to this NodeSocket.
         """
 
-        return self._connected_sockets.copy()
+        return list(self._connected_sockets)
 
     def set_index(self, index):
         """Set the index of this socket. This value is used to figure out what input/output this socket corresponds to."""
@@ -146,7 +147,7 @@ class NodeSocket(GraphElement):
     def dtype(self) -> DataType:
         return self._dtype
 
-    def _find_connecting_edge(self, other_socket: 'NodeSocket') -> typing.Union[None, Edge]:
+    def find_connecting_edge(self, other_socket: 'NodeSocket') -> typing.Union[None, Edge]:
         for edge in self._connected_edges:
             if edge.connects(self, other_socket):
                 return edge

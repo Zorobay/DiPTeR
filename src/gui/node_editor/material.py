@@ -1,14 +1,19 @@
+import json
 import logging
 import typing
 import uuid
 
+import torch
 from PyQt5.QtCore import QObject, pyqtSignal, Qt
 from glumpy.gloo import Program
-
+from src.shaders.material_output_shader import MaterialOutputShader
 from src.gui.node_editor.g_edge import GEdge
+from src.gui.node_editor.g_node_socket import GNodeSocket
 from src.gui.node_editor.g_shader_node import ShaderNode, GMaterialOutputNode, GShaderNode
 from src.gui.node_editor.node_scene import NodeScene
-from src.gui.node_editor.g_node_socket import GNodeSocket
+from src.misc import io as iofuncs
+from src.misc import material_serializer as ms
+from src.misc import string_funcs
 from src.shaders.shader_super import FunctionShader, CompilableShader
 
 _logger = logging.getLogger(__name__)
@@ -23,7 +28,7 @@ class Material(QObject):
     edge_spawned = pyqtSignal(object)
     edge_despawned = pyqtSignal()
 
-    def __init__(self, cc, name: str):
+    def __init__(self, cc, name: str, material_filepath: str = None):
         super().__init__()
         self.cc = cc
         self._name = name
@@ -41,7 +46,10 @@ class Material(QObject):
         self._shader = None
         self._is_drawing_edge = False
 
-        self._add_material_output_node()
+        if material_filepath:
+            self._load_material(material_filepath)
+        else:
+            self._add_material_output_node()
 
     def __str__(self):
         return "Material ({})".format(self.name)
@@ -53,13 +61,19 @@ class Material(QObject):
     def id(self):
         return self._id
 
-    def add_node(self, shader: typing.Type[FunctionShader]):
-        if not isinstance(shader, FunctionShader):
-            shader = shader()  # Instantiate the shader if only a type was given
+    def add_node(self, shader: typing.Type[FunctionShader]=None, backend_node:ShaderNode=None) -> GShaderNode:
+        assert not (shader is None and backend_node is None), "At least one of shader or backend_node has to be specified!"
+        label = ""
+        if shader is not None:
+            if not isinstance(shader, FunctionShader):
+                shader = shader()  # Instantiate the shader if only a type was given
+                label = shader.get_name()
 
-        node = GShaderNode(self.node_scene, label=shader.get_name(), shader=shader)
+        node = GShaderNode(self.node_scene, label=label, shader=shader, backend_node=backend_node)
         self._add_node(node)
         _logger.debug("Added new node {} to material {}.".format(node.label(), self.name))
+
+        return node
 
     def _add_node(self, node: 'Node'):
         self._assign_node_number(node)
@@ -71,8 +85,8 @@ class Material(QObject):
 
         self.changed.emit()
 
-    def _add_material_output_node(self):
-        node = GMaterialOutputNode(self.node_scene)
+    def _add_material_output_node(self, backend_node: ShaderNode = None):
+        node = GMaterialOutputNode(self.node_scene, backend_node=backend_node)
         self._add_node(node)
 
         node.graph_changed.connect(self._handle_graph_change)
@@ -192,3 +206,64 @@ class Material(QObject):
         # Edge did not intersect with another valid socket, so it will be removed
         _logger.debug("Discarded edge started from node {}".format(source_node.label()))
         self.node_scene.removeItem(edge)
+
+    def _load_material(self, filename):
+        """Loads a saved material from file."""
+        mon = ms.load_material(filename)
+        self._build_node_graph(mon)
+
+    def _build_node_graph(self, node: ShaderNode, parent=ShaderNode):
+        if isinstance(node.get_shader(), MaterialOutputShader):
+            self._add_material_output_node(backend_node=node)  # TODO WHY THE HELL DOES THIS NOT EVAL TO TRUE?!
+        else:
+            self.add_node(backend_node=node)
+
+        for inp in node.get_input_sockets():
+            if inp.is_connected():
+                for next_node in inp.get_connected_nodes():
+                    self._build_node_graph(next_node, node)
+
+                for out_socket in inp.get_connected_sockets():
+                    edge = inp.find_connecting_edge(out_socket)
+                    gedge = GEdge.from_edge(edge)
+                    gedge.connect_sockets()
+                    self.node_scene.addItem(gedge)
+
+
+
+    # def _load_material(self, mat_dict: dict, parent: 'GShaderNode' = None, parent_socket: 'GNodeSocket' = None, output_index: int = None):
+    #     for key_id in mat_dict:
+    #         node_dict = mat_dict[key_id]
+    #         shader = node_dict[ms.SHADER]
+    #         if "MaterialOutputShader" in shader:
+    #             if self.get_material_output_node() is None:
+    #                 self._add_material_output_node()
+    #             node = self.get_material_output_node()
+    #         else:
+    #             importstring = string_funcs.type_to_import_string(shader)
+    #             cls = iofuncs.import_class_from_string(importstring)
+    #             node = self.add_node(cls)
+    #
+    #             # Connect parents input socket to current node's output socket
+    #             out_socket = node.get_output_socket(output_index)
+    #             edge = GEdge(source=out_socket, destination=parent_socket)
+    #             edge.connect_sockets()
+    #             self.node_scene.addItem(edge)
+    #
+    #         inputs = node_dict[ms.INPUTS]
+    #         for inp in inputs:
+    #             arg = inp[ms.ARGUMENT]
+    #             connected = inp[ms.CONNECTED]
+    #             value = inp[ms.VALUE]
+    #             output_index = inp[ms.OUTPUT_SOCKET_INDEX]
+    #             socket = node.get_input_socket(arg)
+    #             if connected:
+    #                 self._load_material(value, parent=node, parent_socket=socket, output_index=output_index)
+    #             else:
+    #                 if socket:
+    #                     socket.set_value(torch.tensor(value, dtype=torch.float32))
+    #                     module = node.get_input_module(socket)
+    #                     module.set_value(value)
+    #                 else:
+    #                     raise RuntimeError(
+    #                         "Can not find socket with label {} on node created from shader {} while loading material.".format(arg, shader))

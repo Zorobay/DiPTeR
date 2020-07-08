@@ -1,6 +1,9 @@
 import typing
+import re
+
 
 EXCLUDED_WORDS = ["RGB", "HSV"]
+REG_CLASS_TO_IMPORT = re.compile(r".+class\s+[\\]?'(.+)[\\]?'", flags=re.UNICODE|re.DOTALL|re.IGNORECASE)
 
 
 def split_on_upper_case(string: str, strip=True, ignore_excluded=True) -> typing.List[str]:
@@ -45,3 +48,8 @@ def snake_case_to_names(string: str) -> typing.List[str]:
             splits.append(w)
 
     return splits
+
+
+def type_to_import_string(typestring: str) -> str:
+    match = REG_CLASS_TO_IMPORT.match(typestring)
+    return match.group(1)

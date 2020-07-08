@@ -5,6 +5,7 @@ import typing
 from PyQt5.QtCore import Qt, QRectF, pyqtSignal, QPointF
 from PyQt5.QtGui import QColor, QBrush, QPainter, QPen
 from PyQt5.QtWidgets import QGraphicsWidget, QGraphicsLinearLayout, QGraphicsItem, QGraphicsSceneMouseEvent, QGraphicsSceneHoverEvent
+from boltons.setutils import IndexedSet
 from node_graph.data_type import DataType
 from node_graph.edge import Edge
 from node_graph.node_socket import NodeSocket, SocketType
@@ -28,7 +29,7 @@ class GNodeSocket(QGraphicsWidget):
         self._socket = socket
         self._socket.set_container(self)
         self._parent_g_node = parent_node
-        self._connected_g_edges = set()
+        self._connected_g_edges = IndexedSet()
 
         # Define socket properties
         self._circle_connected_brush = QColor(255, 130, 0, 255) if self._socket.type() == NodeSocket.INPUT else QColor(130, 255, 0, 255)
@@ -110,11 +111,11 @@ class GNodeSocket(QGraphicsWidget):
         pos.setY(pos.y() + self._bbox.bottom() / 2)
         return pos
 
-    def connect_to(self, socket: 'GNodeSocket') -> Edge:
+    def connect_to(self, socket: 'GNodeSocket') -> GEdge:
         """
         Connects this GNodeSocket to another GNodeSocket.
         :param other_socket: Other GNodeSocket to connect this socket to.
-        :return: the Edge that was created between the sockets, or the old Edge if there already exists a connection.
+        :return: the GEdge that was created between the sockets, or the old GEdge if there already exists a connection.
         """
         edge = self._socket.connect_to(socket.get_backend_socket())
 
@@ -123,6 +124,8 @@ class GNodeSocket(QGraphicsWidget):
             self.connection_changed.emit(self, edge)
         elif socket.type() == SocketType.INPUT:
             socket.connection_changed.emit(socket, edge)
+
+        return GEdge.from_edge(edge)
 
     def add_connecting_edge(self, edge: GEdge):
         self._connected_g_edges.add(edge)

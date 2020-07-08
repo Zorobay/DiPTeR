@@ -79,23 +79,23 @@ class SettingsPanel(QWidget):
         self.settings.optimizer = self._optimizer_map["Adam"]
 
         # --- Setup render size input ---
-        self._width_input.set_default_value(self.settings.render_width)
-        self._height_input.set_default_value(self.settings.render_height)
+        self._width_input.set_value(self.settings.render_width)
+        self._height_input.set_value(self.settings.render_height)
         self._width_input.input_changed.connect(lambda: self._change_settings("render_width", self._width_input.get_gl_value()))
         self._height_input.input_changed.connect(lambda: self._change_settings("render_height", self._height_input.get_gl_value()))
 
         # --- Setup max iterations input ---
         self._max_iter_input.input_changed.connect(lambda: self._change_settings("max_iter", self._max_iter_input.get_gl_value()))
-        self._max_iter_input.set_default_value(100)
+        self._max_iter_input.set_value(100)
 
         # --- Setup early stopping loss threshold input ---
         self._early_stopping_loss_thresh.input_changed.connect(lambda: self._change_settings("early_stopping_thresh",
                                                                                              self._early_stopping_loss_thresh.get_gl_value()))
-        self._early_stopping_loss_thresh.set_default_value(0.01)
+        self._early_stopping_loss_thresh.set_value(0.01)
 
         # --- Setup learning rate input ---
         self._learning_rate.input_changed.connect(lambda: self._change_settings("learning_rate", self._learning_rate.get_gl_value()))
-        self._learning_rate.set_default_value(0.1)
+        self._learning_rate.set_value(0.1)
 
         self._layout.addWidget(self._match_button)
         self._layout.addWidget(self._load_texture_button)
@@ -122,8 +122,8 @@ class SettingsPanel(QWidget):
         loss_func = self._loss_func_map[self._loss_combo_box.currentText()]
 
         if isinstance(loss_func, losses.NeuralLoss):
-            self._width_input.set_default_value(224)
-            self._height_input.set_default_value(224)
+            self._width_input.set_value(224)
+            self._height_input.set_value(224)
 
         self._change_settings("loss_func", loss_func)
 

@@ -2,6 +2,7 @@ import typing
 import uuid
 
 import torch
+from boltons.setutils import IndexedSet
 from node_graph.data_type import DataType
 from node_graph.graph_element import GraphElement
 from node_graph.parameter import Parameter
@@ -62,17 +63,33 @@ class Node(GraphElement):
 
         return False
 
-    def get_input_socket(self, index: int) -> typing.Union[NodeSocket, None]:
-        """
-        Finds an input socket by index and returns it.
-        :param index: the index of the wanted socket.
-        :return: The input Socket, or None if the index is invalid.
-        """
+    def _get_socket(self, id_, collection) -> typing.Union[NodeSocket, None]:
 
-        if index < len(self._in_sockets):
-            return self._in_sockets[index]
+        if isinstance(id_, int):
+            if id_ < len(collection):
+                return collection[id_]
+        elif isinstance(id_, str):
+            for s in collection:
+                if s.label() == id_:
+                    return s
 
         return None
+
+    def get_input_socket(self, identifier) -> typing.Union[NodeSocket, None]:
+        """
+        Finds an input socket by index or label and returns it.
+        :param identifier: a socket identifier, either integer index or string label.
+        :return: The input Socket, or None if the identifier is invalid
+        """
+        return self._get_socket(identifier, self._in_sockets)
+
+    def get_output_socket(self, identifier: int) -> typing.Union[NodeSocket, None]:
+        """
+        Finds an output socket by index or label and returns it.
+        :param identifier: a socket identifier, either integer index or string label.
+        :return: The output Socket, or None if the identifier is invalid
+        """
+        return self._get_socket(identifier, self._out_sockets)
 
     def get_input_sockets(self) -> typing.List[NodeSocket]:
         """Returns a list with all NodeSockets that are inputs to this Node."""
@@ -81,18 +98,6 @@ class Node(GraphElement):
     def num_input_sockets(self) -> int:
         """Returns the number of input NodeSockets of this Node"""
         return len(self._in_sockets)
-
-    def get_output_socket(self, index: int) -> typing.Union[NodeSocket, None]:
-        """
-        Finds an output socket by index and returns it.
-        :param index: the index of the wanted socket.
-        :return: The output Socket, or None if the index is invalid.
-        """
-
-        if index < len(self._out_sockets):
-            return self._out_sockets[index]
-
-        return None
 
     def get_output_sockets(self) -> typing.List[NodeSocket]:
         """Returns a list of NodeSockets that are outputs to this Node."""
@@ -108,13 +113,13 @@ class Node(GraphElement):
         if socket:
             socket.set_value(value)
 
-    def get_ancestor_nodes(self, add_self: bool = False) -> typing.Set['Node']:
+    def get_ancestor_nodes(self, add_self: bool = False) -> IndexedSet:
         """
         Returns a list of all connected ancestors of this node.
         :param add_self: if True, adds this node to the set of returned nodes.
         :return: a Set of nodes that are ancestors of this node.
         """
-        out = set()
+        out = IndexedSet()
         if add_self:
             out.add(self)
 
@@ -182,7 +187,7 @@ class ShaderNode(Node):
         super().__init__(**kwargs)
 
         if "label" not in kwargs:
-            self.set_label(shader.__class__)
+            self.set_label(str(shader.__class__.__name__))
 
         self._shader = shader
         self._render_parameters = dict()

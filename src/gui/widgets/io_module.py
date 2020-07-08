@@ -26,8 +26,8 @@ class Input:
         raise NotImplementedError("Input subclass need to implement this method!")
 
     @abstractmethod
-    def set_default_value(self, default_value: typing.Any):
-        """Set the default value of this widgets."""
+    def set_value(self, default_value: typing.Any):
+        """Set the value of this widgets."""
         raise NotImplementedError("Input subclass need to implement this method!")
 
     def get_dtype(self) -> str:
@@ -74,8 +74,8 @@ class Module(QWidget):
     def set_label_palette(self, palette: QPalette):
         self._label_widget.setPalette(palette)
 
-    def set_default_value(self, default_value: typing.Any):
-        self.widget.set_default_value(default_value)
+    def set_value(self, default_value: typing.Any):
+        self.widget.set_value(default_value)
 
     def get_gl_value(self):
         return self.widget.get_gl_value()
