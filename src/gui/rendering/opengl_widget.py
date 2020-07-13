@@ -3,9 +3,10 @@ import logging
 import numpy as np
 from PyQt5.QtCore import QTimer, Qt, pyqtSignal
 from PyQt5.QtGui import QMouseEvent, QImage
-from PyQt5.QtWidgets import QOpenGLWidget, QMenu, QFileDialog, QSizePolicy, QLayout
+from PyQt5.QtWidgets import QOpenGLWidget, QMenu, QFileDialog, QSizePolicy
 from glumpy import gl, glm, gloo
 from glumpy.gloo import Program
+
 from src.gui.node_editor.control_center import ControlCenter
 from src.gui.node_editor.material import Material
 from src.opengl import object_vertices
@@ -55,10 +56,9 @@ class OpenGLWidget(QOpenGLWidget):
 
         # Set Widget settings
         size_policy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        size_policy.setHeightForWidth(True)
         self.setSizePolicy(size_policy)
         self.setMinimumSize(100, 100)
-        #self.resizeGL(width, height)
+        # self.resizeGL(width, height)
         self.setMouseTracking(False)
 
     @property
@@ -169,6 +169,8 @@ class OpenGLWidget(QOpenGLWidget):
 
     def _get_texture(self) -> QImage:
         # Reset the view to default so that the texture fits to the view
+        old_size = self.size()
+        self.resize(600, 600)
         temp_obj_to_world = self._object_to_world
         temp_world_to_view = self._world_to_view
         temp_view_to_proj = self._view_to_projection
@@ -185,15 +187,13 @@ class OpenGLWidget(QOpenGLWidget):
         img: QImage = self.grabFramebuffer()
 
         # Reset the view
+        self.resize(old_size)
         self._object_to_world = temp_obj_to_world
         self._world_to_view = temp_world_to_view
         self._view_to_projection = temp_view_to_proj
         self.set_vertices(temp_V, temp_I)
 
         return img
-
-    def heightForWidth(self, width: int) -> int:
-        return width
 
     # ============== ============ ==============
     # ============== HANDLE EVENTS ==============

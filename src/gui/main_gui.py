@@ -1,5 +1,6 @@
 import logging
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QApplication, QMainWindow, QAction
 from src.gui.node_editor.control_center import ControlCenter
 from src.gui.node_editor.node_view import NodeView

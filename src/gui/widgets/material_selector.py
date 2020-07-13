@@ -19,6 +19,7 @@ class MaterialSelector(QWidget):
         self._add_button = QPushButton("+")
         self._material_combo_box = QComboBox()
         self._save_material_button = QPushButton("Save Material")
+        self._load_material_button = QPushButton("Load Material")
         self._layout = QHBoxLayout()
 
         # Define data
@@ -40,6 +41,9 @@ class MaterialSelector(QWidget):
 
         self._save_material_button.clicked.connect(self._save_material)
         self._layout.addWidget(self._save_material_button)
+
+        self._load_material_button.clicked.connect(self._load_material)
+        self._layout.addWidget(self._load_material_button)
 
         self.setLayout(self._layout)
 
@@ -72,3 +76,9 @@ class MaterialSelector(QWidget):
             self.cc.active_material.name))
         if filename:
             material_serializer.save_material(self.cc.active_material.get_material_output_node().get_backend_node(), filename)
+
+    def _load_material(self):
+        filename, _ = QFileDialog.getOpenFileName(self, "Open Material", filter="Material (*.json)")
+
+        if filename:
+            self.load_material(filename)
