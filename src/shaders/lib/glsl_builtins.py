@@ -26,9 +26,9 @@ def smoothstep(edge0: ty.Union[float, Tensor], edge1: ty.Union[float, Tensor], x
 
 
 def step(edge: ty.Union[float, Tensor], x: Tensor) -> Tensor:
-    return (x >= edge).float()
+    return (torch.sign(x-edge) + 1) / 2
 
 
 def mod(x: Tensor, y: ty.Union[float, Tensor]) -> Tensor:
     """returns the value of input modulo y"""
-    return torch.remainder(x,y)
+    return torch.remainder(x, y)
