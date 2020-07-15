@@ -23,7 +23,7 @@ class BrickShader(FunctionShader):
     def shade_mat(self, mortar_scale: Tensor, brick_scale: Tensor, brick_elongate: Tensor, brick_shift: Tensor,
                   color_brick: Tensor, color_mortar: Tensor) -> Tensor:
         scale = torch.cat([torch.div(brick_scale, brick_elongate + TINY_FLOAT), brick_scale, brick_scale], dim=2)
-        uv3 = pattern.tile(Shader.frag_pos, scale, torch.cat((brick_shift, torch.zeros_like(brick_shift)), dim=2))
+        uv3 = pattern.tile(Shader.frag_pos(), scale, torch.cat((brick_shift, torch.zeros_like(brick_shift)), dim=2))
         b = pattern.box(uv3[:, :, 0:2], torch.cat((mortar_scale, mortar_scale), dim=2))
         frag_color = gl.mix(color_mortar, color_brick, b)
         return frag_color

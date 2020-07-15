@@ -2,6 +2,7 @@ import logging
 import re
 import time
 import typing
+from boltons.setutils import IndexedSet
 from pathlib import Path
 
 GLSL_IMPORT_DIR = "res/shaders/lib/"
@@ -19,11 +20,11 @@ REG_GLSL_IMPORT = re.compile(r"\s*#\s*import\s*[\"'](\w*\.?\w*)[\"']", flags=re.
 REG_GLSL_IN_OR_UNIFORM = re.compile(r"^\s*(?:in|uniform)\s+(?P<"
                                     + IN_UNIFORM_ARGUMENT + r">[\w_]+\s+[\w_]+)",
                                     flags=re.UNICODE | re.DOTALL | re.IGNORECASE)
-REG_GLSL_FUNCTION_NAME = re.compile(r"^\s*(?:\w+)\s+([\w_]+)\(.*\)", flags=re.UNICODE | re.DOTALL | re.IGNORECASE)
+REG_GLSL_FUNCTION_NAME = re.compile(r"^\s*(?:\w+)\s+([\w_]+)\(", flags=re.UNICODE | re.DOTALL | re.IGNORECASE)
 REG_FUNCTION = re.compile(r"^\s*(?P<"
                           + FUNC_RETURN_TYPE + r">\w+)\s+(?P<"
                           + FUNC_FUNCTION_NAME + r">[\w_]+)\((?P<"
-                          + FUNC_ARGUMENTS + r">[\w\s_,]*)\)",
+                          + FUNC_ARGUMENTS + r">[\w\s_,]*)",
                           flags=re.UNICODE | re.DOTALL | re.MULTILINE | re.IGNORECASE)
 REG_LINE_COMMENT = re.compile(r"\s*\/\/.*", flags=re.UNICODE | re.DOTALL | re.IGNORECASE)
 
@@ -72,8 +73,8 @@ class GLSLCode:
         self.filename = filename
         self.shader_name = self.filename.split("/")[-1].split(".")[0]
         self.functions = []
-        self.imports = set()
-        self.connected_code = set()
+        self.imports = IndexedSet()
+        self.connected_code = IndexedSet()
         self.parse_time = 0
         self._primary_func_name = primary_function
         self.primary_function: GLSLFunction = None
@@ -132,25 +133,25 @@ class GLSLCode:
                         self._primary_func_start_line = line_i
 
                 func_code = [line]
-                opening_braces = 0
-                closing_braces = 0
+                opening_curly_brace = 0
+                closing_curly_brace = 0
 
                 # Opening brace of primary_function might not be on the same line as the primary_function title!
                 while not ("{" in line):
                     line = next(code_iterator)
                     func_code.append(line)
 
-                opening_braces += 1
+                opening_curly_brace += 1
 
-                while opening_braces > closing_braces:
+                while opening_curly_brace > closing_curly_brace:
                     line = next(code_iterator)
                     line_i += 1
                     func_code.append(line)
 
                     if "}" in line:
-                        closing_braces += 1
+                        closing_curly_brace += 1
                     if "{" in line:
-                        opening_braces += 1
+                        opening_curly_brace += 1
 
                 self.functions.append(GLSLFunction(func_code, self))
 
@@ -231,8 +232,9 @@ class GLSLCode:
                     self._uniforms.append((arg.type, arg.modified_name))
 
         # Step 3, handle imports
-        all_imports = set([im for n in self.connected_code for im in n.imports])  # Convert to set to remove double imports
+        all_imports = IndexedSet([im for n in self.connected_code for im in n.imports])  # Convert to set to remove double imports
         for import_file in all_imports:
+            print("Import File: {}".format(import_file))
             libcode = generate_comment_line(import_file) + "\n" + get_import_code(import_file)
             self._generated_code.append(libcode + "\n")
 
@@ -242,20 +244,6 @@ class GLSLCode:
         added_function_defs = []
         _add_calls(self, var_declarations, function_calls, added_function_defs, self._generated_code)
 
-        # for needed_code in self.connected_code:
-        #     for needed_func in needed_code.functions:
-        #         comment = generate_comment_line("{}.{}".format(needed_code.shader_name, needed_func.function_name))
-        #
-        #         if needed_func.modified_function_name not in added_function_defs:  # We don't want to add duplicate function definitions
-        #             func_code = "\n" + comment + "\n" + "".join(needed_func.generated_code)
-        #             self._generated_code.append(func_code + "\n")
-        #             added_function_defs.append(needed_func.modified_function_name)
-        #
-        #         # Step 4.1, generate calls to connected functions
-        #         func_calls, var_declars = needed_func.get_call_strings()
-        #         var_declarations.extend(var_declars)
-        #         function_calls.extend(func_calls)
-
         # Step 5, generate calls to connected functions in own primary function
         self.primary_function.add_calls(function_calls, var_declarations)
         primary_code = "".join(self.primary_function.generated_code)
@@ -264,8 +252,7 @@ class GLSLCode:
         return "".join(self._generated_code)
 
 
-def _add_calls(code: 'GLSLCode', declarations: list, calls: list, added_function_defs:list, generated_code: list):
-
+def _add_calls(code: 'GLSLCode', declarations: list, calls: list, added_function_defs: list, generated_code: list):
     for arg in code.primary_function.arguments:
         if arg.is_connected() and arg.name != "frag_pos" and not arg.is_output():
             connected_code = arg.get_connected_func().get_parent_code()
@@ -309,21 +296,32 @@ class GLSLFunction:
 
     def _parse(self):
 
-        for i, line in enumerate(self.code):
+        iterator = iter(self.code)
+        signature_found = False
+
+        for i, line in enumerate(iterator):
             # Parse first line
-            match = REG_FUNCTION.match(line)
+            if not signature_found:
+                match = REG_FUNCTION.match(line)
 
-            if match:  # Function signature
-                match_dict = match.groupdict()
-                self.return_type = match_dict[FUNC_RETURN_TYPE]
-                self.function_name = match_dict[FUNC_FUNCTION_NAME]
+                if match:  # Function signature
+                    signature_found = True
+                    match_dict = match.groupdict()
+                    self.return_type = match_dict[FUNC_RETURN_TYPE]
+                    self.function_name = match_dict[FUNC_FUNCTION_NAME]
 
-                # Rename the function so that we do not get any clashes
-                self._set_modified_filename()
-                new_func_def = replace_filename(self._renamed_code[i], self.modified_function_name)
-                self._renamed_code[i] = new_func_def
+                    # Rename the function so that we do not get any clashes
+                    self._set_modified_filename()
+                    new_func_def = replace_filename(self._renamed_code[i], self.modified_function_name)
+                    self._renamed_code[i] = new_func_def
 
-                self._parse_arguments(match_dict[FUNC_ARGUMENTS])
+                    # Check if we have found all the arguments (func def might be multiline)
+                    func_args = [match_dict[FUNC_ARGUMENTS].replace("\n", " ")]
+                    while not ")" in line:
+                        line = next(iterator)
+                        func_args.append(line.replace("\n", " ").replace(")", ""))
+
+                    self._parse_arguments("".join(func_args))
 
             if "{" in line:
                 self._body_start_line = i + 1

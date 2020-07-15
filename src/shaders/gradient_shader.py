@@ -18,5 +18,5 @@ class GradientShader(FunctionShader):
         return color
 
     def shade_mat(self) -> Tensor:
-        frag_pos = Shader.frag_pos
+        frag_pos = Shader.frag_pos()
         return frag_pos[:, :, 0].unsqueeze(-1).repeat(1, 1, 3)

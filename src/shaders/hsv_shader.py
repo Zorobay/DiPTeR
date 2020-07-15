@@ -17,7 +17,7 @@ class HSVShader(FunctionShader):
         ]
 
     def shade_mat(self, h: Tensor, s: Tensor, v: Tensor) -> Tensor:
-        Wi, He = Shader.width, Shader.height
+        Wi, He = Shader.render_size()
         c = torch.tensor(6.0).repeat(Wi, He, 1)
         K = torch.tensor((1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0)).repeat(Wi, He, 1)
         K0 = K[:, :, 0].unsqueeze(-1).repeat(1, 1, 3)

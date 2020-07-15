@@ -14,4 +14,4 @@ class FragmentCoordinatesShader(FunctionShader):
         ]
 
     def shade_mat(self) -> Tensor:
-        return Shader.frag_pos
+        return Shader.frag_pos()

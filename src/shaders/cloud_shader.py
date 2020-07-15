@@ -22,8 +22,8 @@ class CloudShader(FunctionShader):
         ]
 
     def shade_mat(self, scale: Tensor, detail: Tensor) -> Tensor:
-        w, h = Shader.width, Shader.height
-        uv = Shader.frag_pos[:, :, :2]
+        w, h = Shader.render_size()
+        uv = Shader.frag_pos()[:, :, :2]
         color = torch.tensor((0., 0., 0.)).repeat(w, h, 1)
 
         fBM = noise.fractalBrownianMotion(uv*scale, detail)

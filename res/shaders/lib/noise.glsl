@@ -2,8 +2,12 @@ vec2 simpleSmoothstep(vec2 p) {
     return p*p*(3. -2.*p);
 }
 
+float random_float(float p) {
+    return fract(sin(p * 98.81) * 123555.68);
+}
+
 float random(vec2 p) {
-    return fract(sin(p.x * 888. + p.y * 5322.) * 3451.);
+    return random_float(p.x * 103. + p.y * 85.62);
 }
 
 float smoothNoise2D(vec2 p) {

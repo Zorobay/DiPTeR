@@ -26,9 +26,18 @@ def smoothstep(edge0: ty.Union[float, Tensor], edge1: ty.Union[float, Tensor], x
 
 
 def step(edge: ty.Union[float, Tensor], x: Tensor) -> Tensor:
+    """
+    `step` generates a step function by comparing x to edge.
+    For element i of the return value, 0.0 is returned if x[i] < edge[i], and 1.0 is returned otherwise.
+    """
     return (torch.sign(x-edge) + 1) / 2
 
 
 def mod(x: Tensor, y: ty.Union[float, Tensor]) -> Tensor:
     """returns the value of input modulo y"""
     return torch.remainder(x, y)
+
+
+def dot(x: Tensor, y: Tensor) -> Tensor:
+    """dot returns the dot product of two vectors, x and y. i.e., x[0]⋅y[0]+x[1]⋅y[1]+..."""
+    return torch.einsum("abc, abc -> ab", x, y).unsqueeze(-1)

@@ -22,10 +22,13 @@ from src.shaders.shader_super import FunctionShader
 from src.shaders.tile_shader import TileShader
 from src.shaders.vector_math_shader import VectorMathShader
 from src.shaders.math_shader import ScalarMathShader
+from src.shaders.blender_brick_shader import BlenderBrickShader
+from src.shaders.perlin_noise_shader import PerlinNoiseShader
 from tests.stuff_for_testing.shaders.test_box_shader import TestBoxShader
 
-SHADERS_TO_CONTEXT_MENU = [TileShader, GradientShader, CloudShader, HSVShader, ColorShader, RGBShader, BrickShader, MixShader]
+SHADERS_TO_CONTEXT_MENU = [BlenderBrickShader,BrickShader, TileShader, GradientShader, HSVShader, ColorShader, RGBShader, MixShader]
 
+SHADERS_NOISE_MENU = [CloudShader, PerlinNoiseShader]
 SHADERS_MISC_MENU = [FragmentCoordinatesShader, TestBoxShader, MiniBrickShader]
 SHADERS_MATH_MENU = [VectorMathShader, ScalarMathShader, MulAddShader]
 
@@ -164,6 +167,7 @@ class AddNodeMenu(QMenu):
 
         self._misc_menu = self.addMenu("Misc")
         self._math_menu = self.addMenu("Math")
+        self._noise_menu = self.addMenu("Noise")
         self._action_shader_map = []
         self._add_shader_actions()
 
@@ -176,6 +180,9 @@ class AddNodeMenu(QMenu):
 
         for shader in SHADERS_MATH_MENU:
             self._add_shader(shader, self._math_menu)
+
+        for shader in SHADERS_NOISE_MENU:
+            self._add_shader(shader, self._noise_menu)
 
     def _add_shader(self, shader, menu: QMenu):
         words = string_funcs.split_on_upper_case(shader.__name__)

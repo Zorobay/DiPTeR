@@ -142,21 +142,18 @@ class ShaderOutputParameter:
         return self._argument
 
 
-class Shader(ABC):
+class Shader:
     FRAGMENT_SHADER_FUNCTION = None
     FRAGMENT_SHADER_FILENAME = None
-    frag_pos = None
-    width = 100
-    height = 100
+    _ren_width = 100
+    _ren_height = 100
+    _frag_pos_matrix = torch.empty((_ren_width, _ren_height))
 
     def __init__(self):
         self.code = None
         self._parsed_code = None
 
         self._parse()
-
-    def get_size(self):
-        print("{}: {}".format(self.__class__, Shader.width))
 
     def _parse(self):
         assert self.__class__.FRAGMENT_SHADER_FILENAME, "Name of GLSL fragment shader need to be set by subclass to FRAGMENT_SHADER_FILENAME " \
@@ -179,9 +176,25 @@ class Shader(ABC):
 
     @classmethod
     def set_render_size(cls, width: int, height: int):
-        Shader.width = width
-        Shader.height = height
-        Shader.frag_pos = render_funcs.generate_frag_pos(width, height)
+        Shader._ren_height = width
+        Shader._ren_width = height
+        Shader._frag_pos_matrix = render_funcs.generate_frag_pos(width, height)
+
+    @classmethod
+    def render_size(cls):
+        return Shader._ren_width, Shader._ren_height
+
+    @classmethod
+    def render_width(cls):
+        return Shader._ren_width
+
+    @classmethod
+    def render_height(cls):
+        return Shader._ren_height
+
+    @classmethod
+    def frag_pos(cls):
+        return Shader._frag_pos_matrix
 
     @abstractmethod
     def get_inputs(self) -> typing.List[ShaderInputParameter]:
@@ -195,7 +208,7 @@ class Shader(ABC):
 
     def shade(self, args: dict) -> Tensor:
         """Convenience function that converts all connectable arguments to matrix form before returning the rendered image."""
-        width, height = Shader.width, Shader.height
+        width, height = Shader.render_width(), Shader.render_height()
         mat_args = dict()
 
         for key_arg, param in zip(args, self.get_inputs()):
@@ -218,7 +231,7 @@ class Shader(ABC):
     def tensor(self, data) -> Tensor:
         """Creates a matrix tensor of a shape that matches the rendering size from data. This is shorthand to creating tensors in the shade
         function."""
-        return torch.tensor(data, dtype=torch.float32).repeat(Shader.width, Shader.height, 1)
+        return torch.tensor(data, dtype=torch.float32).repeat(*Shader.render_size(), 1)
 
 
 class FunctionShader(Shader, ABC):
