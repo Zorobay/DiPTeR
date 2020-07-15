@@ -153,7 +153,6 @@ class Material(QObject):
             self.node_scene.removeItem(node)
 
             _logger.info("Deleted node {} from material {}".format(node.label(), self.name))
-            # self.get_material_output_node()._handle_graph_change()
             self.changed.emit()
             return True
         except KeyError:
