@@ -33,6 +33,14 @@ class Node(GraphElement):
         self._in_sockets = list()
         self._out_sockets = list()
         self._label = label
+        self._num = -1
+
+    def get_num(self) -> int:
+        """Returns the number that is assigned to this node. This number should be unique among nodes with the same shader type."""
+        return self._num
+
+    def set_num(self, num: int):
+        self._num = num
 
     def delete(self):
         """Deletes this node from the graph."""
@@ -216,11 +224,13 @@ class ShaderNode(Node):
             self.set_default_inputs()
 
     def _init(self):
-        for inp in self._shader.get_inputs():
-            self.add_socket(NodeSocket.INPUT, label=inp.get_argument(), dtype=inp.dtype())
+        for i, inp in enumerate(self._shader.get_inputs()):
+            socket = self.add_socket(NodeSocket.INPUT, label=inp.get_argument(), dtype=inp.dtype())
+            socket.set_index(i)
 
-        for out in self._shader.get_outputs():
-            self.add_socket(NodeSocket.OUTPUT, label=out.get_display_label(), dtype=out.dtype())
+        for i, out in enumerate(self._shader.get_outputs()):
+            socket = self.add_socket(NodeSocket.OUTPUT, label=out.get_display_label(), dtype=out.dtype())
+            socket.set_index(i)
 
     def get_shader(self) -> Shader:
         return self._shader
@@ -254,7 +264,8 @@ class ShaderNode(Node):
         for i, socket in enumerate(self._in_sockets):
             arg = socket.label()
             inp = self._shader.get_input_by_arg(arg)
-            mod_arg = self.get_shader().get_parsed_code().get_modified_arg_name(arg)
+            mod_arg = self.get_shader().get_parsed_code().get_modified_arg_name(arg, self.get_num())
+
             if socket.is_connected():
                 nodes = socket.get_connected_nodes()
                 assert len(nodes) == 1  # It should be an input node, so it should only be able to have 1 connected node

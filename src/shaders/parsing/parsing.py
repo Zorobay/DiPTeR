@@ -190,10 +190,10 @@ class GLSLCode:
     def get_primary_function(self) -> 'GLSLFunction':
         return self.primary_function
 
-    def get_modified_arg_name(self, arg: str) -> str:
+    def get_modified_arg_name(self, arg: str, number: int = None) -> str:
         arg = self.primary_function.get_argument(arg)
         if arg:
-            return arg.get_modified_name()
+            return arg.get_modified_name(number)
 
         return None
 
@@ -484,11 +484,13 @@ class GLSLArgument:
     def get_node_num(self):
         return self.parent_function.parent_code.get_node_num()
 
-    def get_modified_name(self) -> str:
+    def get_modified_name(self, number: int = None) -> str:
         if self.name == "frag_pos" or self.parent_function.function_name == "main":
             return self.name
         else:
-            return "{}_{}_{}".format(self.parent_function.modified_function_name, self.get_node_num(), self.name)
+            if number is None:
+                number = self.get_node_num()
+            return "{}_{}_{}".format(self.parent_function.modified_function_name, number, self.name)
 
     def get_parent_code(self) -> 'GLSLCode':
         return self.parent_function.parent_code

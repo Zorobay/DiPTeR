@@ -67,7 +67,6 @@ class GShaderNode(QGraphicsWidget):
             self._node.set_label(label)
 
         self.node_scene = node_scene
-        self._num = -1
 
         self._in_socket_modules = []
         self._out_socket_modules = []
@@ -124,13 +123,13 @@ class GShaderNode(QGraphicsWidget):
             shader_output = shader.get_outputs()[i]
             label = shader_output.get_display_label()
             socket = self._node.get_output_socket(i)
-            socket.set_index(i)
+            #socket.set_index(i)
             self._add_output_module(output_label=label, node_socket=socket)
 
         for i in range(self._node.num_input_sockets()):
             shader_input = shader.get_inputs()[i]
             socket = self._node.get_input_socket(i)
-            socket.set_index(i)
+            #socket.set_index(i)
             self._add_input_module(socket, shader_input)
 
     def _notify_change(self):
@@ -174,11 +173,10 @@ class GShaderNode(QGraphicsWidget):
 
     def get_num(self) -> int:
         """Returns the number that is assigned to this node. This number is unique among nodes with the same shader type."""
-        return self._num
+        return self._node.get_num()
 
     def set_num(self, num: int):
-        self._num = num
-        self.set_label()
+        self._node.set_num(num)
 
     def _init_title(self):
         self._title_item.setDefaultTextColor(self._title_color)

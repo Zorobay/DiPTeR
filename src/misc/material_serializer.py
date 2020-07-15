@@ -87,26 +87,54 @@ def _save_material(node: ShaderNode, output_dict: dict):
     output_dict[Serializer.serialize(node.id())] = node_info
 
 
-def load_material(filename) -> ShaderNode:
-    """Loads a saved material from file."""
-    with open(filename, "r", encoding="utf-8") as f:
+def load_material(filepath, assign_numbers=True) -> ShaderNode:
+    """
+    Loads a saved material from file.
+    :param filepath: The path to the material .json file.
+    :param assign_numbers: if True will automatically assign unique node numbers to the loaded nodes.
+    :return: the root node
+    """
+    taken_numbers = {}
+    with open(filepath, "r", encoding="utf-8") as f:
         mat_dict = json.load(f)
 
     mon = ShaderNode(shader=MaterialOutputShader())
-    _load_material(mat_dict, parent=mon)
+    _load_material(mat_dict, taken_numbers, assign_numbers, parent=mon)
     return mon
 
 
-def _load_material(mat_dict: dict, parent: ShaderNode = None, parent_socket: NodeSocket = None, output_index: int = None):
+def _get_node_number(shader: str, taken_numbers: dict) -> int:
+    if shader not in taken_numbers:
+        taken_numbers[shader] = [None]
+
+    numbers = taken_numbers[shader]
+
+    for i, n in enumerate(numbers):
+        if n is None:
+            numbers[i] = i
+            return i
+
+    # If no empty slot is found, add the next bigger number to the end of the list
+    num = len(numbers)
+    numbers.append(num)
+    return num
+
+
+def _load_material(mat_dict: dict, taken_numbers: dict, assign_numbers:bool, parent: ShaderNode = None, parent_socket: NodeSocket = None,
+                   output_index: int = None):
     for key_id in mat_dict:
         node_dict = mat_dict[key_id]
         shader = node_dict[SHADER]
+
         if "MaterialOutputShader" in shader:
             node = parent
         else:
-            importstring = string_funcs.type_to_import_string(shader)
-            cls = iofuncs.import_class_from_string(importstring)
+            import_string = string_funcs.type_to_import_string(shader)
+            cls = iofuncs.import_class_from_string(import_string)
             node = ShaderNode(shader=cls())
+            if assign_numbers:
+                node_num = _get_node_number(shader, taken_numbers)
+                node.set_num(node_num)
 
             # Connect parents input socket to current node's output socket
             out_socket = node.get_output_socket(output_index)
@@ -120,7 +148,7 @@ def _load_material(mat_dict: dict, parent: ShaderNode = None, parent_socket: Nod
             output_index = inp[OUTPUT_SOCKET_INDEX]
             socket = node.get_input_socket(arg)
             if connected:
-                _load_material(value, parent=node, parent_socket=socket, output_index=output_index)
+                _load_material(value, taken_numbers, assign_numbers, parent=node, parent_socket=socket, output_index=output_index)
             else:
                 if socket:
                     socket.set_value(torch.tensor(value, dtype=torch.float32))
