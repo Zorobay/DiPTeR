@@ -177,6 +177,7 @@ class GShaderNode(QGraphicsWidget):
 
     def set_num(self, num: int):
         self._node.set_num(num)
+        self.set_label(None)
 
     def _init_title(self):
         self._title_item.setDefaultTextColor(self._title_color)
