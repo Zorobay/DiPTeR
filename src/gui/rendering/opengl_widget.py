@@ -55,7 +55,7 @@ class OpenGLWidget(QOpenGLWidget):
         self._mins = np.array((1., 1., 1.), dtype=np.float32)
 
         # Set Widget settings
-        size_policy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setSizePolicy(size_policy)
         self.setMinimumSize(100, 100)
         # self.resizeGL(width, height)

@@ -136,6 +136,7 @@ class LineInput(QLineEdit, Input):
         self._old_text = ""
         self.editingFinished.connect(self._handle_change)
         self.textChanged.connect(self._handle_change)
+        self.setMaximumWidth(80)
 
     def _handle_change(self):
         if self.text() != self._old_text:
