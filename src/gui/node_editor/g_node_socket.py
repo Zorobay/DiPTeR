@@ -18,7 +18,7 @@ _logger = logging.getLogger(__name__)
 class GNodeSocket(QGraphicsWidget):
     edge_started = pyqtSignal(GEdge)
     edge_released = pyqtSignal(GEdge)
-    connection_changed = pyqtSignal(object, Edge)  # Socket
+    connection_changed = pyqtSignal(object, object)  # Socket, Edge or None
     position_changed = pyqtSignal(QPointF)
 
     INPUT = SocketType.INPUT
@@ -133,10 +133,10 @@ class GNodeSocket(QGraphicsWidget):
     def add_connecting_edge(self, edge: GEdge):
         self._connected_g_edges.add(edge)
 
-    def remove_connected_edge(self, edge: GEdge):
-        assert edge in self._connected_g_edges
+    def remove_connected_edge(self, gedge: GEdge):
+        assert gedge in self._connected_g_edges
 
-        self._connected_g_edges.remove(edge)
+        self._connected_g_edges.remove(gedge)
 
     def label(self) -> str:
         return self._socket.label()

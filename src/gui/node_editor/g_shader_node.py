@@ -47,6 +47,7 @@ class GShaderNode(QGraphicsWidget):
     """
     edge_started = pyqtSignal(uuid.UUID, GEdge)
     edge_ended = pyqtSignal(uuid.UUID, GEdge)
+    deleted = pyqtSignal(object)
     connection_changed = pyqtSignal(GNodeSocket, object)  # Node
     input_changed = pyqtSignal(object)  # Node
 
@@ -137,23 +138,23 @@ class GShaderNode(QGraphicsWidget):
         self.input_changed.emit(self)
 
     def delete(self):
-        for s in self.get_output_sockets():
-            edges = s.get_connected_edges()
-            for e in edges:
-                s.remove_connected_edge(e)
-                self.node_scene.removeItem(e)
-
-            del s
-
-        for s in self.get_input_sockets():
-            edges = s.get_connected_edges()
-            for e in edges:
-                s.remove_connected_edge(e)
-                self.node_scene.removeItem(e)
-
-            del s
-
+        output_nodes = self.get_output_target_nodes()
+        self._remove_edges_from_sockets(self.get_output_sockets())
+        self._remove_edges_from_sockets(self.get_input_sockets())
         self._node.delete()
+        for n in output_nodes:
+            n.update_module_enabled_state()
+
+        self.deleted.emit(self)
+
+    def _remove_edges_from_sockets(self, sockets):
+        for s in sockets:
+            edges = s.get_connected_edges()
+            for e in edges:
+                s.remove_connected_edge(e)
+                self.node_scene.removeItem(e)
+
+            del s
 
     def id(self) -> uuid.UUID:
         return self._node.id()
@@ -207,6 +208,9 @@ class GShaderNode(QGraphicsWidget):
 
         return out
 
+    def get_output_target_nodes(self) -> list:
+        return [n.get_container() for n in self._node.get_output_target_nodes()]
+
     def get_ancestor_nodes(self, add_self: bool = False) -> IndexedSet:
         """
         Returns a list of all connected ancestors of this node.
@@ -250,7 +254,14 @@ class GShaderNode(QGraphicsWidget):
     def get_input_socket(self, index: int) -> typing.Union[GNodeSocket, None]:
         return self._node.get_input_socket(index).get_container()
 
-    def get_input_module(self, socket=None, index=None):
+    def update_module_enabled_state(self):
+        for socket in self.get_input_sockets():
+            mod = self.get_input_module(socket)
+
+            if mod is not None:
+                mod.setEnabled(not socket.is_connected())
+
+    def get_input_module(self, socket=None, index=None) -> SocketModule:
         assert not (socket is None and index is None), "Specify at least one identifier to find input module!"
 
         for i, (s, m) in enumerate(self._in_socket_modules):
@@ -332,11 +343,12 @@ class GShaderNode(QGraphicsWidget):
         self._input_index += 1
 
     def _handle_socket_connection(self, socket: GNodeSocket, _):
+        mod = self.get_input_module(socket)
 
         if socket.is_connected():  # Disable socket module to show that is not user controllable anymore
-            for (s, mod) in self._in_socket_modules:
-                if s == socket:
-                    mod.setEnabled(False)
+            mod.setEnabled(False)
+        else:
+            mod.setEnabled(True)
 
         self.connection_changed.emit(socket, self)
 
@@ -402,11 +414,18 @@ class GMaterialOutputNode(GShaderNode):
         self._connected_node = socket.get_connected_nodes()[0]
         self._handle_graph_change()
 
+    def _handle_node_deletion(self, node: 'GShaderNode'):
+        if node == self._connected_node:
+            self._connected_node = None
+
+        self._handle_graph_change()
+
     def _handle_graph_change(self, *args):
-        connected_nodes = self._connected_node.get_ancestor_nodes(add_self=True)
+        connected_nodes = [] if self._connected_node is None else self._connected_node.get_ancestor_nodes(add_self=True)
 
         for n in connected_nodes:
             n.connection_changed.connect(self._handle_graph_change)
+            n.deleted.connect(self._handle_node_deletion)
             n.input_changed.connect(self._handle_input_changed)
 
         self._recompile()  # Compile and get new program
@@ -418,18 +437,6 @@ class GMaterialOutputNode(GShaderNode):
     def _recompile(self):
         self.get_shader().recompile(self)
         self._program = self.get_shader().get_program()
-
-    def _create_io_mapping(self, nodes: typing.List[ShaderNode]):
-        """Creates a mapping that tracks nodes and their modified argument names."""
-        for node in nodes:
-            node_id = node.id()
-            if node_id not in self._io_mapping:
-                self._io_mapping[node_id] = {}
-
-            node_inputs = node.get_input(exclude_connected=True)
-
-            for arg, mod_arg, _ in node_inputs:
-                self._io_mapping[node_id][arg] = mod_arg
 
     def _handle_input_changed(self, node: GShaderNode):
         set_program_uniforms_from_node(self._program, node)
