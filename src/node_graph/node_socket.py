@@ -64,6 +64,11 @@ class NodeSocket(GraphElement):
 
         return edge
 
+    def disconnect_all(self):
+        """Disconnects this NodeSocket from all other connected sockets."""
+        for other in self._connected_sockets:
+            self.disconnect_from(other)
+
     def disconnect_from(self, other_socket: 'NodeSocket'):
         """
         Disconnects this NodeSocket from another NodeSocket.

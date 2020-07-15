@@ -70,7 +70,6 @@ class GShaderNode(QGraphicsWidget):
 
         self._in_socket_modules = []
         self._out_socket_modules = []
-        self._socket_connections = {}
 
         # define Node properties
         self._selected = False
@@ -138,8 +137,23 @@ class GShaderNode(QGraphicsWidget):
         self.input_changed.emit(self)
 
     def delete(self):
-        # TODO Implement!
-        pass
+        for s in self.get_output_sockets():
+            edges = s.get_connected_edges()
+            for e in edges:
+                s.remove_connected_edge(e)
+                self.node_scene.removeItem(e)
+
+            del s
+
+        for s in self.get_input_sockets():
+            edges = s.get_connected_edges()
+            for e in edges:
+                s.remove_connected_edge(e)
+                self.node_scene.removeItem(e)
+
+            del s
+
+        self._node.delete()
 
     def id(self) -> uuid.UUID:
         return self._node.id()

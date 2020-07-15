@@ -34,6 +34,14 @@ class Node(GraphElement):
         self._out_sockets = list()
         self._label = label
 
+    def delete(self):
+        """Deletes this node from the graph."""
+        for s in self._in_sockets:
+            s.disconnect_all()
+
+        for s in self._out_sockets:
+            s.disconnect_all()
+
     def add_socket(self, type_: SocketType, label: str = "", dtype: DataType = None) -> NodeSocket:
         """
         Adds an input socket to this Node
@@ -265,14 +273,3 @@ class ShaderNode(Node):
             arguments[arg] = t
 
         return self.get_shader().shade(arguments), complete_params_dict
-
-    # def _shade(self, args: dict):
-    #     width, height = Shader.width, Shader.height
-    #     mat_args = dict()
-    #     for key, arg in args.items():
-    #         if len(arg.shape) == 3 and arg.shape[0] == width and arg.shape[1] == height:
-    #             mat_args[key] = arg.float()
-    #         else:
-    #             mat_args[key] = arg.repeat(width, height, 1).float()
-    #
-    #     return self.get_shader().shade_mat(**mat_args)

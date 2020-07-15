@@ -149,6 +149,7 @@ class Material(QObject):
         try:
             node = nodes[node_id]
             self._unassign_node_number(node)
+            node.delete()
             del nodes[node_id]  # Remove nodes from list of material nodes
 
             self.node_scene.removeItem(node)

@@ -127,13 +127,16 @@ class GNodeSocket(QGraphicsWidget):
 
         return GEdge.from_edge(edge)
 
+    def get_connected_edges(self) -> IndexedSet:
+        return self._connected_g_edges
+
     def add_connecting_edge(self, edge: GEdge):
         self._connected_g_edges.add(edge)
 
     def remove_connected_edge(self, edge: GEdge):
-        assert edge in self._connected_edges
+        assert edge in self._connected_g_edges
 
-        self._connected_edges.remove(edge)
+        self._connected_g_edges.remove(edge)
 
     def label(self) -> str:
         return self._socket.label()
