@@ -1,3 +1,6 @@
+# Material files in root
+/*.json
+
 # IDE specific
 .idea
 .vscode
