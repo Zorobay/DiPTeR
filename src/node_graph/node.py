@@ -138,6 +138,16 @@ class Node(GraphElement):
 
         return out
 
+    def get_output_target_nodes(self) -> IndexedSet:
+        """Returns a set of all nodes connected to this nodes output socket."""
+        out = IndexedSet()
+
+        for socket in self.get_output_sockets():
+            if socket.is_connected():
+                out.update(socket.get_connected_nodes())
+
+        return out
+
     def save_graph_state(self):
         """Saves the state (socket values) of this node and all ancestor nodes."""
 
