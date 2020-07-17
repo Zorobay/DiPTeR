@@ -1,6 +1,6 @@
 import torch
 
-from shaders.shader_super import TINY_FLOAT
+from dipter.shaders.shader_super import TINY_FLOAT
 from dipter.shaders.lib import glsl_builtins as gl
 from dipter.shaders.lib import noise
 

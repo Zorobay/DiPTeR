@@ -4,8 +4,8 @@ import numbers
 import uuid
 import numpy as np
 import torch
-from misc import string_funcs
-from node_graph.node_socket import NodeSocket
+from dipter.misc import string_funcs
+from dipter.node_graph.node_socket import NodeSocket
 from dipter.misc import io as iofuncs
 from dipter.node_graph.node import ShaderNode
 from dipter.shaders.material_output_shader import MaterialOutputShader

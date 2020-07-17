@@ -5,8 +5,8 @@ import numpy as np
 import torch
 from PyQt5.QtGui import QValidator, QDoubleValidator, QIntValidator
 from PyQt5.QtWidgets import QLineEdit
-from node_graph.data_type import DataType
 from dipter.gui.widgets.node_input.io_module import Input
+from dipter.node_graph.data_type import DataType
 
 Number = typing.Union[int, float]
 

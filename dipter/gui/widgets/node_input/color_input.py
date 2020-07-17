@@ -4,9 +4,8 @@ import numpy as np
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QColor, QPalette
 from PyQt5.QtWidgets import QPushButton, QColorDialog
-from node_graph.data_type import DataType
-
 from dipter.gui.widgets.node_input.io_module import Input
+from dipter.node_graph.data_type import DataType
 
 
 class ColorInput(QPushButton, Input):

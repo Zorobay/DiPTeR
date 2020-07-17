@@ -5,8 +5,8 @@ from abc import abstractmethod
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt
 from PyQt5.QtGui import QPalette, QColor
 from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout, QSizePolicy, QVBoxLayout
-from gui.node_editor.g_node_socket import GNodeSocket
-from node_graph.data_type import DataType
+from dipter.gui.node_editor.g_node_socket import GNodeSocket
+from dipter.node_graph.data_type import DataType
 
 
 class Input:

@@ -3,7 +3,7 @@ import typing
 
 import torch
 from PyQt5.QtWidgets import QComboBox
-from node_graph.data_type import DataType
+from dipter.node_graph.data_type import DataType
 from dipter.gui.widgets.node_input.io_module import Input
 
 
