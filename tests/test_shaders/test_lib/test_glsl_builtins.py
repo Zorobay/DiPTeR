@@ -1,7 +1,7 @@
 import torch
 from torch.testing import assert_allclose
 from torch import tensor
-from src.shaders.lib import glsl_builtins as gl
+from dipter.shaders.lib import glsl_builtins as gl
 
 
 def test_step():

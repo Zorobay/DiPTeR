@@ -2,8 +2,8 @@ import logging
 
 import torch
 import numpy as np
-from src.misc.render_funcs import render_iter
-from src.shaders.color_shader import ColorShader
+from dipter.misc.render_funcs import render_iter
+from dipter.shaders.color_shader import ColorShader
 from tests.stuff_for_testing import funcs
 from tests.stuff_for_testing.funcs import render_opengl, assert_abs_mean_diff
 

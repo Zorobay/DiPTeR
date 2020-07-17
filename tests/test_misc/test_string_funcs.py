@@ -1,6 +1,6 @@
 import unittest
 
-from src.misc import string_funcs
+from dipter.misc import string_funcs
 
 
 class TestStringFuncs(unittest.TestCase):

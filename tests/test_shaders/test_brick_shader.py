@@ -3,9 +3,9 @@ import logging
 import numpy as np
 import torch
 
-from src.misc.render_funcs import render_iter
-from src.opengl.object_vertices import get_2d_plane
-from src.shaders.brick_shader import BrickShader
+from dipter.misc.render_funcs import render_iter
+from dipter.opengl.object_vertices import get_2d_plane
+from dipter.shaders.brick_shader import BrickShader
 from tests.stuff_for_testing import funcs
 from tests.stuff_for_testing.funcs import save_images, render_opengl, assert_abs_mean_diff, render_opengl_callback_loop
 from tests.stuff_for_testing.shader import ShaderTest

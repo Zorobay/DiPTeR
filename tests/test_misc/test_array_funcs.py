@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from src.misc import array_funcs
+from dipter.misc import array_funcs
 
 
 def test_index_of():

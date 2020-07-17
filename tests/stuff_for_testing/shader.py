@@ -2,8 +2,8 @@ import typing
 
 import torch
 
-from src.misc import render_funcs
-from src.shaders.shader_super import FunctionShader
+from dipter.misc import render_funcs
+from dipter.shaders.shader_super import FunctionShader
 from tests.stuff_for_testing import funcs
 from tests.stuff_for_testing.funcs import assert_abs_mean_diff, assert_abs_max_diff
 

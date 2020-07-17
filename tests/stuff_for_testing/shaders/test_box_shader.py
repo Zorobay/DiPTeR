@@ -1,7 +1,7 @@
 from numpy.core.multiarray import ndarray
 
-from src.shaders.lib.pattern import *
-from src.shaders.shader_super import *
+from dipter.shaders.lib.pattern import *
+from dipter.shaders.shader_super import *
 
 
 class TestBoxShader(FunctionShader):

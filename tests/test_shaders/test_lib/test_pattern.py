@@ -1,7 +1,7 @@
 from torch import tensor
 from torch.testing import assert_allclose
 
-from src.shaders.lib import pattern as pattern
+from dipter.shaders.lib import pattern as pattern
 
 
 def test_box():

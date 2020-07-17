@@ -1,6 +1,6 @@
 from numpy.core.multiarray import ndarray
 
-from src.shaders.shader_super import *
+from dipter.shaders.shader_super import *
 
 
 class TestFragInterpolationShader(FunctionShader):

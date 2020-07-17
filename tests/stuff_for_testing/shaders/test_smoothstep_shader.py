@@ -1,7 +1,7 @@
 from numpy.core.multiarray import ndarray
 
-from src.shaders.lib import glsl_builtins as gl
-from src.shaders.shader_super import *
+from dipter.shaders.lib import glsl_builtins as gl
+from dipter.shaders.shader_super import *
 
 
 class TestSmoothstepShader(FunctionShader):

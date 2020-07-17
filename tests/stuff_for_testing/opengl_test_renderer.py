@@ -7,8 +7,8 @@ from PyQt5.QtWidgets import QOpenGLWidget
 from glumpy import gl
 from glumpy.gloo import Program
 
-from src.opengl import object_vertices
-from src.shaders import OBJECT_MATRIX_NAME, VIEW_MATRIX_NAME, PROJECTION_MATRIX_NAME
+from dipter.opengl import object_vertices
+from dipter.shaders import OBJECT_MATRIX_NAME, VIEW_MATRIX_NAME, PROJECTION_MATRIX_NAME
 
 
 class OpenGLTestRenderer(QOpenGLWidget):

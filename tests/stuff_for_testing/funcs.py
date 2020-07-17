@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import QApplication
 from glumpy.gloo import Program
 from node_graph.data_type import DataType
 
-from src.shaders.shader_super import FunctionShader
+from dipter.shaders.shader_super import FunctionShader
 from tests.stuff_for_testing.opengl_test_renderer import OpenGLTestRenderer
 
 _logger = logging.getLogger(__name__)
