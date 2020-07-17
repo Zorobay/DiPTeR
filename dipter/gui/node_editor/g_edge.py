@@ -4,7 +4,7 @@ import typing
 from PyQt5.QtCore import QPointF
 from PyQt5.QtGui import QColor, QPen
 from PyQt5.QtWidgets import QGraphicsLineItem
-from node_graph.edge import Edge
+from dipter.node_graph.edge import Edge
 
 _logger = logging.getLogger(__name__)
 

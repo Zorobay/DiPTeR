@@ -1,6 +1,6 @@
 import uuid
 
-from node_graph.graph_element import GraphElement
+from dipter.node_graph.graph_element import GraphElement
 
 
 class Edge(GraphElement):

@@ -10,9 +10,9 @@ from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsWidget
 from boltons.setutils import IndexedSet
 from glumpy.gloo import Program
 from gui.widgets.node_input.int_choice_input import IntChoiceInput
-from node_graph.edge import Edge
-from node_graph.node import ShaderNode
-from node_graph.node_socket import NodeSocket
+from dipter.node_graph.edge import Edge
+from dipter.node_graph.node import ShaderNode
+from dipter.node_graph.node_socket import NodeSocket
 from dipter.gui.node_editor.g_edge import GEdge
 from dipter.gui.node_editor.g_node_socket import GNodeSocket
 from dipter.gui.node_editor.layouts import GraphicsGridLayout

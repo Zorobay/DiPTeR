@@ -5,10 +5,9 @@ import numpy as np
 import torch
 from PIL.Image import Image
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
+
 from dipter.gui.node_editor.g_shader_node import GMaterialOutputNode
 from dipter.misc import image_funcs
-from dipter.optimization.losses import Loss
-from torch.optim.optimizer import Optimizer
 
 
 class GradientDescentSettings:
@@ -104,4 +103,4 @@ class GradientDescent(QObject):
 
             i += 1
 
-        return params_dict, loss_hist[0:i+1]
+        return params_dict, loss_hist[0:i + 1]

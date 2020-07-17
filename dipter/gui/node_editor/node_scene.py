@@ -1,10 +1,7 @@
 import logging
 
-from PyQt5.QtCore import Qt, QPointF
 from PyQt5.QtGui import QBrush, QColor
-from PyQt5.QtWidgets import QGraphicsScene, QGraphicsSceneMouseEvent
-
-from dipter.gui.node_editor.g_edge import GEdge
+from PyQt5.QtWidgets import QGraphicsScene
 
 _logger = logging.getLogger(__name__)
 
@@ -22,7 +19,6 @@ class NodeScene(QGraphicsScene):
 
     def _init_scene(self):
         self.setBackgroundBrush(QBrush(QColor(140, 140, 140, 255)))
-
 
     # def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
     #     if event.buttons() == Qt.LeftButton:

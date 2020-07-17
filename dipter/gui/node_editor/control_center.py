@@ -7,7 +7,6 @@ from PyQt5.QtCore import QObject, pyqtSignal
 from dipter.gui.node_editor.g_edge import GEdge
 from dipter.gui.node_editor.material import Material
 from dipter.gui.node_editor.node_scene import NodeScene
-from dipter.shaders.material_output_shader import MaterialOutputShader
 from dipter.shaders.shader_super import FunctionShader
 
 _logger = logging.getLogger(__name__)

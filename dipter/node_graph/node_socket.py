@@ -4,9 +4,9 @@ import typing
 import uuid
 
 from boltons.setutils import IndexedSet
-from node_graph.edge import Edge
-from node_graph.data_type import DataType
-from node_graph.graph_element import GraphElement
+from dipter.node_graph.edge import Edge
+from dipter.node_graph.data_type import DataType
+from dipter.node_graph.graph_element import GraphElement
 
 _logger = logging.getLogger(__name__)
 

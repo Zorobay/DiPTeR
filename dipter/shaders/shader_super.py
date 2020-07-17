@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from glumpy import gloo
-from node_graph.data_type import DataType
+from dipter.node_graph.data_type import DataType
 from dipter.misc import string_funcs, render_funcs
 from dipter.shaders.parsing.parsing import GLSLCode, preprocess_imports
 from torch import Tensor

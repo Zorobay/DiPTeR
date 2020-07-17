@@ -1,6 +1,6 @@
 import torch
-from node_graph.data_type import is_vector
-from shaders.shader_super import ShaderInputParameter
+from dipter.node_graph.data_type import is_vector
+from dipter.shaders.shader_super import ShaderInputParameter
 
 
 class Parameter(ShaderInputParameter):
