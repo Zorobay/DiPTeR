@@ -34,7 +34,7 @@ class Serializer(json.JSONEncoder):
         if isinstance(obj, uuid.UUID):
             return obj.hex
         elif isinstance(obj, torch.Tensor):
-            return list(obj.numpy())
+            return list(obj.cpu().numpy())
         elif isinstance(obj, np.ndarray):
             return list(obj)
         elif isinstance(obj, numbers.Number):

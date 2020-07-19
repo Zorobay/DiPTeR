@@ -36,7 +36,7 @@ class ImagePlotter(pg.GraphicsLayoutWidget):
 
     def set_image(self, img):
         if isinstance(img, torch.Tensor):
-            img = img.detach().numpy()
+            img = img.detach().cpu().numpy()
 
         if img is not None:
             self._image_width = img.shape[0]

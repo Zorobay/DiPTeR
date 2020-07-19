@@ -84,7 +84,7 @@ class GradientDescent(QObject):
                 start = time.time()
                 render, _ = self.out_node.render(width, height, retain_graph=True)
                 loss = loss_func(render, self.target)
-                new_loss_np = loss.detach().clone().numpy()
+                new_loss_np = loss.detach().clone().cpu().numpy()
                 loss_hist[i] = new_loss_np
                 props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1], 'learning_rate': lr,
                          'params': {k: params_dict[k].get_value() for k in params_dict}, 'iter_time': 0.0, 'render': render}

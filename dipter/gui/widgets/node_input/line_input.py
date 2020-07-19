@@ -185,7 +185,7 @@ class IntInput(LineInput):
         if isinstance(default_value, (float, np.float)):
             default_value = int(default_value)
         elif isinstance(default_value, torch.Tensor):
-            default_value = int(default_value.detach().numpy())
+            default_value = int(default_value.detach().cpu().numpy())
 
         assert isinstance(default_value, (int, np.int)), "Incompatible type of default value for FloatInput!"
 

@@ -47,9 +47,9 @@ class Parameter(ShaderInputParameter):
 
     def get_value(self, index=-1):
         if index >= 0:
-            return self._t[index].detach().clone().numpy()
+            return self._t[index].detach().clone().cpu().numpy()
         else:
-            return self._t.detach().clone().numpy()
+            return self._t.detach().clone().cpu().numpy()
 
     def is_vector(self) -> bool:
         return is_vector(self.dtype())

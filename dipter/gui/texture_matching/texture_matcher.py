@@ -56,7 +56,7 @@ class SettingsPanel(QWidget):
         self._loss_func_map = {"MSE Loss": losses.MSELoss(reduction='mean'), "Squared Bin Loss": losses.SquaredBinLoss(), "Neural Loss":
             losses.NeuralLoss()}
 
-        self._optimizer_map = {"Adam": optim.Adam, "AdamW": optim.AdamW, "SGD": optim.SGD, "RMSprop": optim.RMSprop}
+        self._optimizer_map = {"Adam": optim.Adam, "AdamW": optim.AdamW, "Adagrad": optim.Adagrad, "RMSprop": optim.RMSprop}
         self.loaded_image = None
         self._max_iter = 100
         self.settings = GradientDescentSettings()

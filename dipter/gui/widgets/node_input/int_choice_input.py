@@ -27,6 +27,6 @@ class IntChoiceInput(QComboBox, Input):
         if isinstance(value, numbers.Number):
             value = int(value)
         elif isinstance(value, torch.IntTensor):
-            value = int(value.detach().numpy())
+            value = int(value.detach().cpu().numpy())
 
         self.setCurrentIndex(value)

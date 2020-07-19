@@ -1,5 +1,6 @@
 import inspect
 import logging
+import os
 import time
 import typing
 from abc import ABC, abstractmethod
@@ -21,7 +22,7 @@ TINY_FLOAT = TORCH_FLOAT_FINFO.eps
 FLOAT_INTERVAL = (TORCH_FLOAT_FINFO.min,TORCH_FLOAT_FINFO.max)
 
 # GLSL Shaders Directory
-GLSL_SHADERS_DIR = Path(__file__) / ".." / ".." / ".." / "res" / "shaders"
+GLSL_SHADERS_DIR = Path(os.getcwd()) / "res" / "shaders"
 
 
 def read_glsl_source_file(filename) -> typing.List[str]:
@@ -29,12 +30,13 @@ def read_glsl_source_file(filename) -> typing.List[str]:
     try:
         with open(filepath, "r") as v:
             return v.readlines()
+    except NotADirectoryError as e:
+        _logger.warning("Failed to read GLSL source file at %s", filepath)
+        return []
     except FileNotFoundError as e:
-        _logger.error("Could not find file at path %s.", filepath)
-        raise e
+        raise FileNotFoundError("Could not find file at path %s.", filepath)
     except IOError as e:
-        _logger.error("Could not read file at path %s.", filepath)
-        raise e
+        raise IOError("Could not read file at path %s.", filepath)
 
 
 def get_function_arguments(func: typing.Callable):
@@ -161,7 +163,11 @@ class Shader:
         assert self.__class__.FRAGMENT_SHADER_FUNCTION, "Name of GLSL fragment shader primary function need to be set by subclass {} to " \
                                                         "FRAGMENT_SHADER_FUNCTION constant.".format(self.__class__)
 
-        self.code = read_glsl_source_file(self.FRAGMENT_SHADER_FILENAME)
+        try:
+            self.code = read_glsl_source_file(self.FRAGMENT_SHADER_FILENAME)
+        except Exception as e:
+            _logger.warning("Failed to parse GLSL source file due to an error reading the file: %s", str(e))
+
         self._parsed_code = GLSLCode(self.code, self.FRAGMENT_SHADER_FILENAME, self.FRAGMENT_SHADER_FUNCTION)
 
     def get_parsed_code(self) -> GLSLCode:
@@ -394,6 +400,6 @@ class CompilableShader(Shader, ABC):
             for inp in self.get_inputs():
                 default = inp.get_default()
                 if isinstance(default, Tensor):
-                    default = default.numpy()
+                    default = default.cpu().numpy()
 
                 program[inp.get_argument()] = default

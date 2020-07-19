@@ -228,7 +228,7 @@ class LossVisualizer(QWidget):
             for j in range(R2):
                 self._p2.set_value(p2_values[j], index=p2_index)
                 r, _ = self._mat_out_node.get_backend_node().render(W, H, retain_graph=True)
-                loss = loss_f(r, self._target_matrix).detach().clone().numpy()
+                loss = loss_f(r, self._target_matrix).detach().clone().cpu().numpy()
                 #print("Loss: {:.4f}, P1: {:.4f}, P2: {:.4f}".format(loss, self._p1.get_value(), self._p2.get_value()))
                 if loss < min_loss:
                     min_loss = loss
