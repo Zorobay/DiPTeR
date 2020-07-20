@@ -1,6 +1,7 @@
 import dipter.shaders.lib.glsl_builtins as gl
 from dipter.shaders.lib import pattern
 from dipter.shaders.shader_super import *
+from dipter.shaders.shader_io import ShaderInputParameter
 
 
 class MiniBrickShader(FunctionShader):

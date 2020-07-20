@@ -2,7 +2,7 @@ import logging
 
 import torch
 
-from dipter.shaders.rgb_shader import RGBShader
+from dipter.shaders.shaders.rgb_shader import RGBShader
 from tests.stuff_for_testing import funcs
 from tests.stuff_for_testing.funcs import assert_abs_mean_diff, render_opengl_callback_loop, assert_abs_max_diff
 from tests.stuff_for_testing.shader import ShaderTest

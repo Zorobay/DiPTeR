@@ -10,7 +10,7 @@ from dipter.gui.node_editor.g_node_socket import GNodeSocket
 from dipter.gui.node_editor.g_shader_node import ShaderNode, GMaterialOutputNode, GShaderNode
 from dipter.gui.node_editor.node_scene import NodeScene
 from dipter.misc import material_serializer as ms
-from dipter.shaders.material_output_shader import MaterialOutputShader
+from dipter.shaders.shaders.material_output_shader import MaterialOutputShader
 from dipter.shaders.shader_super import FunctionShader, CompilableShader
 
 _logger = logging.getLogger(__name__)

@@ -277,6 +277,7 @@ class ShaderNode(Node):
                 else:
                     t = res
                 complete_params_dict.update(ad)
+                p = Parameter(inp, t)
             else:
                 if arg in self._render_parameters and retain_graph:  # Argument is already fetched, get saved reference
                     p = self._render_parameters[arg]
@@ -289,8 +290,8 @@ class ShaderNode(Node):
                     p = Parameter(inp, t)
                     self._render_parameters[arg] = p
                 complete_params_dict[mod_arg] = p
-                t = p.tensor()
+                #t = p.tensor()
 
-            arguments[arg] = t
+            arguments[arg] = p
 
         return self.get_shader().shade(arguments), complete_params_dict

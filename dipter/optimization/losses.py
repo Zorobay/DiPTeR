@@ -1,4 +1,5 @@
 import abc
+import typing
 
 import torch
 from torch import Tensor
@@ -26,15 +27,15 @@ class Loss(Module):
 
 class NeuralLoss(Loss):
 
-    def __init__(self, layers: list = None, layer_weights: list = None):
+    def __init__(self, layers: typing.Iterable[int] = None, layer_weights: list = None):
         super().__init__()
         if layers is None:
-            layers = [2, 4, 6]
+            layers = [0, 2, 4]
         if layer_weights is None:
-            layer_weights = [2e-1, 2e1, 2e1]
+            layer_weights = [2e-1, 2e1, 2e1, 2e1]
 
         self._layer_indices = layers
-        self._layer_weights = torch.tensor(layer_weights)
+        self._layer_weights = torch.tensor(layer_weights)[0:len(layers)]
 
         self.vgg = models.vgg19(pretrained=True, progress=True)
         self.modulelist = list(self.vgg.features.modules())

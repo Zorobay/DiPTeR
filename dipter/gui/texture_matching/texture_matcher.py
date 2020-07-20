@@ -19,7 +19,7 @@ from dipter.gui.widgets.node_input.line_input import FloatInput, IntInput
 from dipter.misc import image_funcs
 from dipter.node_graph.parameter import Parameter
 from dipter.optimization import losses
-from dipter.optimization.gradient_descent import GradientDescent, GradientDescentSettings
+from dipter.optimization.gradient_descent import GradientDescent, GradientDescentSettings, run_in_thread
 from dipter.optimization.optimizers import AdamL
 
 sns.set()
@@ -263,14 +263,9 @@ class TextureMatcher(QWidget):
 
         self.gd = GradientDescent(self._target_image, self._out_node, self._settings_panel.settings)
         self.thread = QThread()
-        self.gd.iteration_done.connect(self._gd_iter_callback)
-        self.gd.first_render_done.connect(self._set_parameter_values)
-        self.gd.moveToThread(self.thread)
-        self.thread.started.connect(self.gd.run)
-        self.gd.finished.connect(self._finish_gradient_descent)
-
         _logger.debug("Started Gradient Descent Thread...")
-        self.thread.start()
+        run_in_thread(self.gd, self.thread, iteration_done_callback=self._gd_iter_callback, first_render_done_callback=self._set_parameter_values,
+                      gd_finished_callback=self._finish_gradient_descent)
 
     def _reset(self):
         # Reset procedural model parameters

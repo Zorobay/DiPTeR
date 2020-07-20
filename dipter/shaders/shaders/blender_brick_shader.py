@@ -1,6 +1,7 @@
 from dipter.shaders.lib import blender
 from dipter.shaders.lib import glsl_builtins as gl
 from dipter.shaders.shader_super import *
+from dipter.shaders.shader_io import ShaderInputParameter, ShaderOutputParameter
 
 
 class BlenderBrickShader(FunctionShader):

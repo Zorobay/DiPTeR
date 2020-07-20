@@ -8,7 +8,7 @@ from dipter.misc import string_funcs
 from dipter.node_graph.node_socket import NodeSocket
 from dipter.misc import io as iofuncs
 from dipter.node_graph.node import ShaderNode
-from dipter.shaders.material_output_shader import MaterialOutputShader
+from dipter.shaders.shaders.material_output_shader import MaterialOutputShader
 
 SHADER = "shader"
 INPUTS = "inputs"

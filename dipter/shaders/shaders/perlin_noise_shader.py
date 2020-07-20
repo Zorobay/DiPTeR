@@ -2,6 +2,7 @@ import dipter.shaders.lib.glsl_builtins as gl
 from dipter.shaders.lib import perlin_noise as pn
 from dipter.shaders.lib import vec
 from dipter.shaders.shader_super import *
+from dipter.shaders.shader_io import ShaderInputParameter, ShaderOutputParameter
 
 
 class PerlinNoiseShader(FunctionShader):

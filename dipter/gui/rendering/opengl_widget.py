@@ -12,7 +12,7 @@ from dipter.gui.node_editor.material import Material
 from dipter.opengl import object_vertices
 from dipter.opengl.object_vertices import VERTEX_COORD_MAXES, VERTEX_COORD_MINS
 from dipter.shaders import OBJECT_MATRIX_NAME, VIEW_MATRIX_NAME, PROJECTION_MATRIX_NAME, UNIFORM_VERTEX_MAXES, UNIFORM_VERTEX_MINS
-from dipter.shaders.default_shader import DefaultShader
+from dipter.shaders.shaders.default_shader import DefaultShader
 
 _logger = logging.getLogger(__name__)
 

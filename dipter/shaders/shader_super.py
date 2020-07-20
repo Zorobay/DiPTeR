@@ -9,17 +9,20 @@ from pathlib import Path
 import numpy as np
 import torch
 from glumpy import gloo
-from dipter.node_graph.data_type import DataType
-from dipter.misc import string_funcs, render_funcs
-from dipter.shaders.parsing.parsing import GLSLCode, preprocess_imports
 from torch import Tensor
+
+from dipter.misc import string_funcs, render_funcs
+from dipter.node_graph.data_type import DataType
+from dipter.node_graph.parameter import Parameter
+from dipter.shaders.parsing.parsing import GLSLCode, preprocess_imports
+from dipter.shaders.shader_io import ShaderOutputParameter, ShaderInputParameter
 
 _logger = logging.getLogger(__name__)
 
 # Define useful constants for numerical manipulation
 TORCH_FLOAT_FINFO = torch.finfo(torch.float32)
 TINY_FLOAT = TORCH_FLOAT_FINFO.eps
-FLOAT_INTERVAL = (TORCH_FLOAT_FINFO.min,TORCH_FLOAT_FINFO.max)
+FLOAT_INTERVAL = (TORCH_FLOAT_FINFO.min, TORCH_FLOAT_FINFO.max)
 
 # GLSL Shaders Directory
 GLSL_SHADERS_DIR = Path(os.getcwd()) / "res" / "shaders"
@@ -74,74 +77,6 @@ def connect_code(node: 'GShaderNode', code: GLSLCode):
             connect_code(connected_node, connected_code)
 
             code.connect(socket_arg, connected_code, out_arg=connected_arg)
-
-
-class ShaderInputParameter:
-
-    def __init__(self, display_label: str, argument: str, dtype: DataType, limits: typing.Tuple[float, float], default: typing.Any,
-                 connectable: bool = True, force_scalar: bool = False, names: typing.List[str] = None):
-        self._display_label = display_label
-        self._argument = argument
-        self._dtype = dtype
-        self._limits = limits
-        self._default = default
-        self._connectable = connectable
-        self._force_scalar = force_scalar
-        if names is None:
-            names = list()
-        self._names = names
-
-        if self._force_scalar:
-            self._connectable = False
-
-    def get_display_label(self) -> str:
-        """Returns the formatted display label for this input."""
-        return self._display_label
-
-    def get_argument(self) -> str:
-        """Returns the name of the argument of this input as it appears in the shader definition."""
-        return self._argument
-
-    def dtype(self) -> DataType:
-        return self._dtype
-
-    def get_limits(self) -> typing.Tuple[float, float]:
-        """Returns the range of value that this input can accept as a tuple of (min,max)."""
-        return self._limits
-
-    def get_default(self):
-        """Returns the default value of this input."""
-        return self._default
-
-    def is_connectable(self) -> bool:
-        """Returns a boolean indicating whether this input can be connected to other nodes."""
-        return self._connectable
-
-    def is_scalar(self) -> bool:
-        """Returns whether this parameter should be handled as a scalar, and thus not converted to matrix form when shading."""
-        return self._force_scalar
-
-    def get_names(self) -> typing.List[str]:
-        """Returns a list of names of the values of this Input."""
-        return self._names
-
-
-class ShaderOutputParameter:
-
-    def __init__(self, display_label: str, dtype: DataType, argument: str = None):
-        self._display_label = display_label
-        self._dtype = dtype
-        self._argument = argument
-
-    def get_display_label(self) -> str:
-        """Returns the formatted display label for this input."""
-        return self._display_label
-
-    def dtype(self):
-        return self._dtype
-
-    def get_argument(self) -> str:
-        return self._argument
 
 
 class Shader:
@@ -212,17 +147,18 @@ class Shader:
             ShaderOutputParameter("Color", DataType.Vec3_RGB)
         ]
 
-    def shade(self, args: dict) -> Tensor:
+    def shade(self, args: typing.Dict[str, Parameter]) -> Tensor:
         """Convenience function that converts all connectable arguments to matrix form before returning the rendered image."""
         width, height = Shader.render_width(), Shader.render_height()
         mat_args = dict()
 
-        for key_arg, param in zip(args, self.get_inputs()):
-            arg = args[key_arg]
-            if (len(arg.shape) == 3 and arg.shape[0] == width and arg.shape[1] == height) or param.is_scalar():
-                mat_args[key_arg] = arg.float()
+        for key_arg, param in args.items():
+            param.unnormalize()
+            t = param.tensor()
+            if (len(t.shape) == 3 and t.shape[0] == width and t.shape[1] == height) or param.is_scalar():
+                mat_args[key_arg] = t.float()
             else:
-                mat_args[key_arg] = arg.repeat(width, height, 1).float()
+                mat_args[key_arg] = t.repeat(width, height, 1).float()
 
         return self.shade_mat(**mat_args)
 

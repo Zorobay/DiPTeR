@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsWidget
 from boltons.setutils import IndexedSet
 from glumpy.gloo import Program
 from dipter.gui.widgets.node_input.int_choice_input import IntChoiceInput
+from dipter.node_graph.data_type import DataType
 from dipter.node_graph.edge import Edge
 from dipter.node_graph.node import ShaderNode
 from dipter.node_graph.node_socket import NodeSocket
@@ -22,8 +23,8 @@ from dipter.gui.widgets.node_input.color_input import ColorInput
 from dipter.gui.widgets.node_input.io_module import SocketModule, OutputModule
 from dipter.gui.widgets.node_input.line_input import FloatInput, IntInput
 from dipter.gui.widgets.node_input.shader_input import ShaderInput
-from dipter.shaders.material_output_shader import MaterialOutputShader, DataType
-from dipter.shaders.shader_super import Shader, ShaderInputParameter
+from dipter.shaders.shader_super import Shader
+from dipter.shaders.shaders.material_output_shader import MaterialOutputShader
 
 TYPE_VALUE = "type_value"
 TYPE_FUNC = "type_func"
@@ -285,7 +286,7 @@ class GShaderNode(QGraphicsWidget):
 
         return socket
 
-    def _add_input_module(self, node_socket: NodeSocket, shader_input: ShaderInputParameter):
+    def _add_input_module(self, node_socket: NodeSocket, shader_input: Shader):
         dtype = node_socket.dtype()
         socket = self._create_g_socket(node_socket)
         lim_min = shader_input.get_limits()[0]

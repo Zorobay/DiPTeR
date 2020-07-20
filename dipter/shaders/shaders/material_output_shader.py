@@ -1,4 +1,5 @@
 from dipter.shaders.shader_super import *
+from dipter.shaders.shader_io import ShaderInputParameter
 
 
 class MaterialOutputShader(CompilableShader):

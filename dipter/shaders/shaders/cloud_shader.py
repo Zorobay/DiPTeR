@@ -1,5 +1,6 @@
 from dipter.shaders.lib import noise
 from dipter.shaders.shader_super import *
+from dipter.shaders.shader_io import ShaderInputParameter, ShaderOutputParameter
 
 
 class CloudShader(FunctionShader):

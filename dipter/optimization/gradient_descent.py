@@ -4,12 +4,25 @@ import typing
 import numpy as np
 import torch
 from PIL.Image import Image
-from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 
 from dipter.misc import image_funcs
 from dipter.optimization import optimizers
-from node_graph.node import ShaderNode
-from node_graph.parameter import Parameter
+from dipter.node_graph.node import ShaderNode
+from dipter.node_graph.parameter import Parameter
+
+
+def run_in_thread(gd: 'GradientDescent', thread: QThread, iteration_done_callback=None, first_render_done_callback=None, gd_finished_callback=None):
+    if iteration_done_callback:
+        gd.iteration_done.connect(iteration_done_callback)
+    if first_render_done_callback:
+        gd.first_render_done.connect(first_render_done_callback)
+    gd.moveToThread(thread)
+    thread.started.connect(gd.run)
+    if gd_finished_callback:
+        gd.finished.connect(gd_finished_callback)
+
+    thread.start()
 
 
 class GradientDescentSettings:
@@ -52,11 +65,6 @@ class GradientDescent(QObject):
         params, loss_hist = self._run_gd()
         self._last_params = params
         self.finished.emit(params, loss_hist)
-
-    def run_without_callback(self) -> typing.Tuple[dict, np.ndarray]:
-        self.target = image_funcs.image_to_tensor(self.target, (self.settings.render_width, self.settings.render_height))
-        params, loss_hist = self._run_gd()
-        self._last_params = params
         return params, loss_hist
 
     def restore_params(self):
@@ -93,6 +101,9 @@ class GradientDescent(QObject):
         while i < max_iter:
             if self._stop:
                 return params_dict, loss_hist
+
+            for p in params_dict.values():  # Normalize values before each step. Un-normalization is automatically performed during rendering.
+                p.normalize()
 
             with torch.autograd.set_detect_anomaly(True):
                 optimizer.zero_grad()

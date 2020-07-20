@@ -4,26 +4,26 @@ from PyQt5 import QtGui
 from PyQt5.QtCore import Qt, QPoint, QPointF
 from PyQt5.QtGui import QWheelEvent, QMouseEvent
 from PyQt5.QtWidgets import QGraphicsView, QMenu, QGraphicsSceneMouseEvent, QMessageBox
-from dipter.shaders.mini_brick_shader import MiniBrickShader
-from dipter.shaders.mul_add_shader import MulAddShader
+from dipter.shaders.shaders.mini_brick_shader import MiniBrickShader
+from dipter.shaders.shaders.mul_add_shader import MulAddShader
 from dipter.gui.node_editor.control_center import ControlCenter
 from dipter.gui.node_editor.g_edge import GEdge
 from dipter.gui.node_editor.material import Material
 from dipter.misc import string_funcs, array_funcs
-from dipter.shaders.brick_shader import BrickShader
-from dipter.shaders.cloud_shader import CloudShader
-from dipter.shaders.color_shader import ColorShader
-from dipter.shaders.frag_coord_shader import FragmentCoordinatesShader
-from dipter.shaders.gradient_shader import GradientShader
-from dipter.shaders.hsv_shader import HSVShader
-from dipter.shaders.mix_shader import MixShader
-from dipter.shaders.rgb_shader import RGBShader
+from dipter.shaders.shaders.brick_shader import BrickShader
+from dipter.shaders.shaders.cloud_shader import CloudShader
+from dipter.shaders.shaders.color_shader import ColorShader
+from dipter.shaders.shaders.frag_coord_shader import FragmentCoordinatesShader
+from dipter.shaders.shaders.gradient_shader import GradientShader
+from dipter.shaders.shaders.hsv_shader import HSVShader
+from dipter.shaders.shaders.mix_shader import MixShader
+from dipter.shaders.shaders.rgb_shader import RGBShader
 from dipter.shaders.shader_super import FunctionShader
-from dipter.shaders.tile_shader import TileShader
-from dipter.shaders.vector_math_shader import VectorMathShader
-from dipter.shaders.math_shader import ScalarMathShader
-from dipter.shaders.blender_brick_shader import BlenderBrickShader
-from dipter.shaders.perlin_noise_shader import PerlinNoiseShader
+from dipter.shaders.shaders.tile_shader import TileShader
+from dipter.shaders.shaders.vector_math_shader import VectorMathShader
+from dipter.shaders.shaders.math_shader import ScalarMathShader
+from dipter.shaders.shaders.blender_brick_shader import BlenderBrickShader
+from dipter.shaders.shaders.perlin_noise_shader import PerlinNoiseShader
 from tests.stuff_for_testing.shaders.test_box_shader import TestBoxShader
 
 SHADERS_TO_CONTEXT_MENU = [BlenderBrickShader,BrickShader, TileShader, GradientShader, HSVShader, ColorShader, RGBShader, MixShader]
