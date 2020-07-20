@@ -1,4 +1,3 @@
-import inspect
 import logging
 import typing
 
@@ -9,17 +8,19 @@ from PIL import Image
 from PyQt5.QtCore import pyqtSignal, QThread, Qt
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QComboBox, QMenuBar
-from gui.texture_matching.loss_visualizer import LossVisualizer
-from node_graph.parameter import Parameter
+from torch import optim
+
 from dipter.gui.node_editor.g_shader_node import GMaterialOutputNode
 from dipter.gui.rendering.image_plotter import ImagePlotter
 from dipter.gui.rendering.opengl_widget import OpenGLWidget
+from dipter.gui.texture_matching.loss_visualizer import LossVisualizer
 from dipter.gui.widgets.node_input.labelled_input import LabelledInput
 from dipter.gui.widgets.node_input.line_input import FloatInput, IntInput
 from dipter.misc import image_funcs
+from dipter.node_graph.parameter import Parameter
 from dipter.optimization import losses
 from dipter.optimization.gradient_descent import GradientDescent, GradientDescentSettings
-from torch import optim, nn
+from dipter.optimization.optimizers import AdamL
 
 sns.set()
 
@@ -56,7 +57,7 @@ class SettingsPanel(QWidget):
         self._loss_func_map = {"MSE Loss": losses.MSELoss(reduction='mean'), "Squared Bin Loss": losses.SquaredBinLoss(), "Neural Loss":
             losses.NeuralLoss()}
 
-        self._optimizer_map = {"Adam": optim.Adam, "AdamW": optim.AdamW, "Adagrad": optim.Adagrad, "RMSprop": optim.RMSprop}
+        self._optimizer_map = {"AdamL": AdamL, "Adam": optim.Adam, "AdamW": optim.AdamW, "Adagrad": optim.Adagrad, "RMSprop": optim.RMSprop}
         self.loaded_image = None
         self._max_iter = 100
         self.settings = GradientDescentSettings()
@@ -79,7 +80,8 @@ class SettingsPanel(QWidget):
         # --- Setup optimizer combo box ---
         self._optimizer_combo_box.addItems(list(self._optimizer_map))
         self._optimizer_combo_box.currentTextChanged.connect(self._set_optimizer)
-        self.settings.optimizer = self._optimizer_map["Adam"]
+        self._optimizer_combo_box.setCurrentIndex(0)
+        self.settings.optimizer = self._optimizer_map[self._optimizer_combo_box.currentText()]
 
         # --- Setup render size input ---
         self._width_input.set_value(self.settings.render_width)

@@ -257,8 +257,8 @@ class LossVisualizer(QWidget):
         self._hist_p2 = np.empty(self._settings.max_iter)
         self._hist_p1 = np.empty(self._settings.max_iter)
 
-        self._progress_dialog = QProgressDialog("Calculating loss surface...", "Cancel", 0, self._settings.max_iter, self)
-        self._progress_dialog.setWindowTitle("Performing Gradient Descent...")
+        self._progress_dialog = QProgressDialog("Performing Gradient Descent...", "Cancel", 0, self._settings.max_iter, self)
+        self._progress_dialog.setWindowTitle("Calculating")
         self._progress_dialog.setWindowModality(Qt.WindowModal)
         self._progress_dialog.setMinimumDuration(1)
 

@@ -6,8 +6,9 @@ import torch
 from PIL.Image import Image
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
-from dipter.gui.node_editor.g_shader_node import GMaterialOutputNode
 from dipter.misc import image_funcs
+from dipter.optimization import optimizers
+from node_graph.node import ShaderNode
 
 
 class GradientDescentSettings:
@@ -28,7 +29,7 @@ class GradientDescent(QObject):
     iteration_done = pyqtSignal(dict)
     finished = pyqtSignal(dict, np.ndarray)
 
-    def __init__(self, image_to_match: Image, out_node: GMaterialOutputNode, settings: GradientDescentSettings):
+    def __init__(self, image_to_match: Image, out_node: ShaderNode, settings: GradientDescentSettings):
         super().__init__()
         self.out_node = out_node
         self.settings = settings
@@ -38,7 +39,7 @@ class GradientDescent(QObject):
 
     def stop(self):
         self._stop = True
-
+        
     @pyqtSlot(name='run')
     def run(self):
         self.target = image_funcs.image_to_tensor(self.target, (self.settings.render_width, self.settings.render_height))
@@ -72,7 +73,10 @@ class GradientDescent(QObject):
             p.requires_grad = True
 
         loss_hist = np.empty(max_iter, dtype=np.float32)
-        optimizer = self.settings.optimizer(args_list, lr=lr)
+        if self.settings.optimizer == optimizers.AdamL:
+            optimizer = self.settings.optimizer(list(params_dict.values()), lr=lr)
+        else:
+            optimizer = self.settings.optimizer(args_list, lr=lr)
 
         i = 0
         while i < max_iter:
