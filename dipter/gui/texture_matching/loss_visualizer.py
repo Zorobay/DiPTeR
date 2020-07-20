@@ -262,7 +262,11 @@ class LossVisualizer(QWidget):
         self._progress_dialog.setWindowModality(Qt.WindowModal)
         self._progress_dialog.setMinimumDuration(1)
 
+        checked_items = self._checked_items()
+        params = {i[0].content["param"].get_modified_arg(): i[0].content["param"] for i in checked_items}
+
         self._gd = GradientDescent(self._target_image, self._out_node, self._settings)
+        self._gd.set_active_parameters(params)
         self._thread = QThread()
         self._gd.iteration_done.connect(self._gd_callback)
         self._gd.moveToThread(self._thread)

@@ -9,6 +9,7 @@ from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from dipter.misc import image_funcs
 from dipter.optimization import optimizers
 from node_graph.node import ShaderNode
+from node_graph.parameter import Parameter
 
 
 class GradientDescentSettings:
@@ -36,10 +37,15 @@ class GradientDescent(QObject):
         self.target = image_to_match
         self._stop = False
         self._last_params = None
+        self._active_parameters = None
 
     def stop(self):
         self._stop = True
-        
+
+    def set_active_parameters(self, params: typing.Dict[str, Parameter]):
+        """Given a dictionary of Parameters, these will be the only ones updated each optimization step."""
+        self._active_parameters = params
+
     @pyqtSlot(name='run')
     def run(self):
         self.target = image_funcs.image_to_tensor(self.target, (self.settings.render_width, self.settings.render_height))
@@ -64,13 +70,18 @@ class GradientDescent(QObject):
         loss_func = self.settings.loss_func
         width, height = self.settings.render_width, self.settings.render_height
 
-        _, params_dict = self.out_node.render(width, height, retain_graph=False)
+        if self._active_parameters is None:
+            _, params_dict = self.out_node.render(width, height, retain_graph=False)
+        else:
+            params_dict = self._active_parameters
+
         for _, p in params_dict.items():
             p.save_value()
-        args_list = [params_dict[k].tensor() for k in params_dict]  # Convert to list of tensors
 
-        for p in args_list:
-            p.requires_grad = True
+        args_list = [params_dict[k].tensor() for k in params_dict]
+
+        for t in args_list:
+            t.requires_grad = True
 
         loss_hist = np.empty(max_iter, dtype=np.float32)
         if self.settings.optimizer == optimizers.AdamL:
