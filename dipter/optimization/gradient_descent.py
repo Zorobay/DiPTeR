@@ -29,6 +29,7 @@ class GradientDescentSettings:
 
     def __init__(self):
         self.loss_func = None
+        self.loss_args = {}
         self.optimizer = None
         self.optimizer_args = {}
         self.render_width = 200
@@ -74,7 +75,7 @@ class GradientDescent(QObject):
     def _run_gd(self) -> typing.Tuple[dict, np.ndarray]:
         max_iter = self.settings.max_iter
         early_stopping_thresh = self.settings.early_stopping_thresh
-        loss_func = self.settings.loss_func
+        loss_func = self.settings.loss_func(**self.settings.loss_args)
         width, height = self.settings.render_width, self.settings.render_height
 
         if self._active_parameters is None:

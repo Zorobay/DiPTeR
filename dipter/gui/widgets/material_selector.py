@@ -52,7 +52,7 @@ class MaterialSelector(QWidget):
         self._add_material(mat)
 
     def load_material(self, material_filepath: str):
-        filename = Path(material_filepath).name
+        filename = Path(material_filepath).stem
         mat = self.cc.new_material(filename, material_filepath)
         self._add_material(mat)
 

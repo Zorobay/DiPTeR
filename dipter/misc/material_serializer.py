@@ -155,8 +155,3 @@ def _load_material(mat_dict: dict, taken_numbers: dict, assign_numbers:bool, par
                 else:
                     raise RuntimeError("Can not find socket with label {} on node created from shader {} while loading material.".format(arg, shader))
 
-
-if __name__ == '__main__':
-    node = load_material("cloud material.json")
-    print(node)
-    print(node.get_ancestor_nodes())

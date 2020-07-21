@@ -292,6 +292,8 @@ class MultipleIntInput(LineInput):
 
     def get_gl_value(self) -> typing.List[int]:
         text = self.text().strip()
+        if len(text) == 0:
+            return []
         nums = text.split(",")
 
         return [int(num) for num in nums]
@@ -322,6 +324,8 @@ class MultipleFloatInput(LineInput):
 
     def get_gl_value(self) -> typing.List[float]:
         text = self.text().strip()
+        if len(text) == 0:
+            return []
         nums = text.split(",")
 
         return [float(num) for num in nums]

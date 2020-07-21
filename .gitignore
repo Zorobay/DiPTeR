@@ -1,3 +1,6 @@
+# Data folder in root
+/data
+
 # Material files in root
 /*.json
 

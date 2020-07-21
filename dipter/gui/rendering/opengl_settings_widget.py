@@ -95,7 +95,7 @@ class OpenGLSettingsWidget(QWidget):
         if mat:
             out_node = mat.get_material_output_node()
             if out_node and out_node.can_render():  # Check that the material output node exists
-                self._matcher = TextureMatcher(out_node)
+                self._matcher = TextureMatcher(self.cc, out_node)
                 self._matcher.show()
             else:
                 # Not ready to render, show dialog to user...

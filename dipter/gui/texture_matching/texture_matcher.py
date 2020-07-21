@@ -2,15 +2,17 @@ import inspect
 import logging
 import typing
 
+import h5py
 import numpy as np
 import pyqtgraph as pg
 import seaborn as sns
 from PIL import Image
 from PyQt5.QtCore import pyqtSignal, QThread, Qt
 from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QComboBox, QMenuBar, QGroupBox, QStyle
+from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QComboBox, QMenuBar, QGroupBox
 from torch import optim
 
+from dipter.gui.node_editor.control_center import ControlCenter
 from dipter.gui.node_editor.g_shader_node import GMaterialOutputNode
 from dipter.gui.rendering.image_plotter import ImagePlotter
 from dipter.gui.rendering.opengl_widget import OpenGLWidget
@@ -33,6 +35,10 @@ device = "cpu"
 CHANNELS = 3
 
 
+def to_filename(mat_name, loss_name, optimizer_name):
+    return "{}_{}_{}".format(mat_name, loss_name, optimizer_name)
+
+
 class FunctionSettingsGroup(QGroupBox):
 
     def __init__(self):
@@ -45,7 +51,7 @@ class FunctionSettingsGroup(QGroupBox):
 
     def _init(self):
         self._layout.setSpacing(0)
-        self._layout.setContentsMargins(0,0,0,0)
+        self._layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self._layout)
 
     def set_function(self, func):
@@ -114,10 +120,12 @@ class SettingsPanel(QWidget):
     reset_requested = pyqtSignal()
     texture_loaded = pyqtSignal(Image.Image)
     settings_changed = pyqtSignal(GradientDescentSettings)  # changed key as well as all settings
+    save_data = pyqtSignal(str)
 
-    def __init__(self, *args):
+    def __init__(self, cc: ControlCenter, *args):
         super().__init__(*args)
         # Define gui elements
+        self.cc = cc
         self._layout = QVBoxLayout()
         self._load_texture_button = QPushButton("Load Texture")
         self._texture_label = QLabel("load texture...")
@@ -130,7 +138,8 @@ class SettingsPanel(QWidget):
         self._height_input = IntInput(0, 1000)
         self._max_iter_input = IntInput(0, 10000)
         self._early_stopping_loss_thresh = FloatInput(0, 1)
-        self._learning_rate = FloatInput(0, 1)
+        self._save_data_button = QPushButton("Save Data")
+        # self._learning_rate = FloatInput(0, 1)
 
         # Define data
         self._loss_func_map = {"xSE Loss": losses.XSELoss, "Squared Bin Loss": losses.SquaredBinLoss, "Neural Loss":
@@ -183,9 +192,11 @@ class SettingsPanel(QWidget):
                                                                                              self._early_stopping_loss_thresh.get_gl_value()))
         self._early_stopping_loss_thresh.set_value(0.01)
 
+        # --- Setup save data button ---
+        self._save_data_button.clicked.connect(self._save_data)
         # --- Setup learning rate input ---
-        self._learning_rate.input_changed.connect(lambda: self._change_settings("learning_rate", self._learning_rate.get_gl_value()))
-        self._learning_rate.set_value(0.1)
+        # self._learning_rate.input_changed.connect(lambda: self._change_settings("learning_rate", self._learning_rate.get_gl_value()))
+        # self._learning_rate.set_value(0.1)
 
         self._layout.addWidget(self._match_button)
         self._layout.addWidget(self._load_texture_button)
@@ -196,8 +207,9 @@ class SettingsPanel(QWidget):
         self._layout.addWidget(LabelledInput("Render width", self._width_input))
         self._layout.addWidget(LabelledInput("Render height", self._height_input))
         self._layout.addWidget(LabelledInput("Max iterations", self._max_iter_input))
-        self._layout.addWidget(LabelledInput("Learning Rate", self._learning_rate))
+        # self._layout.addWidget(LabelledInput("Learning Rate", self._learning_rate))
         self._layout.addWidget(LabelledInput("Early stopping loss thresh", self._early_stopping_loss_thresh))
+        self._layout.addWidget(self._save_data_button)
 
         self._layout.setAlignment(Qt.AlignTop)
         self.setLayout(self._layout)
@@ -206,10 +218,9 @@ class SettingsPanel(QWidget):
         # Instantiate loss function with settings from loss function widget
         loss_func = self._settings.loss_func
         if isinstance(loss_func, Loss):
-            loss_func = loss_func.__class__
+            self._settings.loss_func = loss_func.__class__
 
-        new_func = loss_func(**self._loss_settings_group.to_dict())
-        self._settings.loss_func = new_func
+        self._settings.loss_args = self._loss_settings_group.to_dict()
         self._settings.optimizer_args = self._optimizer_settings_group.to_dict()
         return self._settings
 
@@ -265,18 +276,25 @@ class SettingsPanel(QWidget):
             self._match_button.setText("Reset")
             self.match_stop.emit()
 
+    def _save_data(self):
+        filename = to_filename(self.cc.active_material.name, self._settings.loss_func.__name__, self._settings.optimizer.__name__) + ".hdf5"
+        path, _ = QFileDialog.getSaveFileName(self, "Save Data", directory=filename, filter="HDF5 (*.hdf5)")
+
+        if path:
+            self.save_data.emit(path)
+
 
 class TextureMatcher(QWidget):
 
-    def __init__(self, mat_output_node: GMaterialOutputNode):
+    def __init__(self, cc:ControlCenter, mat_output_node: GMaterialOutputNode):
         super().__init__(parent=None)
-
+        self.cc = cc
         self._out_node = mat_output_node
 
         # Define components
         self._menu_bar = QMenuBar()
         self._settings_drawer = QDockWidget(self, Qt.Drawer)
-        self._settings_panel = SettingsPanel(self)
+        self._settings_panel = SettingsPanel(self.cc,self)
         self._openGL = OpenGLWidget(400, 400, None, OpenGLWidget.TEXTURE_RENDER_MODE)
         self._image_plotter = ImagePlotter("Render")
         self._target_plotter = ImagePlotter("Target")
@@ -298,6 +316,7 @@ class TextureMatcher(QWidget):
         self.gd = None
         self.ren_i = 0
         self._params = {}
+        self._loss_hist = None
 
         self._init_widget()
 
@@ -314,6 +333,7 @@ class TextureMatcher(QWidget):
         self._settings_panel.match_start.connect(self._run_gradient_descent_torch)
         self._settings_panel.match_stop.connect(self._stop_gradient_descent)
         self._settings_panel.reset_requested.connect(self._reset)
+        self._settings_panel.save_data.connect(self._save_data)
         self._settings_panel.setMaximumWidth(250)
 
         # Setup plots
@@ -387,6 +407,7 @@ class TextureMatcher(QWidget):
 
     def _finish_gradient_descent(self, params, loss_hist):
         self._params = params
+        self._loss_hist = loss_hist
         self._stop_gradient_descent()
         _logger.info("Gradient Descent finished with a final loss of {:.4f}.".format(loss_hist[-1]))
 
@@ -420,3 +441,11 @@ class TextureMatcher(QWidget):
 
     def _open_loss_viz_window(self):
         self._loss_visualizer.open(self._settings_panel._settings, self._target_image, self._out_node)
+
+    def _save_data(self, filename: str):
+        settings = self._settings
+        with h5py.File(filename, "w") as f:
+            dset = f.create_dataset("data", self._loss_hist)
+
+            for key,value in settings.items():
+                dset[key] = value

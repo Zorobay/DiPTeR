@@ -29,9 +29,9 @@ class NeuralLoss(Loss):
 
     def __init__(self, layers: typing.Iterable[int] = None, layer_weights: typing.Iterable[float] = None):
         super().__init__()
-        if layers is None:
+        if layers is None or layers == []:
             layers = [0]
-        if layer_weights is None:
+        if layer_weights is None or layer_weights == []:
             layer_weights = [1]
 
         self._layer_indices = layers
