@@ -1,3 +1,4 @@
+import inspect
 import logging
 import typing
 
@@ -7,7 +8,7 @@ import seaborn as sns
 from PIL import Image
 from PyQt5.QtCore import pyqtSignal, QThread, Qt
 from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QComboBox, QMenuBar
+from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QGridLayout, QFileDialog, QDockWidget, QVBoxLayout, QComboBox, QMenuBar, QGroupBox, QStyle
 from torch import optim
 
 from dipter.gui.node_editor.g_shader_node import GMaterialOutputNode
@@ -15,12 +16,13 @@ from dipter.gui.rendering.image_plotter import ImagePlotter
 from dipter.gui.rendering.opengl_widget import OpenGLWidget
 from dipter.gui.texture_matching.loss_visualizer import LossVisualizer
 from dipter.gui.widgets.node_input.labelled_input import LabelledInput
-from dipter.gui.widgets.node_input.line_input import FloatInput, IntInput
-from dipter.misc import image_funcs
+from dipter.gui.widgets.node_input.line_input import FloatInput, IntInput, StringInput, MultipleIntInput, MultipleFloatInput
+from dipter.misc import image_funcs, runtime_funcs, qwidget_funcs
+from dipter.node_graph.data_type import DataType
 from dipter.node_graph.parameter import Parameter
 from dipter.optimization import losses
 from dipter.optimization.gradient_descent import GradientDescent, GradientDescentSettings, run_in_thread
-from dipter.optimization.optimizers import AdamL
+from dipter.optimization.losses import Loss
 
 sns.set()
 
@@ -29,6 +31,81 @@ _logger = logging.getLogger(__name__)
 device = "cpu"
 
 CHANNELS = 3
+
+
+class FunctionSettingsGroup(QGroupBox):
+
+    def __init__(self):
+        super().__init__()
+        self._func = None
+        self._args = dict()
+        self._layout = QVBoxLayout()
+
+        self._init()
+
+    def _init(self):
+        self._layout.setSpacing(0)
+        self._layout.setContentsMargins(0,0,0,0)
+        self.setLayout(self._layout)
+
+    def set_function(self, func):
+        self._func = func
+        self._create_widgets()
+        self._update_title()
+
+    def _create_widgets(self):
+        qwidget_funcs.clear_layout(self._layout)
+
+        func = self._func
+        args = list(runtime_funcs.get_function_arguments(func.__init__).items())[1:]  # Skip 'self' argument
+
+        for arg_name, parameter in args:
+            default = parameter.default
+            subtype = None
+            if parameter.annotation not in (None, inspect._empty):
+                type_ = parameter.annotation
+            else:
+                if isinstance(default, typing.Iterable):
+                    subtype = type(default[0])
+                type_ = type(default)
+
+            widget = self._widget_from_type(type_, subtype)
+            if widget:
+                if default is not None:
+                    widget.set_value(default)
+                self._layout.addWidget(LabelledInput(arg_name, widget), 0, Qt.AlignTop)
+
+    def _widget_from_type(self, type_, subtype):
+        if type_ in [float, DataType.Float]:
+            return FloatInput()
+        elif type_ in [int, DataType.Int]:
+            return IntInput()
+        elif type_ in [str]:
+            return StringInput()
+        elif type_ in [typing.Iterable[int]]:
+            return MultipleIntInput()
+        elif type_ in [typing.Iterable[float]]:
+            return MultipleFloatInput()
+        elif type_ in [tuple, list]:
+            if subtype == float:
+                return MultipleFloatInput()
+            elif subtype == int:
+                return MultipleIntInput()
+        else:
+            return None
+
+    def _update_title(self):
+        self.setTitle(self._func.__class__.__name__)
+
+    def to_dict(self) -> dict:
+        out = dict()
+        for i in range(self._layout.count()):
+            labelled_input = self._layout.itemAt(i).widget()
+            label = labelled_input.label
+            value = labelled_input.widget.get_gl_value()
+            out[label] = value
+
+        return out
 
 
 class SettingsPanel(QWidget):
@@ -46,7 +123,9 @@ class SettingsPanel(QWidget):
         self._texture_label = QLabel("load texture...")
         self._match_button = QPushButton("Match Texture")
         self._loss_combo_box = QComboBox()
+        self._loss_settings_group = FunctionSettingsGroup()
         self._optimizer_combo_box = QComboBox()
+        self._optimizer_settings_group = FunctionSettingsGroup()
         self._width_input = IntInput(0, 1000)
         self._height_input = IntInput(0, 1000)
         self._max_iter_input = IntInput(0, 10000)
@@ -54,13 +133,13 @@ class SettingsPanel(QWidget):
         self._learning_rate = FloatInput(0, 1)
 
         # Define data
-        self._loss_func_map = {"MSE Loss": losses.MSELoss(reduction='mean'), "Squared Bin Loss": losses.SquaredBinLoss(), "Neural Loss":
-            losses.NeuralLoss()}
+        self._loss_func_map = {"xSE Loss": losses.XSELoss, "Squared Bin Loss": losses.SquaredBinLoss, "Neural Loss":
+            losses.NeuralLoss}
 
-        self._optimizer_map = {"AdamL": AdamL, "Adam": optim.Adam, "AdamW": optim.AdamW, "Adagrad": optim.Adagrad, "RMSprop": optim.RMSprop}
+        self._optimizer_map = {"Adam": optim.Adam, "AdamW": optim.AdamW, "Adagrad": optim.Adagrad, "RMSprop": optim.RMSprop}
         self.loaded_image = None
         self._max_iter = 100
-        self.settings = GradientDescentSettings()
+        self._settings = GradientDescentSettings()
         self._is_running = False
         self._is_cleared = True
 
@@ -75,17 +154,23 @@ class SettingsPanel(QWidget):
         self._loss_combo_box.addItems(list(self._loss_func_map))
         self._loss_combo_box.currentIndexChanged.connect(self._set_loss_func)
         self._loss_combo_box.setCurrentIndex(0)
-        self.settings.loss_func = self._loss_func_map[self._loss_combo_box.currentText()]
+        self._settings.loss_func = self._loss_func_map[self._loss_combo_box.currentText()]
+
+        # --- Setup loss function settings group ---
+        self._loss_settings_group.set_function(self._settings.loss_func)
 
         # --- Setup optimizer combo box ---
         self._optimizer_combo_box.addItems(list(self._optimizer_map))
         self._optimizer_combo_box.currentTextChanged.connect(self._set_optimizer)
         self._optimizer_combo_box.setCurrentIndex(0)
-        self.settings.optimizer = self._optimizer_map[self._optimizer_combo_box.currentText()]
+        self._settings.optimizer = self._optimizer_map[self._optimizer_combo_box.currentText()]
+
+        # --- Setup optimizer function settings group ---
+        self._optimizer_settings_group.set_function(self._settings.optimizer)
 
         # --- Setup render size input ---
-        self._width_input.set_value(self.settings.render_width)
-        self._height_input.set_value(self.settings.render_height)
+        self._width_input.set_value(self._settings.render_width)
+        self._height_input.set_value(self._settings.render_height)
         self._width_input.input_changed.connect(lambda: self._change_settings("render_width", self._width_input.get_gl_value()))
         self._height_input.input_changed.connect(lambda: self._change_settings("render_height", self._height_input.get_gl_value()))
 
@@ -105,7 +190,9 @@ class SettingsPanel(QWidget):
         self._layout.addWidget(self._match_button)
         self._layout.addWidget(self._load_texture_button)
         self._layout.addWidget(LabelledInput("Loss function", self._loss_combo_box))
+        self._layout.addWidget(self._loss_settings_group)
         self._layout.addWidget(LabelledInput("Optimizer", self._optimizer_combo_box))
+        self._layout.addWidget(self._optimizer_settings_group)
         self._layout.addWidget(LabelledInput("Render width", self._width_input))
         self._layout.addWidget(LabelledInput("Render height", self._height_input))
         self._layout.addWidget(LabelledInput("Max iterations", self._max_iter_input))
@@ -114,6 +201,17 @@ class SettingsPanel(QWidget):
 
         self._layout.setAlignment(Qt.AlignTop)
         self.setLayout(self._layout)
+
+    def settings(self) -> GradientDescentSettings:
+        # Instantiate loss function with settings from loss function widget
+        loss_func = self._settings.loss_func
+        if isinstance(loss_func, Loss):
+            loss_func = loss_func.__class__
+
+        new_func = loss_func(**self._loss_settings_group.to_dict())
+        self._settings.loss_func = new_func
+        self._settings.optimizer_args = self._optimizer_settings_group.to_dict()
+        return self._settings
 
     def _load_texture(self):
         filename, _ = QFileDialog.getOpenFileName(self, "Open Texture", filter="Image File (*.png *.jpg *.jpeg *.bmp)")
@@ -126,15 +224,17 @@ class SettingsPanel(QWidget):
     def _set_loss_func(self, index: int):
         loss_func = self._loss_func_map[self._loss_combo_box.currentText()]
 
-        if isinstance(loss_func, losses.NeuralLoss):
+        if loss_func == losses.NeuralLoss or isinstance(loss_func, losses.NeuralLoss):
             self._width_input.set_value(224)
             self._height_input.set_value(224)
 
         self._change_settings("loss_func", loss_func)
+        self._loss_settings_group.set_function(loss_func)
 
     def _set_optimizer(self, text: str):
         optimizer = self._optimizer_map[text]
         self._change_settings("optimizer", optimizer)
+        self._optimizer_settings_group.set_function(optimizer)
 
     def set_gd_finished(self):
         self._match_button.setText("Reset")
@@ -145,8 +245,8 @@ class SettingsPanel(QWidget):
 
     def _change_settings(self, var: str, new_val: typing.Any):
         _logger.debug("New value for setting {} -> {}.".format(var, new_val))
-        setattr(self.settings, var, new_val)
-        self.settings_changed.emit(self.settings)
+        setattr(self._settings, var, new_val)
+        self.settings_changed.emit(self._settings)
 
     def _toggle_matching(self):
         if not self._is_running:
@@ -261,7 +361,7 @@ class TextureMatcher(QWidget):
     def _run_gradient_descent_torch(self):
         self._reset()
 
-        self.gd = GradientDescent(self._target_image, self._out_node, self._settings_panel.settings)
+        self.gd = GradientDescent(self._target_image, self._out_node, self._settings_panel.settings())
         self.thread = QThread()
         _logger.debug("Started Gradient Descent Thread...")
         run_in_thread(self.gd, self.thread, iteration_done_callback=self._gd_iter_callback, first_render_done_callback=self._set_parameter_values,
@@ -319,4 +419,4 @@ class TextureMatcher(QWidget):
         self._settings = settings
 
     def _open_loss_viz_window(self):
-        self._loss_visualizer.open(self._settings_panel.settings, self._target_image, self._out_node)
+        self._loss_visualizer.open(self._settings_panel._settings, self._target_image, self._out_node)

@@ -27,7 +27,7 @@ class Input:
         raise NotImplementedError("Input subclass need to implement this method!")
 
     @abstractmethod
-    def set_value(self, default_value: typing.Any):
+    def set_value(self, value: typing.Any):
         """Set the value of this widgets."""
         raise NotImplementedError("Input subclass need to implement this method!")
 

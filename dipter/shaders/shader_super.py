@@ -1,4 +1,3 @@
-import inspect
 import logging
 import os
 import time
@@ -12,6 +11,7 @@ from glumpy import gloo
 from torch import Tensor
 
 from dipter.misc import string_funcs, render_funcs
+from dipter.misc.runtime_funcs import get_function_arguments
 from dipter.node_graph.data_type import DataType
 from dipter.node_graph.parameter import Parameter
 from dipter.shaders.parsing.parsing import GLSLCode, preprocess_imports
@@ -40,10 +40,6 @@ def read_glsl_source_file(filename) -> typing.List[str]:
         raise FileNotFoundError("Could not find file at path %s.", filepath)
     except IOError as e:
         raise IOError("Could not read file at path %s.", filepath)
-
-
-def get_function_arguments(func: typing.Callable):
-    return list(inspect.signature(func).parameters.keys())
 
 
 def connect_code(node: 'GShaderNode', code: GLSLCode):
@@ -153,7 +149,6 @@ class Shader:
         mat_args = dict()
 
         for key_arg, param in args.items():
-            param.unnormalize()
             t = param.tensor()
             if (len(t.shape) == 3 and t.shape[0] == width and t.shape[1] == height) or param.is_scalar():
                 mat_args[key_arg] = t.float()
@@ -192,7 +187,7 @@ class FunctionShader(Shader, ABC):
         func = self._parsed_code.get_primary_function()
 
         py_args = [inp.get_argument() for inp in self.get_inputs()]
-        shade_mat_args = get_function_arguments(self.shade_mat)
+        shade_mat_args = get_function_arguments(self.shade_mat).keys()
         glsl_args = func.arguments
 
         # First, check that frag_pos is the first argument of the functions

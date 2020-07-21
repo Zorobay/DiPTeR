@@ -14,27 +14,9 @@ class Parameter(ShaderInputParameter):
         self._t = value
         self._data = None
         self._mod_arg = None
-        self._is_normalized = False
 
     def __str__(self):
         return "Parameter({})".format(self._t)
-
-    @torch.no_grad()
-    def get_normalized(self, index=-1) -> torch.Tensor:
-        """Returns the value of this Parameter normalized to the interval [0,1]."""
-        return (self.get_value(index) - self.get_min()) / (self.get_max() - self.get_min())
-
-    @torch.no_grad()
-    def normalize(self):
-        if not self._is_normalized:
-            (self._t.sub_(self.get_min())).div_(self.get_max()-self.get_min())
-            self._is_normalized = True
-
-    @torch.no_grad()
-    def unnormalize(self):
-        if self._is_normalized:
-            (self._t.mul_(self.get_max()-self.get_min())).add_(self.get_min())
-            self._is_normalized = False
 
     def tensor(self) -> torch.Tensor:
         return self._t

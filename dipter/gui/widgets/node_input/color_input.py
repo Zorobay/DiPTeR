@@ -16,8 +16,8 @@ class ColorInput(QPushButton, Input):
         self._palette = QPalette()
         self._init_widget()
 
-    def set_value(self, default_value: list):
-        color = QColor.fromRgbF(*default_value)
+    def set_value(self, value: list):
+        color = QColor.fromRgbF(*value)
         self._set_display_color(color)
         self._color_dialog.setCurrentColor(color)
 

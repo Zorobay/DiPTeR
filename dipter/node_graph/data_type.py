@@ -11,6 +11,7 @@ class DataType(enum.Enum):
     Vec3_Float = "type_vec3_float"
     Vec3_RGB = "type_vec3_rgb"
     Shader = "type_shader"
+    String = "type_string"
 
 
 def dtype_size(dtype: DataType) -> int:

@@ -27,12 +27,12 @@ class Loss(Module):
 
 class NeuralLoss(Loss):
 
-    def __init__(self, layers: typing.Iterable[int] = None, layer_weights: list = None):
+    def __init__(self, layers: typing.Iterable[int] = None, layer_weights: typing.Iterable[float] = None):
         super().__init__()
         if layers is None:
-            layers = [0, 2, 4]
+            layers = [0]
         if layer_weights is None:
-            layer_weights = [2e-1, 2e1, 2e1, 2e1]
+            layer_weights = [1]
 
         self._layer_indices = layers
         self._layer_weights = torch.tensor(layer_weights)[0:len(layers)]
@@ -52,8 +52,7 @@ class NeuralLoss(Loss):
         ])
 
     def __str__(self):
-        layers = "\n\t".join([self.modulelist[i + 1].__str__() for i in self._layer_indices])
-        return "Neural Loss (\n\tlayers:\n {}, \n\tweights: {}\n)".format(layers, self._layer_weights)
+        return "Neural Loss (\n\tlayers:\n {}, \n\tweights: {}\n)".format(self._layer_indices, self._layer_weights)
 
     def _preprocess(self, x: Tensor):
         # Swap axes to get image on CxHxW form, which is required for Models in PyTorch, then Normalize to comply with VGG19 and add batch dimension
@@ -89,13 +88,14 @@ class NeuralLoss(Loss):
         return L_tot
 
 
-class MSELoss(Loss):
+class XSELoss(Loss):
 
     def __init__(self, reduction: str = 'mean'):
         super().__init__()
+        self.loss_func = MSELoss(reduction=reduction)
 
     def _loss(self, x: Tensor, target: Tensor):
-        return mse_loss(x, target)
+        return self.loss_func(x, target)
 
 
 class SquaredBinLoss(Loss):

@@ -5,10 +5,16 @@ import numpy as np
 import torch
 from PyQt5.QtGui import QValidator, QDoubleValidator, QIntValidator
 from PyQt5.QtWidgets import QLineEdit
+
 from dipter.gui.widgets.node_input.io_module import Input
 from dipter.node_graph.data_type import DataType
 
 Number = typing.Union[int, float]
+
+INT_MIN = np.iinfo(np.int32).min
+INT_MAX = np.iinfo(np.int32).max
+FLOAT_MIN = np.finfo(np.float32).min
+FLOAT_MAX = np.finfo(np.float32).max
 
 
 class NumberValidator:
@@ -128,6 +134,68 @@ class IntValidator(NumberValidator, QIntValidator):
         return corrected
 
 
+class MultipleNumberValidator(QValidator):
+
+    def __init__(self, validate: typing.Callable, fixup: typing.Callable):
+        super().__init__()
+        self.func_validate = validate
+        self.func_fixup = fixup
+
+    def validate(self, input_: str, cursor_pos: int) -> (int, str, int):
+        numbers = input_.split(",")
+        total_res = self.Acceptable
+        for num in numbers:
+            res, _, _ = self.func_validate(num, cursor_pos)
+
+            if res == self.Intermediate:
+                total_res = self.Intermediate
+            elif res == self.Invalid:
+                return self.Invalid, input_, cursor_pos
+
+        return total_res, input_, cursor_pos
+
+    def fixup(self, input_: str) -> str:
+        numbers = input_.split(",")
+        for i, num in enumerate(numbers):
+            corrected = self.func_fixup(num)
+            numbers[i] = corrected
+
+        return ", ".join(numbers)
+
+
+class MultipleFloatValidator(MultipleNumberValidator):
+    def __init__(self, bottom: float, top: float, decimals: int):
+        validator = FloatValidator(bottom, top, decimals)
+        super().__init__(validate=validator.validate, fixup=validator.fixup)
+
+
+class MultipleIntValidator(IntValidator):
+
+    def __init__(self, bottom: int, top: int):
+        super().__init__(bottom, top)
+
+    def validate(self, input_: str, cursor_pos: int) -> (int, str, int):
+        numbers = input_.split(",")
+        total_res = self.Acceptable
+        for num in numbers:
+            res, _, _ = super().validate(num, cursor_pos)
+
+            if res == self.Intermediate:
+                total_res = self.Intermediate
+            elif res == self.Invalid:
+                return self.Invalid, input_, cursor_pos
+
+        return total_res, input_, cursor_pos
+
+    def fixup(self, input_: str) -> str:
+        numbers = input_.split(",")
+        for i, num in enumerate(numbers):
+            corrected = super().fixup(num)
+            numbers[i] = corrected
+
+        return ", ".join(numbers)
+
+
 class LineInput(QLineEdit, Input):
 
     @abstractmethod
@@ -149,7 +217,7 @@ class LineInput(QLineEdit, Input):
 
 class FloatInput(LineInput):
 
-    def __init__(self, min_: float, max_: float, dtype=DataType.Float):
+    def __init__(self, min_: float = FLOAT_MIN, max_: float = FLOAT_MAX, dtype=DataType.Float):
         assert min_ <= max_, "Minimum value must be less than or equal to maximum value!"
         super().__init__(dtype=dtype)
 
@@ -173,7 +241,7 @@ class FloatInput(LineInput):
 
 class IntInput(LineInput):
 
-    def __init__(self, min_: int, max_: int, dtype=DataType.Int):
+    def __init__(self, min_: int = INT_MIN, max_: int = INT_MAX, dtype=DataType.Int):
         assert min_ <= max_, "Minimum value must be less than or equal to maximum value!"
         super().__init__(dtype=dtype)
 
@@ -181,15 +249,15 @@ class IntInput(LineInput):
         self.max_ = max_
         self.setValidator(IntValidator(bottom=self.min_, top=self.max_))
 
-    def set_value(self, default_value: typing.Any):
-        if isinstance(default_value, (float, np.float)):
-            default_value = int(default_value)
-        elif isinstance(default_value, torch.Tensor):
-            default_value = int(default_value.detach().cpu().numpy())
+    def set_value(self, value: typing.Any):
+        if isinstance(value, (float, np.float)):
+            value = int(value)
+        elif isinstance(value, torch.Tensor):
+            value = int(value.detach().cpu().numpy())
 
-        assert isinstance(default_value, (int, np.int)), "Incompatible type of default value for FloatInput!"
+        assert isinstance(value, (int, np.int)), "Incompatible type of default value for FloatInput!"
 
-        self.setText(str(default_value))
+        self.setText(str(value))
 
     def get_gl_value(self) -> int:
         text = self.text().strip()
@@ -197,3 +265,75 @@ class IntInput(LineInput):
             return np.int(0)
 
         return int(self.text())
+
+
+class MultipleIntInput(LineInput):
+
+    def __init__(self, min_: int = INT_MIN, max_: int = INT_MAX, dtype=DataType.Int):
+        assert min_ <= max_, "Minimum value must be less than or equal to maximum value!"
+        super().__init__(dtype=dtype)
+
+        self.min_ = min_
+        self.max_ = max_
+        self.setValidator(MultipleIntValidator(bottom=self.min_, top=self.max_))
+
+    def set_value(self, values: typing.Iterable):
+        list_values = []
+        for value in values:
+            if isinstance(value, (float, np.float)):
+                value = int(value)
+            elif isinstance(value, torch.Tensor):
+                value = int(value.detach().cpu().numpy())
+
+            list_values.append(value)
+            assert isinstance(value, (int, np.int)), "Incompatible type of default value for FloatInput!"
+
+        self.setText(", ".join([str(i) for i in list_values]))
+
+    def get_gl_value(self) -> typing.List[int]:
+        text = self.text().strip()
+        nums = text.split(",")
+
+        return [int(num) for num in nums]
+
+
+class MultipleFloatInput(LineInput):
+
+    def __init__(self, min_: float = FLOAT_MIN, max_: float = FLOAT_MAX, dtype=DataType.Int):
+        assert min_ <= max_, "Minimum value must be less than or equal to maximum value!"
+        super().__init__(dtype=dtype)
+
+        self.min_ = min_
+        self.max_ = max_
+        self.setValidator(MultipleFloatValidator(bottom=self.min_, top=self.max_, decimals=5))
+
+    def set_value(self, values: typing.Iterable):
+        list_values = []
+        for value in values:
+            if isinstance(value, (float, np.float)):
+                value = float(value)
+            elif isinstance(value, torch.Tensor):
+                value = float(value.detach().cpu().numpy())
+
+            list_values.append(value)
+            assert isinstance(value, (float, np.float32)), "Incompatible type of default value for FloatInput!"
+
+        self.setText(", ".join([str(i) for i in list_values]))
+
+    def get_gl_value(self) -> typing.List[float]:
+        text = self.text().strip()
+        nums = text.split(",")
+
+        return [float(num) for num in nums]
+
+
+class StringInput(LineInput, Input):
+
+    def __init__(self):
+        super().__init__(dtype=DataType.String)
+
+    def get_gl_value(self) -> typing.Any:
+        return self.get_value()
+
+    def set_value(self, value: typing.Any):
+        self.setText(value)

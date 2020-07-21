@@ -44,6 +44,6 @@ class ArrayInput(QWidget, Input):
 
         return out
 
-    def set_value(self, default_value: typing.Any):
-        for i, d in enumerate(default_value):
+    def set_value(self, value: typing.Any):
+        for i, d in enumerate(value):
             self._inputs[i].set_value(d)

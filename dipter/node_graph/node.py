@@ -290,7 +290,6 @@ class ShaderNode(Node):
                     p = Parameter(inp, t)
                     self._render_parameters[arg] = p
                 complete_params_dict[mod_arg] = p
-                #t = p.tensor()
 
             arguments[arg] = p
 

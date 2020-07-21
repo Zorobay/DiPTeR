@@ -7,9 +7,9 @@ from PIL.Image import Image
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 
 from dipter.misc import image_funcs
-from dipter.optimization import optimizers
 from dipter.node_graph.node import ShaderNode
 from dipter.node_graph.parameter import Parameter
+from dipter.optimization import optimizers
 
 
 def run_in_thread(gd: 'GradientDescent', thread: QThread, iteration_done_callback=None, first_render_done_callback=None, gd_finished_callback=None):
@@ -30,11 +30,11 @@ class GradientDescentSettings:
     def __init__(self):
         self.loss_func = None
         self.optimizer = None
+        self.optimizer_args = {}
         self.render_width = 200
         self.render_height = 200
         self.max_iter = 100
         self.early_stopping_thresh = 0.01
-        self.learning_rate = 0.01
         self.decay = 0.99
 
 
@@ -72,7 +72,6 @@ class GradientDescent(QObject):
             self._last_params[key].restore_value()
 
     def _run_gd(self) -> typing.Tuple[dict, np.ndarray]:
-        lr = self.settings.learning_rate
         max_iter = self.settings.max_iter
         early_stopping_thresh = self.settings.early_stopping_thresh
         loss_func = self.settings.loss_func
@@ -93,17 +92,17 @@ class GradientDescent(QObject):
 
         loss_hist = np.empty(max_iter, dtype=np.float32)
         if self.settings.optimizer == optimizers.AdamL:
-            optimizer = self.settings.optimizer(list(params_dict.values()), lr=lr)
+            optimizer = self.settings.optimizer(list(params_dict.values()), **self.settings.optimizer_args)
         else:
-            optimizer = self.settings.optimizer(args_list, lr=lr)
+            optimizer = self.settings.optimizer(args_list, **self.settings.optimizer_args)
 
         i = 0
         while i < max_iter:
             if self._stop:
                 return params_dict, loss_hist
 
-            for p in params_dict.values():  # Normalize values before each step. Un-normalization is automatically performed during rendering.
-                p.normalize()
+            # for p in params_dict.values():  # Normalize values before each step. Un-normalization is automatically performed during rendering.
+            #     p.normalize()
 
             with torch.autograd.set_detect_anomaly(True):
                 optimizer.zero_grad()
@@ -112,7 +111,7 @@ class GradientDescent(QObject):
                 loss = loss_func(render, self.target)
                 new_loss_np = loss.detach().clone().cpu().numpy()
                 loss_hist[i] = new_loss_np
-                props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1], 'learning_rate': lr,
+                props = {'iter': i, 'loss': new_loss_np, 'loss_hist': loss_hist[:i + 1],
                          'params': {k: params_dict[k].get_value() for k in params_dict}, 'iter_time': 0.0, 'render': render}
 
                 # We need to break here, otherwise the parameters will change when we call optimizer.step()
