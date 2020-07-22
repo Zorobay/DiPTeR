@@ -64,28 +64,32 @@ class FunctionSettingsGroup(QGroupBox):
         self._update_title()
 
     def _create_widgets(self):
+        widget_dict = self._get_widget_dict()
         qwidget_funcs.clear_layout(self._layout)
 
         func = self._func
         args = list(runtime_funcs.get_function_arguments(func.__init__).items())[1:]  # Skip 'self' argument
 
         for arg_name, parameter in args:
-            default = parameter.default
-            subtype = None
-            if parameter.annotation not in (None, inspect._empty):
-                type_ = parameter.annotation
+            if arg_name in widget_dict:
+                widget = widget_dict[arg_name]
             else:
-                if isinstance(default, typing.Iterable):
-                    subtype = type(default[0])
-                if type(default) == int and default == 0:
-                    type_ = float  # We do not know if this is supposed to be a float or an integer...
+                default = parameter.default
+                subtype = None
+                if parameter.annotation not in (None, inspect._empty):
+                    type_ = parameter.annotation
                 else:
-                    type_ = type(default)
+                    if isinstance(default, typing.Iterable):
+                        subtype = type(default[0])
+                    if type(default) == int and default == 0:
+                        type_ = float  # We do not know if this is supposed to be a float or an integer...
+                    else:
+                        type_ = type(default)
 
-            widget = self._widget_from_type(type_, subtype)
-            if widget:
-                if default is not None:
+                widget = self._widget_from_type(type_, subtype)
+                if widget and default is not None:
                     widget.set_value(default)
+            if widget:
                 self._layout.addWidget(LabelledInput(arg_name, widget), 0, Qt.AlignTop)
 
     def _widget_from_type(self, type_, subtype):
@@ -109,6 +113,14 @@ class FunctionSettingsGroup(QGroupBox):
 
     def _update_title(self):
         self.setTitle(self._func.__class__.__name__)
+
+    def _get_widget_dict(self) -> dict:
+        out =dict()
+        for i in range(self._layout.count()):
+            widget = self._layout.itemAt(i).widget()
+            label = widget.label
+            out[label] = widget.widget
+        return out
 
     def to_dict(self) -> dict:
         out = dict()
