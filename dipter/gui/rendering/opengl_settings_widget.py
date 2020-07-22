@@ -46,6 +46,7 @@ class OpenGLSettingsWidget(QWidget):
         self._object_list = QComboBox()
         self._reset_view_button = QPushButton("Reset Scene View")
         self._match_texture_button = QPushButton("Match Texture")
+        self._randomize_button = QPushButton("Randomize Parameters")
         self._matcher = None
 
         # Define data variables
@@ -73,6 +74,9 @@ class OpenGLSettingsWidget(QWidget):
         # Setup Match Texture Button
         self._match_texture_button.clicked.connect(self._match_texture)
         self._layout.addWidget(self._match_texture_button)
+
+        self._randomize_button.clicked.connect(self._randomize_shader_model)
+        self._layout.addWidget(self._randomize_button)
 
         self._layout.setAlignment(Qt.AlignTop)
         self.setLayout(self._layout)
@@ -103,3 +107,7 @@ class OpenGLSettingsWidget(QWidget):
                                      "Can not start Texture Matcher with only a Material Ouput Node. "
                                      "Please connect the output node to a shader and try again.", buttons=QMessageBox.Ok, parent=self)
                 dialog.exec()
+
+    def _randomize_shader_model(self):
+        for node in self.cc.active_material.get_nodes().values():
+            node.randomize_input()

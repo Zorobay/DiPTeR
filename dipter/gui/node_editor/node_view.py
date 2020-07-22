@@ -25,11 +25,12 @@ from dipter.shaders.shaders.math_shader import ScalarMathShader
 from dipter.shaders.shaders.blender_brick_shader import BlenderBrickShader
 from dipter.shaders.shaders.perlin_noise_shader import PerlinNoiseShader
 from tests.stuff_for_testing.shaders.test_box_shader import TestBoxShader
+from dipter.shaders.shaders.test_color_clipping_shader import TestColorClippingShader
 
 SHADERS_TO_CONTEXT_MENU = [BlenderBrickShader,BrickShader, TileShader, GradientShader, HSVShader, ColorShader, RGBShader, MixShader]
 
 SHADERS_NOISE_MENU = [CloudShader, PerlinNoiseShader]
-SHADERS_MISC_MENU = [FragmentCoordinatesShader, TestBoxShader, MiniBrickShader]
+SHADERS_MISC_MENU = [TestColorClippingShader,FragmentCoordinatesShader, TestBoxShader, MiniBrickShader]
 SHADERS_MATH_MENU = [VectorMathShader, ScalarMathShader, MulAddShader]
 
 

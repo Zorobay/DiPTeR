@@ -1,5 +1,5 @@
 import torch
-
+import numpy as np
 from dipter.node_graph.data_type import is_vector
 from dipter.shaders.shader_io import ShaderInputParameter
 
@@ -18,16 +18,13 @@ class Parameter(ShaderInputParameter):
     def __str__(self):
         return "Parameter({})".format(self._t)
 
+    def randomize(self):
+        """Assigns a random value within the specified limits to this Parameter."""
+        random_value = np.random.uniform(self.get_min(), self.get_max(), size=self._t.shape)
+        self.set_value(np.round(random_value, decimals=3))
+
     def tensor(self) -> torch.Tensor:
         return self._t
-
-    def get_min(self):
-        """Returns the specified minimum limit of this Parameter."""
-        return self.get_limits()[0]
-
-    def get_max(self):
-        """Returns the specified maximum limit of this Parameter."""
-        return self.get_limits()[1]
 
     def set_default(self):
         """Set the value to the default value."""

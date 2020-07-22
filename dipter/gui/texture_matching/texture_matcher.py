@@ -1,6 +1,10 @@
+import ast
 import inspect
 import logging
+import numbers
+import pydoc
 import typing
+from pathlib import Path
 
 import h5py
 import numpy as np
@@ -19,7 +23,7 @@ from dipter.gui.rendering.opengl_widget import OpenGLWidget
 from dipter.gui.texture_matching.loss_visualizer import LossVisualizer
 from dipter.gui.widgets.node_input.labelled_input import LabelledInput
 from dipter.gui.widgets.node_input.line_input import FloatInput, IntInput, StringInput, MultipleIntInput, MultipleFloatInput
-from dipter.misc import image_funcs, runtime_funcs, qwidget_funcs
+from dipter.misc import image_funcs, runtime_funcs, qwidget_funcs, string_funcs, number_funcs
 from dipter.node_graph.data_type import DataType
 from dipter.node_graph.parameter import Parameter
 from dipter.optimization import losses
@@ -73,7 +77,10 @@ class FunctionSettingsGroup(QGroupBox):
             else:
                 if isinstance(default, typing.Iterable):
                     subtype = type(default[0])
-                type_ = type(default)
+                if type(default) == int and default == 0:
+                    type_ = float  # We do not know if this is supposed to be a float or an integer...
+                else:
+                    type_ = type(default)
 
             widget = self._widget_from_type(type_, subtype)
             if widget:
@@ -113,6 +120,15 @@ class FunctionSettingsGroup(QGroupBox):
 
         return out
 
+    def load_from_dict(self, d: dict):
+        for key, value in d.items():
+            for i in range(self._layout.count()):
+                labelled_input = self._layout.itemAt(i).widget()
+                label = labelled_input.label
+                if label == key:
+                    labelled_input.widget.set_value(value)
+                    break
+
 
 class SettingsPanel(QWidget):
     match_start = pyqtSignal()
@@ -139,18 +155,26 @@ class SettingsPanel(QWidget):
         self._max_iter_input = IntInput(0, 10000)
         self._early_stopping_loss_thresh = FloatInput(0, 1)
         self._save_data_button = QPushButton("Save Data")
+        self._load_settings_button = QPushButton("Load Settings")
         # self._learning_rate = FloatInput(0, 1)
 
         # Define data
-        self._loss_func_map = {"xSE Loss": losses.XSELoss, "Squared Bin Loss": losses.SquaredBinLoss, "Neural Loss":
-            losses.NeuralLoss}
+        self._loss_func_map = {}
+        ls = [losses.XSELoss, losses.SquaredBinLoss, losses.NeuralLoss]
+        for l in ls:
+            self._loss_func_map[l.__name__] = l
 
-        self._optimizer_map = {"Adam": optim.Adam, "AdamW": optim.AdamW, "Adagrad": optim.Adagrad, "RMSprop": optim.RMSprop}
+        self._optimizer_map = {}
+        os = [optim.Adam, optim.AdamW, optim.Adagrad, optim.RMSprop]
+        for o in os:
+            self._optimizer_map[o.__name__] = o
+
         self.loaded_image = None
         self._max_iter = 100
         self._settings = GradientDescentSettings()
         self._is_running = False
         self._is_cleared = True
+        self._last_load_path = None
 
         self._init_widget()
 
@@ -170,7 +194,7 @@ class SettingsPanel(QWidget):
 
         # --- Setup optimizer combo box ---
         self._optimizer_combo_box.addItems(list(self._optimizer_map))
-        self._optimizer_combo_box.currentTextChanged.connect(self._set_optimizer)
+        self._optimizer_combo_box.currentIndexChanged.connect(self._set_optimizer)
         self._optimizer_combo_box.setCurrentIndex(0)
         self._settings.optimizer = self._optimizer_map[self._optimizer_combo_box.currentText()]
 
@@ -192,11 +216,9 @@ class SettingsPanel(QWidget):
                                                                                              self._early_stopping_loss_thresh.get_gl_value()))
         self._early_stopping_loss_thresh.set_value(0.01)
 
-        # --- Setup save data button ---
+        # --- Setup save/load data button ---
         self._save_data_button.clicked.connect(self._save_data)
-        # --- Setup learning rate input ---
-        # self._learning_rate.input_changed.connect(lambda: self._change_settings("learning_rate", self._learning_rate.get_gl_value()))
-        # self._learning_rate.set_value(0.1)
+        self._load_settings_button.clicked.connect(self._load_settings)
 
         self._layout.addWidget(self._match_button)
         self._layout.addWidget(self._load_texture_button)
@@ -207,9 +229,9 @@ class SettingsPanel(QWidget):
         self._layout.addWidget(LabelledInput("Render width", self._width_input))
         self._layout.addWidget(LabelledInput("Render height", self._height_input))
         self._layout.addWidget(LabelledInput("Max iterations", self._max_iter_input))
-        # self._layout.addWidget(LabelledInput("Learning Rate", self._learning_rate))
         self._layout.addWidget(LabelledInput("Early stopping loss thresh", self._early_stopping_loss_thresh))
         self._layout.addWidget(self._save_data_button)
+        self._layout.addWidget(self._load_settings_button)
 
         self._layout.setAlignment(Qt.AlignTop)
         self.setLayout(self._layout)
@@ -242,8 +264,8 @@ class SettingsPanel(QWidget):
         self._change_settings("loss_func", loss_func)
         self._loss_settings_group.set_function(loss_func)
 
-    def _set_optimizer(self, text: str):
-        optimizer = self._optimizer_map[text]
+    def _set_optimizer(self, index: int):
+        optimizer = self._optimizer_map[self._optimizer_combo_box.currentText()]
         self._change_settings("optimizer", optimizer)
         self._optimizer_settings_group.set_function(optimizer)
 
@@ -278,15 +300,76 @@ class SettingsPanel(QWidget):
 
     def _save_data(self):
         filename = to_filename(self.cc.active_material.name, self._settings.loss_func.__name__, self._settings.optimizer.__name__) + ".hdf5"
-        path, _ = QFileDialog.getSaveFileName(self, "Save Data", directory=filename, filter="HDF5 (*.hdf5)")
+        directory = Path.cwd() / "data" / filename
+        path, _ = QFileDialog.getSaveFileName(self, "Save Data", directory=str(directory), filter="HDF5 (*.hdf5)")
 
         if path:
             self.save_data.emit(path)
 
+    def _load_settings(self):
+        if self._last_load_path:
+            path, _ = QFileDialog.getOpenFileName(self, "Load Settings", directory=str(self._last_load_path), filter="HDF5 (*.hdf5)")
+        else:
+            path, _ = QFileDialog.getOpenFileName(self, "Load Settings", filter="HDF5 (*.hdf5)")
+
+        if path:
+            self._last_load_path = Path(path).parent
+            f = h5py.File(path, "r")
+            attrs = dict(f.get("data").attrs)
+            for att in attrs:
+                saved_att = attrs[att]
+                try:
+                    current_att = getattr(self._settings, att)
+                    type_att = type(current_att)
+                    if not isinstance(saved_att, type_att):
+                        if type_att == dict:
+                            saved_att = ast.literal_eval(saved_att)
+                        elif type_att == type:
+                            import_string = string_funcs.type_to_import_string(saved_att)
+                            if att == "optimizer":  # Optimizers are weird when it comes to importing them, handle them separately
+                                cls_name = import_string.split(".")[-1]
+                                import_string = "torch.optim." + cls_name
+
+                            saved_att = pydoc.locate(import_string)
+                        else:
+                            saved_att = type_att(saved_att)
+
+                    if isinstance(saved_att, numbers.Real):
+                        saved_att = number_funcs.round_significant(saved_att, 3)
+                    elif isinstance(saved_att, dict):
+                        for key, val in saved_att.items():
+                            if isinstance(val, numbers.Real):
+                                saved_att[key] = number_funcs.round_significant(val, 3)
+                    elif isinstance(saved_att, (list, np.ndarray)):
+                        for i, val in enumerate(saved_att):
+                            if isinstance(val, numbers.Real):
+                                saved_att[i] = number_funcs.round_significant(val, 3)
+
+                    setattr(self._settings, att, saved_att)
+                except AttributeError as e:
+                    _logger.debug("Attribute {} not found in settings. Skipping...".format(att))
+            f.close()
+            self._update_from_settings()
+            _logger.info("Loaded settings from file {}".format(path))
+
+    def _update_from_settings(self):
+        self._width_input.set_value(self._settings.render_width)
+        self._height_input.set_value(self._settings.render_height)
+        self._early_stopping_loss_thresh.set_value(self._settings.early_stopping_thresh)
+        self._max_iter_input.set_value(self._settings.max_iter)
+
+        if self._settings.loss_func:
+            self._loss_combo_box.setCurrentIndex(list(self._loss_func_map).index(self._settings.loss_func.__name__))
+            self._loss_settings_group.load_from_dict(self._settings.loss_args)
+
+        if self._settings.optimizer:
+            self._optimizer_combo_box.setCurrentIndex(list(self._optimizer_map).index(self._settings.optimizer.__name__))
+            self._optimizer_settings_group.load_from_dict(self._settings.optimizer_args)
+
 
 class TextureMatcher(QWidget):
 
-    def __init__(self, cc:ControlCenter, mat_output_node: GMaterialOutputNode):
+    def __init__(self, cc: ControlCenter, mat_output_node: GMaterialOutputNode):
         super().__init__(parent=None)
         self.cc = cc
         self._out_node = mat_output_node
@@ -294,7 +377,7 @@ class TextureMatcher(QWidget):
         # Define components
         self._menu_bar = QMenuBar()
         self._settings_drawer = QDockWidget(self, Qt.Drawer)
-        self._settings_panel = SettingsPanel(self.cc,self)
+        self._settings_panel = SettingsPanel(self.cc, self)
         self._openGL = OpenGLWidget(400, 400, None, OpenGLWidget.TEXTURE_RENDER_MODE)
         self._image_plotter = ImagePlotter("Render")
         self._target_plotter = ImagePlotter("Target")
@@ -311,7 +394,6 @@ class TextureMatcher(QWidget):
         # Define data
         self._target_image = None
         self._target_matrix = None
-        self._settings = {}
         self.thread = None
         self.gd = None
         self.ren_i = 0
@@ -364,7 +446,7 @@ class TextureMatcher(QWidget):
         self._layout.addWidget(self._image_plotter, 0, 1)
         self._layout.addWidget(self._target_plotter, 0, 2)
         self._layout.addWidget(self._loss_plotter, 1, 0, 1, 3)
-        self._layout.addWidget(self._settings_panel, 0, 3)
+        self._layout.addWidget(self._settings_panel, 0, 3, 2, 1)
 
         self.setLayout(self._layout)
 
@@ -436,16 +518,20 @@ class TextureMatcher(QWidget):
                 _logger.error("Uniform {} does not exist in program!".format(uniform_key))
                 raise e
 
-    def _update_settings(self, key: str, settings: dict):
-        self._settings = settings
-
     def _open_loss_viz_window(self):
         self._loss_visualizer.open(self._settings_panel._settings, self._target_image, self._out_node)
 
     def _save_data(self, filename: str):
-        settings = self._settings
-        with h5py.File(filename, "w") as f:
-            dset = f.create_dataset("data", self._loss_hist)
+        mat_name = self.cc.active_material.name
+        settings = self._settings_panel.settings().to_dict()
+        f = h5py.File(filename, "w")
+        dset = f.create_dataset("data", data=self._loss_hist, dtype="f")
 
-            for key,value in settings.items():
-                dset[key] = value
+        for key, value in settings.items():
+            try:
+                dset.attrs[key] = value
+            except TypeError:
+                dset.attrs[key] = str(value)
+        dset.attrs["material_name"] = mat_name
+        f.close()
+        _logger.info("Saved data to {}".format(filename))

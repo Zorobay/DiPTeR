@@ -1,5 +1,7 @@
 import typing
 
+import numpy as np
+
 from dipter.node_graph.data_type import DataType
 
 
@@ -20,6 +22,38 @@ class ShaderInputParameter:
 
         if self._force_scalar:
             self._connectable = False
+
+    def get_min(self):
+        """Returns the specified minimum limit of this Parameter."""
+        return self.get_limits()[0]
+
+    def get_max(self):
+        """Returns the specified maximum limit of this Parameter."""
+        return self.get_limits()[1]
+
+    def get_range(self) -> float:
+        """Returns the range of the limit."""
+        return self.get_max() - self.get_min()
+
+    def get_random_value(self):
+        """Returns a random value within the limits of the correct shape for this input parameter."""
+        low = self.get_min()
+        high = self.get_max()
+        random = np.random.uniform(low, high, size=np.shape(self.get_default()))
+        return np.round(random, decimals=3)
+
+    def get_centered_random_value(self, spread: float = None):
+        """Returns a random value within the limits of the correct shape that is centered around the default value."""
+        if spread is None:
+            spread = self.get_range() * 0.2
+
+        center = self.get_default()
+        center = np.where(center - spread < self.get_min(), center + spread, center)
+        # if center-spread < self.get_min():
+        #     center = center + spread
+
+        random = np.clip(np.random.normal(center, scale=spread), a_min=self.get_min(), a_max=self.get_max())
+        return np.round(random, decimals=3)
 
     def get_display_label(self) -> str:
         """Returns the formatted display label for this input."""

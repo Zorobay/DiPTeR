@@ -97,6 +97,11 @@ class SocketModule(Module):
         self._socket.set_value(self.widget.get_gl_value())
         self.input_changed.emit()
 
+    def update_from_socket(self):
+        """Updates the value of this modules widget based on the current value of the socket. Does not emit an input_changed signal."""
+        value = self._socket.value()
+        self.set_value(value)
+
 
 class OutputModule(QWidget):
 

@@ -72,7 +72,7 @@ class Material(QObject):
 
         return node
 
-    def _add_node(self, node: 'Node'):
+    def _add_node(self, node: 'GShaderNode'):
         self._assign_node_number(node)
         node.edge_started.connect(self._spawn_edge)
         node.edge_ended.connect(self._end_edge)
@@ -158,7 +158,7 @@ class Material(QObject):
         except KeyError:
             return False
 
-    def get_nodes(self) -> typing.Dict[uuid.UUID, ShaderNode]:
+    def get_nodes(self) -> typing.Dict[uuid.UUID, GShaderNode]:
         return self._nodes
 
     def remove_edge(self, edge: GEdge):

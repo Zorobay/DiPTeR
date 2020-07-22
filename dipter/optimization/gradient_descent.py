@@ -36,7 +36,9 @@ class GradientDescentSettings:
         self.render_height = 200
         self.max_iter = 100
         self.early_stopping_thresh = 0.01
-        self.decay = 0.99
+
+    def to_dict(self) -> dict:
+        return vars(self)
 
 
 class GradientDescent(QObject):

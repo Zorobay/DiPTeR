@@ -227,7 +227,7 @@ class FloatInput(LineInput):
 
     def set_value(self, value: typing.Any):
         assert isinstance(value, (float, int, np.int, np.float32, torch.FloatTensor, torch.cuda.FloatTensor)), \
-            "Incompatible type of default value for FloatInput!"
+            "Incompatible type ({}) of value for FloatInput!".format(type(value))
 
         self.setText(str(float(value)))
 

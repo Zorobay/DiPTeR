@@ -18,6 +18,8 @@ class Loss(Module):
     def forward(self, x: Tensor, target: Tensor):
         assert target.shape == x.shape
         assert target.shape[2] == 3 and x.shape[2] == 3, "Images need to be on the format [W,H,3]"
+        x = torch.clamp(x, 0.0, 1.0)
+        target = torch.clamp(target, 0.0, 1.0)
         return self._loss(x, target)
 
     @abc.abstractmethod

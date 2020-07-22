@@ -1,4 +1,7 @@
 import logging
+import threading
+import time
+from concurrent.futures import thread
 
 import numpy as np
 from PyQt5.QtCore import QTimer, Qt, pyqtSignal
@@ -22,7 +25,7 @@ class OpenGLWidget(QOpenGLWidget):
     FREE_RENDER_MODE = 1
     init_done = pyqtSignal()
 
-    def __init__(self, width: int, height: int, cc: ControlCenter = None, render_mode: int = FREE_RENDER_MODE):
+    def __init__(self, width: int=100, height: int=100, cc: ControlCenter = None, render_mode: int = FREE_RENDER_MODE):
         super().__init__()
 
         # Define variables to track objects
@@ -55,10 +58,9 @@ class OpenGLWidget(QOpenGLWidget):
         self._mins = np.array((1., 1., 1.), dtype=np.float32)
 
         # Set Widget settings
-        size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        size_policy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         self.setSizePolicy(size_policy)
-        self.setMinimumSize(100, 100)
-        # self.resizeGL(width, height)
+        self.setMinimumSize(width, height)
         self.setMouseTracking(False)
 
     @property
@@ -169,31 +171,35 @@ class OpenGLWidget(QOpenGLWidget):
 
     def _get_texture(self) -> QImage:
         # Reset the view to default so that the texture fits to the view
-        old_size = self.size()
-        self.resize(600, 600)
-        temp_obj_to_world = self._object_to_world
-        temp_world_to_view = self._world_to_view
-        temp_view_to_proj = self._view_to_projection
-        self._object_to_world = np.eye(4, dtype=np.float32)
-        self._world_to_view = np.eye(4, dtype=np.float32)
-        self._view_to_projection = np.eye(4, dtype=np.float32)
+        if self._render_mode == self.FREE_RENDER_MODE:
+            old_size = self.size()
+            self.resize(600, 600)
 
-        # Set the rendered object to be a plane
-        temp_V, temp_I = self._V, self._I
-        V, I = object_vertices.get_2d_plane()
-        self.set_vertices(V, I)
+            temp_obj_to_world = self._object_to_world
+            temp_world_to_view = self._world_to_view
+            temp_view_to_proj = self._view_to_projection
+            self._object_to_world = np.eye(4, dtype=np.float32)
+            self._world_to_view = np.eye(4, dtype=np.float32)
+            self._view_to_projection = np.eye(4, dtype=np.float32)
 
-        self.update()
-        img: QImage = self.grabFramebuffer()
+            # Set the rendered object to be a plane
+            temp_V, temp_I = self._V, self._I
+            V, I = object_vertices.get_2d_plane()
+            self.set_vertices(V, I)
+            self.update()
 
-        # Reset the view
-        self.resize(old_size)
-        self._object_to_world = temp_obj_to_world
-        self._world_to_view = temp_world_to_view
-        self._view_to_projection = temp_view_to_proj
-        self.set_vertices(temp_V, temp_I)
+            img: QImage = self.grabFramebuffer()
 
-        return img
+            # Reset the view
+            self.resize(old_size)
+            self._object_to_world = temp_obj_to_world
+            self._world_to_view = temp_world_to_view
+            self._view_to_projection = temp_view_to_proj
+            self.set_vertices(temp_V, temp_I)
+
+            return img
+        else:
+            return self.grabFramebuffer()
 
     # ============== ============ ==============
     # ============== HANDLE EVENTS ==============
@@ -237,9 +243,6 @@ class OpenGLWidget(QOpenGLWidget):
             glm.rotate(self._object_to_world, y_angle, 0, 1, 0)
 
     def mouseReleaseEvent(self, mouse_event: QMouseEvent):
-        if self._render_mode == self.TEXTURE_RENDER_MODE:
-            return
-
         # if a right click occurred, open context menu
         if mouse_event.button() == Qt.RightButton:
             menu = QMenu()

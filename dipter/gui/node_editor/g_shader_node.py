@@ -9,20 +9,21 @@ from PyQt5.QtGui import QBrush, QFont, QColor, QPalette, QPainter, QPen
 from PyQt5.QtWidgets import QGraphicsItem, QGraphicsTextItem, QGraphicsWidget
 from boltons.setutils import IndexedSet
 from glumpy.gloo import Program
-from dipter.gui.widgets.node_input.int_choice_input import IntChoiceInput
-from dipter.node_graph.data_type import DataType
-from dipter.node_graph.edge import Edge
-from dipter.node_graph.node import ShaderNode
-from dipter.node_graph.node_socket import NodeSocket
+
 from dipter.gui.node_editor.g_edge import GEdge
 from dipter.gui.node_editor.g_node_socket import GNodeSocket
 from dipter.gui.node_editor.layouts import GraphicsGridLayout
 from dipter.gui.node_editor.node_scene import NodeScene
 from dipter.gui.widgets.node_input.array_input import ArrayInput
 from dipter.gui.widgets.node_input.color_input import ColorInput
+from dipter.gui.widgets.node_input.int_choice_input import IntChoiceInput
 from dipter.gui.widgets.node_input.io_module import SocketModule, OutputModule
 from dipter.gui.widgets.node_input.line_input import FloatInput, IntInput
 from dipter.gui.widgets.node_input.shader_input import ShaderInput
+from dipter.node_graph.data_type import DataType
+from dipter.node_graph.edge import Edge
+from dipter.node_graph.node import ShaderNode
+from dipter.node_graph.node_socket import NodeSocket
 from dipter.shaders.shader_super import Shader
 from dipter.shaders.shaders.material_output_shader import MaterialOutputShader
 
@@ -124,13 +125,13 @@ class GShaderNode(QGraphicsWidget):
             shader_output = shader.get_outputs()[i]
             label = shader_output.get_display_label()
             socket = self._node.get_output_socket(i)
-            #socket.set_index(i)
+            # socket.set_index(i)
             self._add_output_module(output_label=label, node_socket=socket)
 
         for i in range(self._node.num_input_sockets()):
             shader_input = shader.get_inputs()[i]
             socket = self._node.get_input_socket(i)
-            #socket.set_index(i)
+            # socket.set_index(i)
             self._add_input_module(socket, shader_input)
 
     def _notify_change(self):
@@ -382,6 +383,15 @@ class GShaderNode(QGraphicsWidget):
         :return: a Tensor containing the rendered image and a list of parameter Tensors (one for each unconnected graph input)
         """
         return self._node.render(width, height, retain_graph=retain_graph)
+
+    def randomize_input(self):
+        """Randomizes the values of all input sockets."""
+        for socket, inp in zip(self.get_input_sockets(), self.get_shader().get_inputs()):
+            if not socket.is_connected():
+                rand_val = inp.get_centered_random_value()
+                socket.set_value(rand_val)
+                mod = self.get_input_module(socket)
+                mod.update_from_socket()
 
     def __str__(self):
         cls = self.__class__
