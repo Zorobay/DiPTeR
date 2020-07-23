@@ -1,8 +1,7 @@
 import torch
 
+from dipter.shaders.lib import glsl_builtins as gl, noise, vec
 from dipter.shaders.shader_super import TINY_FLOAT
-from dipter.shaders.lib import glsl_builtins as gl
-from dipter.shaders.lib import noise
 
 
 def calc_brick_texture(p, mortar_size, mortar_smooth, bias, brick_width, row_height, offset_amount, offset_frequency, squash_amount,
@@ -26,5 +25,10 @@ def calc_brick_texture(p, mortar_size, mortar_smooth, bias, brick_width, row_hei
     tint = noise.random_float(row_brick_bias) + bias
 
     min_dist = torch.min(torch.min(x, y), torch.min(brick_width - x, row_height - y))
-    min_dist = 1.0 - min_dist / (mortar_size + TINY_FLOAT)
-    return torch.cat([tint, gl.smoothstep(0.0, mortar_smooth, min_dist)], dim=2)
+
+    res = torch.where(
+        min_dist >= mortar_size, vec.cat([tint, vec.vec1(0.0)]),  #if
+        torch.where(mortar_smooth == 0.0, vec.cat([tint, vec.vec1(0.0)]),  #else if
+        vec.cat([tint, gl.smoothstep(0.0, mortar_smooth, 1.0-min_dist/(mortar_size+TINY_FLOAT))])) #else
+    )
+    return res

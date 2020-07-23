@@ -113,9 +113,9 @@ class Shader:
 
     @classmethod
     def set_render_size(cls, width: int, height: int):
-        Shader._ren_height = width
-        Shader._ren_width = height
-        Shader._frag_pos_matrix = render_funcs.generate_frag_pos(width, height)
+        Shader._ren_height = np.int32(width)
+        Shader._ren_width = np.int32(height)
+        Shader._frag_pos_matrix = render_funcs.generate_frag_pos(Shader.render_width(), Shader.render_height())
 
     @classmethod
     def render_size(cls):

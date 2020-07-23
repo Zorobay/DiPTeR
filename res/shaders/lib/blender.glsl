@@ -34,6 +34,6 @@ squash_amount, float squash_frequency)
         return vec2(tint, smoothstep(0.0, mortar_smooth, min_dist));
     }
 
-    min_dist = 1.0 - min_dist / mortar_size;
-    return vec2(tint, smoothstep(0.0, mortar_smooth, min_dist));
+    //min_dist = 1.0 - min_dist / mortar_size;
+    //return vec2(tint, smoothstep(0.0, mortar_smooth, min_dist));
 }

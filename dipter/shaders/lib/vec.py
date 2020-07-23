@@ -1,7 +1,6 @@
-import typing
-
-from torch import Tensor
 import torch
+from torch import Tensor
+
 from dipter.shaders.shader_super import Shader
 
 
@@ -51,6 +50,11 @@ def zw(t: Tensor) -> Tensor:
 
 def zzzz(t: Tensor) -> Tensor:
     return torch.cat([z(t), z(t), z(t), z(t)], dim=2)
+
+
+def vec1(val: float) -> Tensor:
+    size = [*Shader.frag_pos().shape[0:2], 1]
+    return torch.full(size, val, dtype=torch.float32, device=Shader.frag_pos().device)
 
 
 def vec3(val: float) -> Tensor:
