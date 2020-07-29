@@ -3,7 +3,7 @@ vec2 simpleSmoothstep(vec2 p) {
 }
 
 float random_float(float p) {
-    return fract(sin(p * 98.81) * 123555.68);
+    return fract(sin(p * 98.81) * 12355.68);
 }
 
 float random(vec2 p) {

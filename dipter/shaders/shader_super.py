@@ -118,7 +118,7 @@ class Shader:
         Shader._frag_pos_matrix = render_funcs.generate_frag_pos(Shader.render_width(), Shader.render_height())
 
     @classmethod
-    def render_size(cls):
+    def render_size(cls) -> typing.Tuple[int, int]:
         return Shader._ren_width, Shader._ren_height
 
     @classmethod

@@ -13,7 +13,7 @@ def random(p: Tensor) -> Tensor:
 
 
 def random_float(p: Tensor) -> Tensor:
-    return gl.fract(torch.sin(p * 98.81) * 123555.68)
+    return gl.fract(torch.sin(p * 98.81) * 12355.68)
 
 
 def smoothNoise2D(p: Tensor) -> Tensor:

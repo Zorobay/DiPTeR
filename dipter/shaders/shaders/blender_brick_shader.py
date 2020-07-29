@@ -1,7 +1,7 @@
-from dipter.shaders.lib import blender
+from dipter.shaders.lib import blender, vec
 from dipter.shaders.lib import glsl_builtins as gl
-from dipter.shaders.shader_super import *
 from dipter.shaders.shader_io import ShaderInputParameter, ShaderOutputParameter
+from dipter.shaders.shader_super import *
 
 
 class BlenderBrickShader(FunctionShader):
@@ -46,10 +46,10 @@ class BlenderBrickShader(FunctionShader):
                                         offset_frequency,
                                         squash_amount,
                                         squash_frequency)
-        tint = f2[:, :, 0].unsqueeze(-1)
-        f = f2[:, :, 1].unsqueeze(-1)
+        tint = vec.x(f2)
+        f = vec.y(f2)
 
-        brick_color1 = torch.where(f != 1.0, (1.0-tint)*brick_color1 + tint*brick_color2, brick_color1)
+        brick_color1 = torch.where(f != 1.0, (1.0 - tint) * brick_color1 + tint * brick_color2, brick_color1)
 
         color = gl.mix(brick_color1, mortar_color, f)
         fac = f

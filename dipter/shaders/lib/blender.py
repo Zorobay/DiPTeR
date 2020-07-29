@@ -27,8 +27,8 @@ def calc_brick_texture(p, mortar_size, mortar_smooth, bias, brick_width, row_hei
     min_dist = torch.min(torch.min(x, y), torch.min(brick_width - x, row_height - y))
 
     res = torch.where(
-        min_dist >= mortar_size, vec.cat([tint, vec.vec1(0.0)]),  #if
-        torch.where(mortar_smooth == 0.0, vec.cat([tint, vec.vec1(0.0)]),  #else if
-        vec.cat([tint, gl.smoothstep(0.0, mortar_smooth, 1.0-min_dist/(mortar_size+TINY_FLOAT))])) #else
+        min_dist >= mortar_size, vec.vec2(tint, vec.rep(0.0)),  #if
+        torch.where(mortar_smooth == 0.0, vec.vec2(tint, vec.rep(0.0)),  #else if
+                    vec.vec2(tint, gl.smoothstep(0.0, mortar_smooth, 1.0-min_dist/(mortar_size+TINY_FLOAT)))) #else
     )
     return res
