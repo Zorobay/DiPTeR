@@ -1,7 +1,6 @@
 import ast
 import inspect
 import logging
-import numbers
 import pydoc
 import typing
 from pathlib import Path
@@ -115,7 +114,7 @@ class FunctionSettingsGroup(QGroupBox):
         self.setTitle(self._func.__class__.__name__)
 
     def _get_widget_dict(self) -> dict:
-        out =dict()
+        out = dict()
         for i in range(self._layout.count()):
             widget = self._layout.itemAt(i).widget()
             label = widget.label
@@ -149,6 +148,7 @@ class SettingsPanel(QWidget):
     texture_loaded = pyqtSignal(Image.Image)
     settings_changed = pyqtSignal(GradientDescentSettings)  # changed key as well as all settings
     save_data = pyqtSignal(str)
+    restore_best = pyqtSignal()
 
     def __init__(self, cc: ControlCenter, *args):
         super().__init__(*args)
@@ -168,6 +168,7 @@ class SettingsPanel(QWidget):
         self._early_stopping_loss_thresh = FloatInput(0, 1)
         self._save_data_button = QPushButton("Save Data")
         self._load_settings_button = QPushButton("Load Settings")
+        self._restore_best_button = QPushButton("Restore Best Parameters")
         # self._learning_rate = FloatInput(0, 1)
 
         # Define data
@@ -187,6 +188,7 @@ class SettingsPanel(QWidget):
         self._is_running = False
         self._is_cleared = True
         self._last_load_path = None
+        self._last_save_path = None
 
         self._init_widget()
 
@@ -231,6 +233,7 @@ class SettingsPanel(QWidget):
         # --- Setup save/load data button ---
         self._save_data_button.clicked.connect(self._save_data)
         self._load_settings_button.clicked.connect(self._load_settings)
+        self._restore_best_button.clicked.connect(lambda: self.restore_best.emit())
 
         self._layout.addWidget(self._match_button)
         self._layout.addWidget(self._load_texture_button)
@@ -244,6 +247,7 @@ class SettingsPanel(QWidget):
         self._layout.addWidget(LabelledInput("Early stopping loss thresh", self._early_stopping_loss_thresh))
         self._layout.addWidget(self._save_data_button)
         self._layout.addWidget(self._load_settings_button)
+        self._layout.addWidget(self._restore_best_button)
 
         self._layout.setAlignment(Qt.AlignTop)
         self.setLayout(self._layout)
@@ -312,10 +316,14 @@ class SettingsPanel(QWidget):
 
     def _save_data(self):
         filename = to_filename(self.cc.active_material.name, self._settings.loss_func.__name__, self._settings.optimizer.__name__) + ".hdf5"
-        directory = Path.cwd() / "data" / filename
-        path, _ = QFileDialog.getSaveFileName(self, "Save Data", directory=str(directory), filter="HDF5 (*.hdf5)")
+
+        if self._last_save_path:
+            path, _ = QFileDialog.getSaveFileName(self, "Save Data", directory=str(self._last_save_path / filename), filter="HDF5 (*.hdf5)")
+        else:
+            path, _ = QFileDialog.getSaveFileName(self, "Save Data", directory=filename, filter="HDF5 (*.hdf5)")
 
         if path:
+            self._last_save_path = Path(path).parent
             self.save_data.emit(path)
 
     def _load_settings(self):
@@ -327,40 +335,7 @@ class SettingsPanel(QWidget):
         if path:
             self._last_load_path = Path(path).parent
             f = h5py.File(path, "r")
-            attrs = dict(f.get("data").attrs)
-            for att in attrs:
-                saved_att = attrs[att]
-                try:
-                    current_att = getattr(self._settings, att)
-                    type_att = type(current_att)
-                    if not isinstance(saved_att, type_att):
-                        if type_att == dict:
-                            saved_att = ast.literal_eval(saved_att)
-                        elif type_att == type:
-                            import_string = string_funcs.type_to_import_string(saved_att)
-                            if att == "optimizer":  # Optimizers are weird when it comes to importing them, handle them separately
-                                cls_name = import_string.split(".")[-1]
-                                import_string = "torch.optim." + cls_name
-
-                            saved_att = pydoc.locate(import_string)
-                        else:
-                            saved_att = type_att(saved_att)
-
-                    if isinstance(saved_att, numbers.Real):
-                        saved_att = number_funcs.round_significant(saved_att, 3)
-                    elif isinstance(saved_att, dict):
-                        for key, val in saved_att.items():
-                            if isinstance(val, numbers.Real):
-                                saved_att[key] = number_funcs.round_significant(val, 3)
-                    elif isinstance(saved_att, (list, np.ndarray)):
-                        for i, val in enumerate(saved_att):
-                            if isinstance(val, numbers.Real):
-                                saved_att[i] = number_funcs.round_significant(val, 3)
-
-                    setattr(self._settings, att, saved_att)
-                except AttributeError as e:
-                    _logger.debug("Attribute {} not found in settings. Skipping...".format(att))
-            f.close()
+            self._settings.load_from_hdf5(f)
             self._update_from_settings()
             _logger.info("Loaded settings from file {}".format(path))
 
@@ -411,6 +386,8 @@ class TextureMatcher(QWidget):
         self.ren_i = 0
         self._params = {}
         self._loss_hist = None
+        self._gd_info = dict()
+        self._target_filename = None
 
         self._init_widget()
 
@@ -428,6 +405,7 @@ class TextureMatcher(QWidget):
         self._settings_panel.match_stop.connect(self._stop_gradient_descent)
         self._settings_panel.reset_requested.connect(self._reset)
         self._settings_panel.save_data.connect(self._save_data)
+        self._settings_panel.restore_best.connect(self._restore_best_params)
         self._settings_panel.setMaximumWidth(250)
 
         # Setup plots
@@ -466,6 +444,7 @@ class TextureMatcher(QWidget):
         # We want to display the same image that we are testing the loss against. This image is columns major (input,y)
         # which is not what matplotlib want's so we have to transpose it back to row major
         self._target_image = image.convert("RGB")
+        self._target_filename = image.filename
         self._target_matrix = image_funcs.image_to_tensor(self._target_image)
         self._target_plotter.set_image(self._target_matrix)
 
@@ -499,11 +478,13 @@ class TextureMatcher(QWidget):
             self.thread.quit()
             self._settings_panel.set_gd_finished()
 
-    def _finish_gradient_descent(self, params, loss_hist):
+    def _finish_gradient_descent(self, params, loss_hist, info):
         self._params = params
         self._loss_hist = loss_hist
+        self._gd_info = info
+        min_loss = np.min(loss_hist)
         self._stop_gradient_descent()
-        _logger.info("Gradient Descent finished with a final loss of {:.4f}.".format(loss_hist[-1]))
+        _logger.info("Gradient Descent finished with a minimum loss of {:.4f}.".format(min_loss))
 
     def _gd_iter_callback(self, props):
         loss_hist = props['loss_hist']
@@ -531,7 +512,7 @@ class TextureMatcher(QWidget):
                 raise e
 
     def _open_loss_viz_window(self):
-        self._loss_visualizer.open(self._settings_panel._settings, self._target_image, self._out_node)
+        self._loss_visualizer.open(self._settings_panel.settings(), self._target_image, self._out_node)
 
     def _save_data(self, filename: str):
         mat_name = self.cc.active_material.name
@@ -545,5 +526,15 @@ class TextureMatcher(QWidget):
             except TypeError:
                 dset.attrs[key] = str(value)
         dset.attrs["material_name"] = mat_name
+        dset.attrs["target_filename"] = self._target_filename
         f.close()
         _logger.info("Saved data to {}".format(filename))
+
+    def _restore_best_params(self):
+        for k, v in self._gd_info["min_params"].items():
+            for pk, pv in self._params.items():
+                if k == pk:
+                    pv.set_value(v)
+
+        self._set_parameter_values(self._params)
+        _logger.info("Restored best parameter values with loss {}".format(self._gd_info["min_loss"]))

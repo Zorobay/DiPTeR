@@ -14,9 +14,9 @@ def image_to_tensor(image: Image, size: typing.Tuple[int, int] = None) -> torch.
     :return: a torch Tensor on the format WxHxC
     """
     image = image.convert("RGB")
-    size = np.asarray(size, dtype=np.int32)
 
     if size:
+        size = np.asarray(size, dtype=np.int32)
         image = image.resize(size)
 
     t = transforms.Compose([

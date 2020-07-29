@@ -24,18 +24,19 @@ _logger = logging.getLogger(__name__)
 
 class PlotWidget3D(QWidget):
 
-    def __init__(self):
+    def __init__(self, projection="3d"):
         super().__init__()
         self._figure = Figure(figsize=(5, 5))
         self._canvas = FigureCanvas(self._figure)
         self._navbar = NavigationToolbar(self._canvas, self)
+        self._ax = self._figure.add_subplot(111, projection="3d")
         self._layout = QVBoxLayout()
         self._layout.addWidget(self._navbar)
         self._layout.addWidget(self._canvas)
         self.setLayout(self._layout)
 
     def get_axis(self):
-        return self._figure.add_subplot(111, projection="3d")
+        return self._ax
 
     def get_canvas(self):
         return self._canvas
@@ -63,7 +64,7 @@ class LossVisualizer(QWidget):
         self._item_queue = FIFOQueue(maxsize=2)
         self._bg_brush_selected = QBrush(QColor("#8bf9b0"))
         self._bg_brush_default = QBrush(QColor("#ffffff"))
-        self._settings = {}
+        self._settings = None
         self._target_image = None
         self._target_matrix = None
         self._out_node = None
@@ -193,7 +194,7 @@ class LossVisualizer(QWidget):
 
         self._target_matrix = image_funcs.image_to_tensor(self._target_image, (W, H))
         loss_surface = np.empty((R1, R2))
-        loss_f = self._settings.loss_func
+        loss_f = self._settings.loss_func(**self._settings.loss_args)
         checked_items = self._checked_items()
 
         item1 = checked_items[0][0]
@@ -229,7 +230,7 @@ class LossVisualizer(QWidget):
                 self._p2.set_value(p2_values[j], index=p2_index)
                 r, _ = self._mat_out_node.get_backend_node().render(W, H, retain_graph=True)
                 loss = loss_f(r, self._target_matrix).detach().clone().cpu().numpy()
-                #print("Loss: {:.4f}, P1: {:.4f}, P2: {:.4f}".format(loss, self._p1.get_value(), self._p2.get_value()))
+
                 if loss < min_loss:
                     min_loss = loss
                     min_loss_p1 = self._p1.get_value(p1_index)
@@ -247,8 +248,8 @@ class LossVisualizer(QWidget):
         self._fig_ax.set_zlim(bottom=0)
 
         # Add min value marker
-        self._fig_ax.plot([min_loss_p1], [min_loss_p2], [min_loss], marker='+', color="#ff00ff")
-        self._fig_ax.text(min_loss_p1, min_loss_p2, min_loss * 1.1, "Minimum Loss = {:.4f}".format(float(min_loss)), color='#ff00ff')
+        self._fig_ax.plot([min_loss_p1], [min_loss_p2], [min_loss], marker='+', color="#ff00ff", markersize=14, markeredgewidth=2.5)
+        # self._fig_ax.text(min_loss_p1, min_loss_p2, min_loss * 1.1, "Minimum Loss = {:.4f}".format(float(min_loss)), color='#ff00ff')
 
         self._canvas.draw()
         self._start_gd_button.setEnabled(True)
@@ -284,8 +285,8 @@ class LossVisualizer(QWidget):
         self._progress_dialog.setValue(i)
 
         if self._progress_dialog.wasCanceled():
-            self.gd.stop()
-            self.thread.quit()
+            self._gd.stop()
+            self._thread.quit()
 
         x = params[self._p1.get_modified_arg()]
         y = params[self._p2.get_modified_arg()]
@@ -293,7 +294,8 @@ class LossVisualizer(QWidget):
         self._hist_p2[i] = y
         _logger.debug("{}. Loss: {}, P1: {}, P2: {}".format(i, loss, x, y))
 
-    def _finish_gradient_descent(self, params, loss_hist):
+    def _finish_gradient_descent(self, params, loss_hist, _):
+
         if self._thread.isRunning():
             _logger.info("Stopping Gradient Descent Thread...")
             self._gd.stop()
@@ -304,10 +306,17 @@ class LossVisualizer(QWidget):
 
         # Plot dis shit!
         num_iter = len(loss_hist)
+        x = params[self._p1.get_modified_arg()]
+        y = params[self._p2.get_modified_arg()]
+        self._hist_p1[num_iter - 1] = x.get_value()
+        self._hist_p2[num_iter - 1] = y.get_value()
         xs = self._hist_p1[0:num_iter]
         ys = self._hist_p2[0:num_iter]
-
-        self._fig_ax.plot(xs, ys, zs=loss_hist, color='#ff0000', marker='o', linestyle='-', markersize=4)
+        self._fig_ax.set_title("HSV Shader Loss Surface", fontsize=18)
+        self._fig_ax.plot(xs,ys,loss_hist, color="#ff656dff", marker="o", mfc="#c44e52ff", mec="#ff656dff", lw=2)
+        self._fig_ax.set_xlabel("Hue")
+        self._fig_ax.set_ylabel("Saturation")
+        self._fig_ax.set_zlabel("Loss")
         self._canvas.draw()
         self._canvas.flush_events()
 
