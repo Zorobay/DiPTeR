@@ -208,22 +208,34 @@ class Material(QObject):
 
     def _load_material(self, filename):
         """Loads a saved material from file."""
-        mon = ms.load_material(filename)
-        self._build_node_graph(mon)
+        mon, mat_dict = ms.load_material(filename)
+        self._build_node_graph(mon, mat_dict)
 
-    def _build_node_graph(self, node: ShaderNode, parent: GShaderNode = None):
+    def _build_node_graph(self, node: ShaderNode, mat_dict: dict, parent: GShaderNode = None):
         if isinstance(node.get_shader(), MaterialOutputShader):
             parent_node = self._add_material_output_node(backend_node=node)
         else:
             parent_node = self.add_node(backend_node=node)
-            shift = QPointF(270, 0)
-            parent_pos = parent.scenePos()
-            parent_node.setPos(parent_pos - shift)
+
+        # Set scene position for parent node
+        mat_dict = mat_dict[parent_node.id().hex]
+        try:
+            pos = mat_dict[ms.POSITION]
+            parent_node.setPos(QPointF(*pos))
+        except KeyError:
+            if parent:
+                shift = QPointF(270, 0)
+                parent_pos = parent.scenePos()
+                parent_node.setPos(parent_pos - shift)
 
         for inp in node.get_input_sockets():
             if inp.is_connected():
                 for next_node in inp.get_connected_nodes():
-                    self._build_node_graph(next_node, parent_node)
+                    list_inputs = mat_dict[ms.INPUTS]
+                    for d_inp in list_inputs:
+                        if inp.label() == d_inp[ms.ARGUMENT]:
+                            sub_dict = d_inp[ms.VALUE]
+                            self._build_node_graph(next_node, sub_dict, parent_node)
 
                 for out_socket in inp.get_connected_sockets():
                     edge = inp.find_connecting_edge(out_socket)

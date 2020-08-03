@@ -62,8 +62,10 @@ class ControlCenter(QObject):
         for _, m in self._materials.items():
             if m.name == name:
                 newname = name.split(".")
-                if len(newname > 1):
+                if len(newname) > 1:
                     newname = newname[-2]
+                else:
+                    newname = newname[0]
 
                 last_char = newname[-1]
                 try:
@@ -75,6 +77,7 @@ class ControlCenter(QObject):
                     pass
                 _logger.warning("Material with title {} already exists! Renaming new material to {}.".format(m.name, newname))
                 name = newname
+                break
 
         material = Material(self, name, material_filepath=filename)
         self._materials[material.id()] = material

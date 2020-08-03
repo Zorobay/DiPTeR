@@ -1,16 +1,20 @@
 import json
 import logging
 import numbers
+import typing
 import uuid
+
 import numpy as np
 import torch
-from dipter.misc import string_funcs
-from dipter.node_graph.node_socket import NodeSocket
+
 from dipter.misc import io as iofuncs
+from dipter.misc import string_funcs
 from dipter.node_graph.node import ShaderNode
+from dipter.node_graph.node_socket import NodeSocket
 from dipter.shaders.shaders.material_output_shader import MaterialOutputShader
 
 SHADER = "shader"
+POSITION = "position"
 INPUTS = "inputs"
 ARGUMENT = "arg"
 VALUE = "value"
@@ -55,8 +59,14 @@ def save_material(root_node: ShaderNode, filename: str):
 
 
 def _save_material(node: ShaderNode, output_dict: dict):
+    container = node.get_container()
+    pos = None
+    if container:
+        pos = (container.x(), container.y())
+
     node_info = {
         SHADER: str(node.get_shader().__class__),
+        POSITION: pos,
         INPUTS: []
     }
 
@@ -87,7 +97,7 @@ def _save_material(node: ShaderNode, output_dict: dict):
     output_dict[Serializer.serialize(node.id())] = node_info
 
 
-def load_material(filepath, assign_numbers=True) -> ShaderNode:
+def load_material(filepath, assign_numbers=True) -> typing.Tuple[ShaderNode, dict]:
     """
     Loads a saved material from file.
     :param filepath: The path to the material .json file.
@@ -100,7 +110,7 @@ def load_material(filepath, assign_numbers=True) -> ShaderNode:
 
     mon = ShaderNode(shader=MaterialOutputShader())
     _load_material(mat_dict, taken_numbers, assign_numbers, parent=mon)
-    return mon
+    return mon, mat_dict
 
 
 def _get_node_number(shader: str, taken_numbers: dict) -> int:
@@ -120,7 +130,7 @@ def _get_node_number(shader: str, taken_numbers: dict) -> int:
     return num
 
 
-def _load_material(mat_dict: dict, taken_numbers: dict, assign_numbers:bool, parent: ShaderNode = None, parent_socket: NodeSocket = None,
+def _load_material(mat_dict: dict, taken_numbers: dict, assign_numbers: bool, parent: ShaderNode = None, parent_socket: NodeSocket = None,
                    output_index: int = None):
     for key_id in mat_dict:
         node_dict = mat_dict[key_id]
@@ -140,6 +150,11 @@ def _load_material(mat_dict: dict, taken_numbers: dict, assign_numbers:bool, par
             out_socket = node.get_output_socket(output_index)
             out_socket.connect_to(parent_socket)
 
+        try:
+            node._id = uuid.UUID(key_id)  # Explicitly set the uuid from file
+        except ValueError as e:
+            _logger.error("Failed to explicitly set the uuid of node {}. A new uuid will be randomized. Error: \n{}".format(node.label(), e))
+
         inputs = node_dict[INPUTS]
         for inp in inputs:
             arg = inp[ARGUMENT]
@@ -154,4 +169,3 @@ def _load_material(mat_dict: dict, taken_numbers: dict, assign_numbers:bool, par
                     socket.set_value(torch.tensor(value, dtype=torch.float32))
                 else:
                     raise RuntimeError("Can not find socket with label {} on node created from shader {} while loading material.".format(arg, shader))
-
