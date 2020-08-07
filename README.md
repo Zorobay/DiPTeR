@@ -2,12 +2,12 @@
 
 DiPTer is a tool to create procedurally generated textures that are fully differentiable.
  
- :warning:**This project is in very early β and has just been started. Expect nothing to work!**:warning:
+ :warning:**This project is in β phase. Expect nothing to work!**:warning:
  
  
 ## Setup
 
-### Install dependencies
+### Install dependencies :warning: NOT UPDATED YET :warning:
 
 Python dependencies can be installed from the `environment.yaml` file using conda. However, I've had problems installing from this format before, so as an alternative, install
  from the `env.txt` file instead using `conda env create --file env.txt`.
