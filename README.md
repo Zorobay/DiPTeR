@@ -1,15 +1,22 @@
 # DiPTeR - Differentiable Procedural Texture Renderer
 
-DiPTer is a tool to create procedurally generated textures that are fully differentiable.
- 
- :warning:**This project is in very early β and has just been started. Expect nothing to work!**:warning:
- 
+DiPTer is a framework for creating procedurally generated textures that are fully differentiable. It features a differentiable renderer specialized in procedural textures implemented in PyTorch and a graphical interface, including a node editor, implemented using PyQt5. DiPTeR's main feature however, is a parameter estimation tool that lets users automatically estimate parameter values of a procedural texture model, based on an input target texture.
+
+This project was created as part of my master thesis.
+
+![Image of DiPTeR main interface](https://imgur.com/TdTj4Us.png)
+
+## Parameter Estimation
+
+The parameter estimation algorithm uses gradient descent and loss functions to minimize the difference between a user input image and the output of a user designed procedural texture.
+
+![Gif of parameter estimation](https://i.imgur.com/BsE4Oxz.gif)
  
 ## Setup
 
 ### Install dependencies
 
-Python dependencies can be installed from the `environment.yaml` file using conda. However, I've had problems installing from this format before, so as an alternative, install
+Python dependencies can be installed from the `environment.yml` file using conda. However, I've had problems installing from this format before, so as an alternative, install
  from the `env.txt` file instead using `conda env create --file env.txt`.
   
 ### Glumpy and freetype

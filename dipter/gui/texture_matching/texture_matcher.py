@@ -392,7 +392,7 @@ class TextureMatcher(QWidget):
         self._init_widget()
 
     def _init_widget(self):
-        self.setWindowTitle("Texture Matcher")
+        self.setWindowTitle("DiPTeR - Texture Matcher")
 
         # Setup menu
         visualize_menu = self._menu_bar.addMenu("visualize")

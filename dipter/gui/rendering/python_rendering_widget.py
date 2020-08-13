@@ -37,7 +37,7 @@ class PythonRenderingWidget(QWidget):
         self._init_widget()
 
     def _init_widget(self):
-        self.setWindowTitle("Python Renderer")
+        self.setWindowTitle("DiPTeR - Python Renderer")
 
         # Setup settings controls
         settings_layout = QHBoxLayout()

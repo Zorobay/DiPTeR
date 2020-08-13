@@ -56,7 +56,7 @@ class MainWindow(QMainWindow):
 
         self.cc = ControlCenter()
 
-        self._title = "Shader viewer"
+        self._title = "DiPTeR - Node Editor"
         self._size = (300, 300, 1600, 500)
 
         self.main_widget = MainWidget(self.cc)
