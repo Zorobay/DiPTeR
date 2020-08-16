@@ -1,6 +1,5 @@
 # DiPTeR - Differentiable Procedural Texture Renderer
 
-<<<<<<< HEAD
 DiPTer is a framework for creating procedurally generated textures that are fully differentiable. It features a differentiable renderer specialized in procedural textures implemented in PyTorch and a graphical interface, including a node editor, implemented using PyQt5. DiPTeR's main feature however, is a parameter estimation tool that lets users automatically estimate parameter values of a procedural texture model, based on an input target texture.
 
 This project was created as part of my master thesis.
@@ -11,13 +10,7 @@ This project was created as part of my master thesis.
 
 The parameter estimation algorithm uses gradient descent and loss functions to minimize the difference between a user input image and the output of a user designed procedural texture.
 
-![Gif of parameter estimation](https://i.imgur.com/BsE4Oxz.gif)
-=======
-DiPTer is a tool to create procedurally generated textures that are fully differentiable.
- 
- :warning:**This project is in β phase. Expect nothing to work!**:warning:
- 
->>>>>>> 92d5236c261404282eae86c7a38b636da76f6c24
+![Gif of parameter estimation](https://i.imgur.com/pB3s1JE.gif)
  
 ## Setup
 
