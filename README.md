@@ -10,11 +10,11 @@ This project was created as part of my master thesis.
 
 The parameter estimation algorithm uses gradient descent and loss functions to minimize the difference between a user input image and the output of a user designed procedural texture.
 
-![Gif of parameter estimation](https://i.imgur.com/pB3s1JE.gif)
+![Gif of parameter estimation](https://i.imgur.com/y7gezYB.gif)
  
 ## Setup
 
-### Install dependencies :warning: NOT UPDATED YET :warning:
+### Install dependencies
 
 Python dependencies can be installed from the `environment.yml` file using conda. However, I've had problems installing from this format before, so as an alternative, install
  from the `env.txt` file instead using `conda env create --file env.txt`.
